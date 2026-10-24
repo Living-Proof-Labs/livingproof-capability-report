@@ -19,6 +19,7 @@ def errors(function):
 
 
 @click.group()
+@click.version_option(package_name="livingproof-capability-report")
 def report():
     """Validate, grade and render portable capability evidence."""
 

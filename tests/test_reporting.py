@@ -146,3 +146,21 @@ def test_reject_bad_json_and_csv_formula(bundle):
     saved = grade(load_bundle(bundle))
     saved["decisions"][0]["reason"] = " =1+1"
     assert "' =1+1" in render(saved, "csv")
+
+
+def test_unknown_contract_is_incompatible(bundle):
+    loaded = load_bundle(bundle)
+    loaded["bundle"]["results"][0]["spec"]["commit"] = "f" * 40
+    assert grade(loaded)["decisions"][0]["status"] == "INCOMPATIBLE"
+
+
+def test_human_template_binds_exact_result(bundle):
+    output = bundle.parent / "human.json"
+    runner = CliRunner()
+    assert runner.invoke(report, ["human-template", str(bundle), "--result", "pause-120",
+                                 "-o", str(output)]).exit_code == 0
+    contribution = decode(output.read_text())["assessments"][0]
+    assert contribution["result_sha256"] == digest(load_bundle(bundle)["bundle"]["results"][0])
+    assert contribution["assessment"]["status"] == "INSUFFICIENT_EVIDENCE"
+    assert runner.invoke(report, ["human-template", str(bundle), "--result", "absent",
+                                 "-o", str(output)]).exit_code != 0
