@@ -161,3 +161,16 @@ Reporter tests check show individual tests and failure annotations. Fork pull
 requests receive the summary and artifact without a write-token check. This
 provides per-run history for comparison; this integration does not implement a
 historical trends dashboard or promise automatic trend correlation.
+
+## Terminal rendering and compatibility
+
+`livingproof-capability-report render report.json` prints a concise table to
+standard output, without color or ANSI sequences. It shows stored decisions and
+separate contexts, never an overall grade or regrading. This invocation was an
+error in v1.0.0 because `--output` was required; adding it is backward-compatible.
+
+Existing `render report.json -o report.html` commands still default to HTML. Use
+`--format table -o report.txt` for a saved table, or explicit `--format json`,
+`--format html`, or `--format csv` with stdout or a new output file. Library
+`render(report)` continues to default to lossless JSON. Scripts should name their
+format explicitly. Existing output files are never overwritten.

@@ -55,12 +55,18 @@ def grade_command(manifest, human, policy, output):
 
 @report.command("render")
 @click.argument("report_file", type=click.Path(exists=True, dir_okay=False, path_type=Path))
-@click.option("--format", type=click.Choice(["json", "html", "csv"]), default="html")
-@click.option("--output", "-o", required=True, type=click.Path(path_type=Path))
+@click.option("--format", type=click.Choice(["table", "json", "html", "csv"]), default=None,
+              help="Default: table on stdout; HTML when --output is supplied (v1 compatibility).")
+@click.option("--output", "-o", type=click.Path(path_type=Path),
+              help="Write a new file; otherwise print to stdout. Existing files are never overwritten.")
 @errors
 def render_command(report_file, format, output):
     """Render saved decisions; never regrade or overwrite existing files."""
-    content = render(decode(report_file.read_text(encoding="utf-8")), format)
+    selected_format = format or ("html" if output is not None else "table")
+    content = render(decode(report_file.read_text(encoding="utf-8")), selected_format)
+    if output is None:
+        click.echo(content, nl=False, color=False)
+        return
     with output.open("x", encoding="utf-8", newline="") as stream:
         stream.write(content)
     click.echo(str(output))
