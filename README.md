@@ -153,3 +153,11 @@ startup behavior across CI providers is not claimed. JUnit expectation tests sta
 separate from the capability decisions. No PyPI publication or new credentials.
 
 Original code and fixture adaptations are Apache-2.0; see [LICENSE](LICENSE).
+
+## Test results in GitHub
+
+The verify job uploads JUnit results even when tests fail. Its run summary and
+Reporter tests check show individual tests and failure annotations. Fork pull
+requests receive the summary and artifact without a write-token check. This
+provides per-run history for comparison; this integration does not implement a
+historical trends dashboard or promise automatic trend correlation.
