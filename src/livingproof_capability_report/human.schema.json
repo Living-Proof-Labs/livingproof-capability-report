@@ -1,0 +1,94 @@
+{
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "assessments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "result_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "result_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "assessment": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evaluator": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "enum": [
+                  "deterministic",
+                  "mock-agent",
+                  "human"
+                ]
+              },
+              "version": {
+                "type": "string",
+                "pattern": "^\\d+\\.\\d+\\.\\d+$"
+              },
+              "status": {
+                "enum": [
+                  "PASS",
+                  "FAIL",
+                  "INSUFFICIENT_EVIDENCE"
+                ]
+              },
+              "rationale": {
+                "type": "string",
+                "minLength": 1
+              },
+              "mandatory": {
+                "type": "boolean"
+              },
+              "evidence_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              },
+              "provenance": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "id",
+              "evaluator",
+              "kind",
+              "version",
+              "status",
+              "rationale",
+              "mandatory",
+              "evidence_ids",
+              "provenance"
+            ]
+          }
+        },
+        "required": [
+          "result_id",
+          "result_sha256",
+          "assessment"
+        ]
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "assessments"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

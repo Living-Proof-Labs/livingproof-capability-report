@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: Apache-2.0
+# Requires uv, project Python, pyproject.toml, and uv.lock with Ruff/pytest in dev.
+version: '3'
+
+tasks:
+  setup:
+    desc: Sync locked dependencies into the project environment
+    cmds:
+      - uv sync --locked --no-python-downloads
+  check:
+    desc: Check Python with locked Ruff
+    cmds:
+      - uv run --locked --no-sync --no-python-downloads ruff check .
+  test:
+    desc: Run locked pytest
+    cmds:
+      - uv run --locked --no-sync --no-python-downloads pytest
+  verify:
+    desc: Run checks and tests
+    cmds:
+      - task: check
+      - task: test
+  package:
+    desc: Build installed Python, Ubuntu Debian and Docker deliverables
+    cmds:
+      - uv run --locked --no-sync python tools/package.py
+  smoke:
+    desc: Check installations without mounting a source checkout
+    cmds:
+      - uv run --locked --no-sync python tools/smoke.py
