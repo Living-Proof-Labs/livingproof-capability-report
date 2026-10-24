@@ -1,0 +1,102 @@
+name: Verify, package and release
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.12.23'
+      - uses: go-task/setup-task@a00fbb05ce67b35648be3c78cbc9fd85354c757e
+        with:
+          version: '3.54.0'
+      - run: task setup
+      - run: task verify
+      - run: task package
+        env:
+          VERSION: 0.0.0
+      - run: task smoke
+        env:
+          VERSION: 0.0.0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: packages-${{ github.event.pull_request.head.sha || github.sha }}
+          path: dist/
+          if-no-files-found: error
+      - name: Package evidence
+        run: |
+          echo 'Wheel, source distribution, Ubuntu 24.04 Debian package and installed-package Docker image passed clean installation checks.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Normal image entrypoint and shell override were tested separately. Packages and SHA256SUMS are in the run artifacts.' >> "$GITHUB_STEP_SUMMARY"
+  release:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    uses: Living-Proof-Labs/collaboration-guidelines/.github/workflows/semantic-release.yml@v2.1.0
+  publish:
+    needs: release
+    if: needs.release.outputs.published == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      packages: write
+    env:
+      VERSION: ${{ needs.release.outputs.version }}
+      RELEASE_TAG: ${{ needs.release.outputs.git-tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.git-tag }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.12.23'
+      - uses: go-task/setup-task@a00fbb05ce67b35648be3c78cbc9fd85354c757e
+        with:
+          version: '3.54.0'
+      - run: task setup
+      - run: task package
+      - run: task smoke
+      - name: Attach packages before attempting registry publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tar -C dist -czf dist/wheelhouse.tar.gz wheels
+          (cd dist && sha256sum wheelhouse.tar.gz >> SHA256SUMS)
+          gh release upload "$RELEASE_TAG" dist/*.whl dist/*.tar.gz dist/*.deb dist/image.tar dist/SHA256SUMS dist/requirements.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-packages-${{ needs.release.outputs.version }}
+          path: dist/
+      - name: Publish exact version through the repository token
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker push "ghcr.io/living-proof-labs/livingproof-capability-report:$VERSION"
+          docker logout ghcr.io
+      - name: Verify anonymous registry consumption
+        run: |
+          docker image rm "ghcr.io/living-proof-labs/livingproof-capability-report:$VERSION"
+          docker pull "ghcr.io/living-proof-labs/livingproof-capability-report:$VERSION"
+          docker run --rm "ghcr.io/living-proof-labs/livingproof-capability-report:$VERSION" --help
+          echo "Released image verified: ghcr.io/living-proof-labs/livingproof-capability-report:$VERSION" >> "$GITHUB_STEP_SUMMARY"
