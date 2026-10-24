@@ -203,6 +203,8 @@ jobs:
               apt-get update -qq
               apt-get install -y /packages/*_all.deb
               livingproof-capability-report --version
+              livingproof-capability-report render /packages/report.json > /tmp/table.txt
+              grep -q "Separate contexts" /tmp/table.txt
               livingproof-capability-report render /packages/report.json --format json -o /tmp/copy.json
               python3 -c "import json; assert len(json.load(open(\"/tmp/copy.json\"))[\"decisions\"]) == 8"
             '

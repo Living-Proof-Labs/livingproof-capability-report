@@ -20,6 +20,8 @@ subprocess.run(["docker", "run", *network, *trust, "--rm", "-v", f"{bundle}:/inp
 # Job containers may override ENTRYPOINT and invoke a shell; test separately.
 exercise = """set -eu
 livingproof-capability-report grade /input/manifest.json -o /tmp/report.json
+livingproof-capability-report render /tmp/report.json > /tmp/table.txt
+grep -q "Separate contexts" /tmp/table.txt
 livingproof-capability-report render /tmp/report.json --format html -o /tmp/report.html
 livingproof-capability-report render /tmp/report.json --format csv -o /tmp/report.csv
 python -c 'import json; r=json.load(open("/tmp/report.json")); s={d["result_id"]:d["status"] for d in r["decisions"]}; assert s["v1.1.1-slow"]=="PASS"; assert s["v1.2.0-slow"]=="FAIL"; assert s["v1.2.0-insufficient"]=="INSUFFICIENT_EVIDENCE"'
@@ -50,6 +52,8 @@ apt-get install -y /packages/livingproof-capability-report_*_all.deb
 cd /tmp
 livingproof-capability-report validate /input/manifest.json
 livingproof-capability-report grade /input/manifest.json -o /tmp/report.json
+livingproof-capability-report render /tmp/report.json > /tmp/table.txt
+grep -q "Separate contexts" /tmp/table.txt
 livingproof-capability-report render /tmp/report.json --format html -o /tmp/report.html
 /usr/bin/python3 -c 'from livingproof_capability_report import grade; print(grade.__module__)'
 test ! -d /opt/livingproof-capability-report
