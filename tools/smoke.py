@@ -51,7 +51,7 @@ cd /tmp
 livingproof-capability-report validate /input/manifest.json
 livingproof-capability-report grade /input/manifest.json -o /tmp/report.json
 livingproof-capability-report render /tmp/report.json --format html -o /tmp/report.html
-/usr/bin/python3 -c 'from livingproof_capability_report import grade; print(grade.__module__)' 
+/usr/bin/python3 -c 'from livingproof_capability_report import grade; print(grade.__module__)'
 test ! -d /opt/livingproof-capability-report
 /usr/bin/python3 -c 'import click, jsonschema; print(click.__file__, jsonschema.__file__)'
 dpkg-query -W -f='${Architecture} ${Version}\\n' livingproof-capability-report python3 python3-click python3-jsonschema
