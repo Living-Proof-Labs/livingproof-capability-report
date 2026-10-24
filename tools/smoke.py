@@ -1,14 +1,16 @@
 """Exercise clean wheel, Debian and image installs with no source checkout."""
 import os
+import platform
 import subprocess
 from pathlib import Path
 
 network = ["--network", os.environ["PACKAGE_NETWORK"]] if "PACKAGE_NETWORK" in os.environ else []
 trust = (["-v", f"{os.environ['PACKAGE_CA_BUNDLE']}:/tmp/package-ca.pem:ro",
           "-e", "PIP_CERT=/tmp/package-ca.pem"] if "PACKAGE_CA_BUNDLE" in os.environ else [])
+architecture = {"x86_64": "amd64", "aarch64": "arm64"}[platform.machine()]
 root = Path(__file__).resolve().parents[1]
 version = os.environ.get("VERSION", "0.0.0")
-image = f"ghcr.io/living-proof-labs/livingproof-capability-report:{version}"
+image = f"ghcr.io/living-proof-labs/livingproof-capability-report:{version}-{architecture}"
 dist = root / "dist"
 bundle = root / "examples/bundle"
 # Normal Docker entrypoint receives only subcommands/options.
@@ -44,13 +46,21 @@ subprocess.run(["docker", "run", *network, *trust, "--rm", "-v", f"{dist}:/packa
                check=True)
 debian = """set -eu
 apt-get update -qq
-apt-get install -y /packages/livingproof-capability-report_*_amd64.deb
+apt-get install -y /packages/livingproof-capability-report_*_all.deb
 cd /tmp
 livingproof-capability-report validate /input/manifest.json
 livingproof-capability-report grade /input/manifest.json -o /tmp/report.json
 livingproof-capability-report render /tmp/report.json --format html -o /tmp/report.html
-/usr/bin/python3 -c 'import importlib.util; assert importlib.util.find_spec("livingproof_capability_report") is None'
-/opt/livingproof-capability-report/bin/python -c 'from livingproof_capability_report import grade; print(grade.__module__)'
+/usr/bin/python3 -c 'from livingproof_capability_report import grade; print(grade.__module__)' 
+test ! -d /opt/livingproof-capability-report
+/usr/bin/python3 -c 'import click, jsonschema; print(click.__file__, jsonschema.__file__)'
+dpkg-query -W -f='${Architecture} ${Version}\\n' livingproof-capability-report python3 python3-click python3-jsonschema
+livingproof-capability-report --version
+apt-get remove -y livingproof-capability-report
+/usr/bin/python3 -c 'import importlib.util; assert importlib.util.find_spec("livingproof_capability_report") is None; import click, jsonschema'
+
 """
-subprocess.run(["docker", "run", *network, *trust, "--rm", "-v", f"{dist}:/packages:ro", "-v",
-                f"{bundle}:/input:ro", "ubuntu:24.04", "sh", "-c", debian], check=True)
+for distribution in ("ubuntu:24.04", "debian:12-slim", "debian:13-slim"):
+    print(f"Clean native {architecture} installation on {distribution}", flush=True)
+    subprocess.run(["docker", "run", *network, *trust, "--rm", "-v", f"{dist}:/packages:ro", "-v",
+                    f"{bundle}:/input:ro", distribution, "sh", "-c", debian], check=True)
