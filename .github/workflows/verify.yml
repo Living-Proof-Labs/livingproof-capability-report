@@ -70,6 +70,10 @@ jobs:
       - run: task smoke
         env:
           VERSION: 0.0.0
+          RUNNER_LABEL: ${{ matrix.runner }}
+      - name: Generated compatibility evidence
+        if: ${{ !cancelled() }}
+        run: uv run --locked --no-sync python tools/compatibility_summary.py >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: ${{ always() && hashFiles('dist/**') != '' }}
         with:
@@ -122,6 +126,11 @@ jobs:
       - run: task setup
       - run: task package
       - run: task smoke
+        env:
+          RUNNER_LABEL: ${{ matrix.runner }}
+      - name: Generated release compatibility evidence
+        if: ${{ !cancelled() }}
+        run: uv run --locked --no-sync python tools/compatibility_summary.py >> "$GITHUB_STEP_SUMMARY"
       - name: Attach packages before attempting registry publication
         env:
           GH_TOKEN: ${{ github.token }}
@@ -129,7 +138,7 @@ jobs:
           if [ "${{ matrix.architecture }}" = amd64 ]; then
             gh release upload "$RELEASE_TAG" dist/*.whl dist/livingproof*.tar.gz dist/*.deb dist/requirements.txt
           fi
-          gh release upload "$RELEASE_TAG" "dist/image-${{ matrix.architecture }}.tar" "dist/wheelhouse-${{ matrix.architecture }}.tar.gz" "dist/SHA256SUMS-${{ matrix.architecture }}"
+          gh release upload "$RELEASE_TAG" "dist/image-${{ matrix.architecture }}.tar" "dist/wheelhouse-${{ matrix.architecture }}.tar.gz" "dist/SHA256SUMS-${{ matrix.architecture }}" "dist/compatibility-${{ matrix.architecture }}.json" "dist/compatibility-${{ matrix.architecture }}.md"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
