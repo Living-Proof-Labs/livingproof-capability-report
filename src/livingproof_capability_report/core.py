@@ -6,6 +6,7 @@ import html
 import io
 import json
 import re
+import textwrap
 from collections import Counter
 from pathlib import Path, PurePosixPath
 
@@ -179,6 +180,8 @@ def render(report, format="json"):
              "revision": results[d["result_id"]]["spec"]["revision"],
              "environment": canonical(results[d["result_id"]]["environment"]),
              "status": d["status"], "reason": d["reason"]} for d in decisions]
+    if format == "table":
+        return terminal_table(rows, aggregate(bundle["results"]))
     if format == "csv":
         stream = io.StringIO(newline="")
         writer = csv.DictWriter(stream, fieldnames=["result_id", "spec_tag", "revision",
@@ -209,3 +212,33 @@ def render(report, format="json"):
             "<th>Environment</th><th>Status</th><th>Reason</th></tr></thead><tbody>"
             + table + "</tbody></table><details><summary>Full lossless report</summary><pre>"
             + full + "</pre></details></html>\n")
+
+
+def terminal_table(rows, groups):
+    """Plain ASCII table of stored decisions; safe for terminals and redirected output."""
+    def safe(value):
+        # Escape terminal controls (including ANSI and bidi controls), preserve data in exports.
+        return json.dumps(str(value), ensure_ascii=True)[1:-1]
+
+    columns = [("Result", "result_id", 30), ("Catalog", "spec_tag", 10),
+               ("Revision", "revision", 8), ("Status", "status", 21)]
+    widths = [min(limit, max(len(title), *(len(safe(row[key])) for row in rows)))
+              for title, key, limit in columns]
+    separator = "-+-".join("-" * width for width in widths)
+    lines = ["Living Proof Labs capability report", "Stored decisions; no regrading.", "",
+             " | ".join(title.ljust(width) for (title, _, _), width in zip(columns, widths)),
+             separator]
+    for row in rows:
+        cells = [textwrap.wrap(safe(row[key]), width=width) or [""]
+                 for (_, key, _), width in zip(columns, widths)]
+        for index in range(max(map(len, cells))):
+            lines.append(" | ".join((cell[index] if index < len(cell) else "").ljust(width)
+                                    for cell, width in zip(cells, widths)).rstrip())
+    lines += ["", "Separate contexts (no overall grade):"]
+    for group in groups:
+        context = group["context"]
+        lines.append("  " + safe(canonical(context)))
+        lines.append("    Results: " + ", ".join(safe(i) for i in group["result_ids"]))
+    lines += ["", "Fixture evidence, not robot safety certification.",
+              "Use --format json/html/csv for full export details."]
+    return "\n".join(lines) + "\n"
