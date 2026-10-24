@@ -12,9 +12,9 @@ tasks:
     cmds:
       - uv run --locked --no-sync --no-python-downloads ruff check .
   test:
-    desc: Run locked pytest
+    desc: Run locked pytest --junitxml=artifacts/tests.xml
     cmds:
-      - uv run --locked --no-sync --no-python-downloads pytest
+      - uv run --locked --no-sync --no-python-downloads pytest --junitxml=artifacts/tests.xml
   verify:
     desc: Run checks and tests
     cmds:
