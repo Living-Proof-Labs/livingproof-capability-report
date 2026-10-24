@@ -9,6 +9,8 @@ version = os.environ.get("VERSION", "0.0.0")
 if not re.fullmatch(r"\d+\.\d+\.\d+", version):
     raise SystemExit("VERSION must be a release version such as 1.0.0")
 network = ["--network", os.environ["PACKAGE_NETWORK"]] if "PACKAGE_NETWORK" in os.environ else []
+trust = (["-v", f"{os.environ['PACKAGE_CA_BUNDLE']}:/tmp/package-ca.pem:ro",
+          "-e", "PIP_CERT=/tmp/package-ca.pem"] if "PACKAGE_CA_BUNDLE" in os.environ else [])
 root = Path(__file__).resolve().parents[1]
 dist = root / "dist"
 if dist.exists() and list(dist.iterdir()):
@@ -20,7 +22,7 @@ subprocess.run(["uv", "export", "--locked", "--no-dev", "--no-emit-project",
                 "--no-hashes", "--output-file", str(dist / "requirements.txt")], check=True)
 subprocess.run(["docker", "build", *network, "-f", "tools/Dockerfile.packages", "-t",
                 "livingproof-report-packager", "."], check=True)
-subprocess.run(["docker", "run", *network, "--rm", "-e", f"OUTPUT_UID={os.getuid()}",
+subprocess.run(["docker", "run", *network, *trust, "--rm", "-e", f"OUTPUT_UID={os.getuid()}",
                 "-e", f"OUTPUT_GID={os.getgid()}", "-v", f"{dist}:/out",
                 "-v", f"{dist}/requirements.txt:/requirements.txt:ro",
                 "livingproof-report-packager", version], check=True)
