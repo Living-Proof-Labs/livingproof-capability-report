@@ -229,3 +229,31 @@ image consumption and the same Debian asset on both architectures, then publishe
 the complete immutable release. Historical v1.0.1 and v1.1.0 release records lack
 package assets because their earlier workflow attempted upload after publication;
 use v1.2.0 or later for these packaging improvements.
+
+## Container development
+
+The `development` target in [Dockerfile](Dockerfile) supplies Python, pinned uv,
+Task and Git. It shares the Python base with the small installed-package runtime
+target; development dependencies come from the same committed `uv.lock` used by
+CI. The release image retains only the installed application and its dependencies.
+
+With Docker Compose and Task on the host:
+
+```sh
+task dev:build
+task dev:verify
+task dev:shell
+```
+
+The [devcontainer](.devcontainer/devcontainer.json) builds that same target for
+VS Code, Cursor and GitHub Codespaces. Reopen in the container; its creation hook
+runs `task setup`. Inside, use `task check`, `task test` and `task verify` directly.
+No Docker daemon, host Docker socket, privileged mode or Docker-in-Docker is
+required inside the development environment. Package/image building remains a
+host/CI task because it requires Docker.
+
+[Development CI](https://github.com/Living-Proof-Labs/livingproof-capability-report/actions/workflows/development.yml)
+builds this Docker target on native AMD64 and ARM64 and runs those same Task
+commands. This verifies the image and setup/verification lifecycle, not a live
+Codespaces session or a particular editor launch. No paid Codespace or new account
+grant is provisioned by these checks.
