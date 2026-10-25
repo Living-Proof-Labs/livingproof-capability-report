@@ -1,6 +1,6 @@
 # Working agreement
 
-Read and apply https://github.com/Living-Proof-Labs/collaboration-guidelines/blob/v2.2.0/AGENTS.md
+Read and apply https://github.com/Living-Proof-Labs/collaboration-guidelines/blob/v3.0.0/AGENTS.md
 and its relevant linked procedures at that same version.
 
 Use isolated checkouts, focused draft pull requests and `task setup`, then

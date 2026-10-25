@@ -152,7 +152,7 @@ Packaging uses the official Python build backend, pip, venv and `dpkg-deb`.
 
 CI attaches wheel, source archive, Debian package, native dependency wheelhouses, saved images
 and SHA-256 checksums. The shared release workflow is pinned to
-[collaboration-guidelines v2.2.0](https://github.com/Living-Proof-Labs/collaboration-guidelines/tree/v2.2.0).
+[collaboration-guidelines v3.0.0](https://github.com/Living-Proof-Labs/collaboration-guidelines/tree/v3.0.0).
 Release builds install the exact published package version. Clean containers test
 wheel and Debian installations without mounting source. A normal `docker run`
 tests the convenience entrypoint; a separate shell override tests the same image
@@ -237,7 +237,7 @@ Task and Git. It shares the Python base with the small installed-package runtime
 target; development dependencies come from the same committed `uv.lock` used by
 CI. The release image retains only the installed application and its dependencies.
 
-With Docker Compose and Task on the host:
+With Docker Compose and Task on a Linux host (the host wrappers are tested on Linux):
 
 ```sh
 task dev:build
