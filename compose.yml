@@ -1,0 +1,9 @@
+services:
+  development:
+    build:
+      context: .
+      target: development
+    working_dir: /workspace/report
+    volumes:
+      - .:/workspace/report
+    init: true

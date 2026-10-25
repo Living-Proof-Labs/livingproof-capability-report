@@ -1,0 +1,12 @@
+{
+  "name": "Living Proof Labs capability report",
+  "build": {"dockerfile": "../Dockerfile", "context": "..", "target": "development"},
+  "workspaceFolder": "/workspace/report",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace/report,type=bind",
+  "remoteUser": "vscode",
+  "updateRemoteUserUID": true,
+  "postCreateCommand": "task setup",
+  "customizations": {
+    "vscode": {"extensions": ["ms-python.python"], "settings": {"python.defaultInterpreterPath": "/tmp/report-venv/bin/python"}}
+  }
+}

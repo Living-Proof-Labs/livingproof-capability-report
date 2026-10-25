@@ -28,3 +28,19 @@ tasks:
     desc: Check installations without mounting a source checkout
     cmds:
       - uv run --locked --no-sync python tools/smoke.py
+  dev:build:
+    platforms: [linux]
+    desc: Build the shared Docker development target
+    cmds:
+      - docker compose build development
+  dev:verify:
+    platforms: [linux]
+    desc: Run setup and verification in the development image without nested Docker
+    cmds:
+      - docker compose run --rm --user "$(id -u):$(id -g)" development bash -c 'task setup && task verify'
+  dev:shell:
+    platforms: [linux]
+    desc: Open the development image and set up its environment
+    interactive: true
+    cmds:
+      - docker compose run --rm --user "$(id -u):$(id -g)" development bash -c 'task setup && exec bash'
