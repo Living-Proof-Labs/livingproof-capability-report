@@ -86,12 +86,10 @@ jobs:
           echo 'Normal image entrypoint and shell override were tested separately. Packages and SHA256SUMS are in the run artifacts.' >> "$GITHUB_STEP_SUMMARY"
   release:
     needs: verify
-    # Pause new release creation while the existing v1.2.0 draft is finalized.
-    # Registry write_package was denied; do not repeat denied pushes.
-    if: false
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: write
-    uses: Living-Proof-Labs/collaboration-guidelines/.github/workflows/semantic-release.yml@v2.2.0
+    uses: Living-Proof-Labs/collaboration-guidelines/.github/workflows/semantic-release.yml@v3.0.0
     with:
       draft-release: true
   publish:

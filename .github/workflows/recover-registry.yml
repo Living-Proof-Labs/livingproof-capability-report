@@ -1,0 +1,89 @@
+name: Publish verified saved v1.2.0 images
+on:
+  pull_request:
+    paths: [.github/workflows/recover-registry.yml, tools/require_absent_image.py]
+  push:
+    branches: [main]
+    paths: [.github/workflows/recover-registry.yml, tools/require_absent_image.py]
+permissions:
+  contents: read
+jobs:
+  saved-image:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: amd64
+            runner: ubuntu-24.04
+          - architecture: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Verify and load immutable released image
+        run: |
+          base="https://github.com/$GITHUB_REPOSITORY/releases/download/v1.2.0"
+          curl -fsSL "$base/SHA256SUMS" -o SHA256SUMS
+          curl -fsSL "$base/image-${{ matrix.architecture }}.tar" -o "image-${{ matrix.architecture }}.tar"
+          sha256sum --ignore-missing -c SHA256SUMS
+          docker load -i "image-${{ matrix.architecture }}.tar"
+          image="ghcr.io/living-proof-labs/livingproof-capability-report:1.2.0-${{ matrix.architecture }}"
+          test "$(docker image inspect "$image" --format '{{.Architecture}}')" = "${{ matrix.architecture }}"
+          docker run --rm "$image" --version | grep 1.2.0
+          docker run --rm --entrypoint /bin/sh "$image" -c 'livingproof-capability-report --help'
+          python3 tools/require_absent_image.py "1.2.0-${{ matrix.architecture }}"
+      - name: Publish existing image after verified Actions access correction
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker push "ghcr.io/living-proof-labs/livingproof-capability-report:1.2.0-${{ matrix.architecture }}"
+          docker logout ghcr.io
+  manifest:
+    needs: saved-image
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Publish previously absent multi-architecture tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 tools/require_absent_image.py 1.2.0
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          image=ghcr.io/living-proof-labs/livingproof-capability-report
+          docker manifest create "$image:1.2.0" "$image:1.2.0-amd64" "$image:1.2.0-arm64"
+          docker manifest push "$image:1.2.0"
+          docker logout ghcr.io
+  anonymous-consumption:
+    needs: manifest
+    strategy:
+      matrix:
+        include:
+          - architecture: amd64
+            runner: ubuntu-24.04
+          - architecture: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Pull anonymously and render the released producer report
+        run: |
+          image=ghcr.io/living-proof-labs/livingproof-capability-report:1.2.0
+          docker pull "$image"
+          test "$(docker image inspect "$image" --format '{{.Architecture}}')" = "${{ matrix.architecture }}"
+          curl -fsSL https://github.com/Living-Proof-Labs/capability-verifier/releases/download/v1.1.1/report.json -o report.json
+          docker run --rm -v "$PWD:/data:ro" "$image" render /data/report.json | tee table.txt
+          grep -q 'Separate contexts' table.txt
+          docker run --rm --entrypoint /bin/sh "$image" -c 'livingproof-capability-report --version' | grep 1.2.0
