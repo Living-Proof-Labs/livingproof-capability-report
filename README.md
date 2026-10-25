@@ -44,8 +44,10 @@ with the installed wheel and the reporting command as its entrypoint. Saved `ima
 publication is unavailable. `docker load -i image-arm64.tar` loads the
 architecture-specific `:1.2.0-arm64` tag; use that tag when working offline.
 A published multi-architecture registry tag selects the native architecture automatically.
-Version 1.2.0 registry pushes were denied with `write_package`; use its saved
-image assets until registry publication is separately verified. Registry publication and
+Version 1.2.0 initially encountered a `write_package` denial. The
+[recovery workflow](https://github.com/Living-Proof-Labs/livingproof-capability-report/actions/workflows/recover-registry.yml)
+verifies and publishes its original saved images after the approved repository
+Actions access correction. Consult that run for actual registry availability. Registry publication and
 anonymous availability are separate checks; see the release job for their results.
 
 ```sh
