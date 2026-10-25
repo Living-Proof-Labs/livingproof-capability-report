@@ -7,6 +7,7 @@ on:
     paths: [.github/workflows/verify-saved-release.yml]
 permissions:
   contents: read
+  actions: read
 jobs:
   verify-saved:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
@@ -23,10 +24,22 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       RELEASE_TAG: v1.2.0
     steps:
-      - name: Download already tested draft assets
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 40145687124
+          name: release-packages-1.2.0-${{ matrix.architecture }}
+          path: downloaded
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 40145687124
+          name: release-packages-1.2.0-amd64
+          path: common
+      - name: Verify already tested artifact checksums
         run: |
-          mkdir downloaded
-          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir downloaded --pattern "image-${{ matrix.architecture }}.tar" --pattern "SHA256SUMS-${{ matrix.architecture }}" --pattern SHA256SUMS-amd64 --pattern '*_all.deb'
+          cp common/*_all.deb downloaded/
+          cp common/SHA256SUMS-amd64 downloaded/
           (cd downloaded && sha256sum --ignore-missing -c "SHA256SUMS-${{ matrix.architecture }}" && sha256sum --ignore-missing -c SHA256SUMS-amd64)
       - name: Verify saved native image and both startup modes
         run: |
