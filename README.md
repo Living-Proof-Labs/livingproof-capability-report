@@ -81,9 +81,12 @@ saved = grade(load_bundle("bundle/manifest.json"))
 html = render(saved, "html")
 ```
 
-The Click group is `livingproof_capability_report.cli.report`, ready to be attached
-to a future `livingproof capability report` group. Neither package needs to depend
-on the other. No root command or general plugin framework is implemented here.
+The installed distribution advertises `livingproof_capability_report.cli:report`
+as `report` in the `livingproof.capability.commands` entry-point group. A compatible
+umbrella can mount that same Click group as `livingproof capability report` when
+both packages are installed in the same Python environment. Neither library
+depends on the other; the standalone command and Python API remain unchanged.
+Version v1.3.0 predates this metadata; it remains usable standalone.
 
 ## Bundle and grading contract
 
