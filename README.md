@@ -43,12 +43,15 @@ The release job builds `ghcr.io/living-proof-labs/livingproof-capability-report:
 with the installed wheel and the reporting command as its entrypoint. Saved `image-amd64.tar` and `image-arm64.tar` files are attached even if registry
 publication is unavailable. `docker load -i image-arm64.tar` loads the
 architecture-specific `:1.2.0-arm64` tag; use that tag when working offline.
-The registry's `:1.2.0` tag selects the native architecture automatically. Registry publication and
+A published multi-architecture registry tag selects the native architecture automatically.
+Version 1.2.0 registry pushes were denied with `write_package`; use its saved
+image assets until registry publication is separately verified. Registry publication and
 anonymous availability are separate checks; see the release job for their results.
 
 ```sh
+docker load -i image-arm64.tar  # use the amd64 asset/tag on amd64
 docker run --rm -v "$PWD/bundle:/data:ro" \
-  ghcr.io/living-proof-labs/livingproof-capability-report:1.2.0 validate manifest.json
+  ghcr.io/living-proof-labs/livingproof-capability-report:1.2.0-arm64 validate manifest.json
 ```
 
 ## Report a portable bundle

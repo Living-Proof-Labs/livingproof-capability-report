@@ -1,0 +1,91 @@
+name: Verify saved release without registry publication
+on:
+  pull_request:
+    paths: [.github/workflows/verify-saved-release.yml]
+  push:
+    branches: [main]
+    paths: [.github/workflows/verify-saved-release.yml]
+permissions:
+  contents: read
+jobs:
+  verify-saved:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: amd64
+            runner: ubuntu-24.04
+          - architecture: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: v1.2.0
+    steps:
+      - name: Download already tested draft assets
+        run: |
+          mkdir downloaded
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir downloaded --pattern "image-${{ matrix.architecture }}.tar" --pattern "SHA256SUMS-${{ matrix.architecture }}" --pattern SHA256SUMS-amd64 --pattern '*_all.deb'
+          (cd downloaded && sha256sum --ignore-missing -c "SHA256SUMS-${{ matrix.architecture }}" && sha256sum --ignore-missing -c SHA256SUMS-amd64)
+      - name: Verify saved native image and both startup modes
+        run: |
+          docker load -i "downloaded/image-${{ matrix.architecture }}.tar"
+          image="ghcr.io/living-proof-labs/livingproof-capability-report:1.2.0-${{ matrix.architecture }}"
+          test "$(docker image inspect "$image" --format '{{.Architecture}}')" = "${{ matrix.architecture }}"
+          docker run --rm "$image" --version | grep '1.2.0'
+          docker run --rm --entrypoint /bin/sh "$image" -c 'livingproof-capability-report --help'
+      - name: Verify same Debian asset on clean native distributions
+        run: |
+          curl -fsSL https://github.com/Living-Proof-Labs/capability-verifier/releases/download/v1.1.1/report.json -o downloaded/report.json
+          for distro in ubuntu:24.04 debian:12-slim debian:13-slim; do
+            docker run --rm -v "$PWD/downloaded:/packages:ro" "$distro" sh -ec '
+              apt-get update -qq
+              apt-get install -y /packages/*_all.deb
+              livingproof-capability-report --version | grep 1.2.0
+              livingproof-capability-report render /packages/report.json > /tmp/table.txt
+              grep -q "Separate contexts" /tmp/table.txt
+              livingproof-capability-report render /packages/report.json --format json -o /tmp/copy.json
+              python3 -c "import json; assert len(json.load(open(\"/tmp/copy.json\"))[\"decisions\"]) == 8"
+            '
+          done
+          echo 'Saved native image, both startup modes, and same Debian asset passed. Registry publication remains blocked by write_package permission.' >> "$GITHUB_STEP_SUMMARY"
+  publish-assets:
+    needs: verify-saved
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: v1.2.0
+    steps:
+      - name: Verify all existing assets and assemble checksums
+        run: |
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft | grep -x true
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir assets
+          (cd assets && sha256sum -c SHA256SUMS-amd64 && sha256sum -c SHA256SUMS-arm64)
+          cat assets/SHA256SUMS-amd64 assets/SHA256SUMS-arm64 > SHA256SUMS
+          gh release upload "$RELEASE_TAG" SHA256SUMS --repo "$GITHUB_REPOSITORY"
+      - name: Publish tested downloadable packages with explicit registry limitation
+        run: |
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body > notes.md
+          cat >> notes.md <<'EOF'
+
+          ## Distribution status
+
+          Wheel, source, architecture-independent Debian package, native saved images and generated compatibility reports are verified and attached. Both native AMD64 and ARM64 clean-install jobs passed. Download a saved image and use `docker load -i image-arm64.tar` (or amd64), then its `1.2.0-arm64` (or amd64) tag.
+
+          Registry publication of version 1.2.0 is blocked: GitHub accepted the repository workflow token login but denied both pushes with `permission_denied: write_package`. This release does not claim that version 1.2.0 is available from GHCR. No credentials, package grants, visibility settings or existing image tags were changed.
+          EOF
+          gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --notes-file notes.md --draft=false
+      - name: Verify public package checksums
+        run: |
+          base="https://github.com/$GITHUB_REPOSITORY/releases/download/$RELEASE_TAG"
+          mkdir public
+          cd public
+          curl -fsSL "$base/SHA256SUMS" -o SHA256SUMS
+          curl -fsSL "$base/livingproof-capability-report_1.2.0_all.deb" -o livingproof-capability-report_1.2.0_all.deb
+          curl -fsSL "$base/compatibility-arm64.json" -o compatibility-arm64.json
+          curl -fsSL "$base/compatibility-amd64.json" -o compatibility-amd64.json
+          sha256sum --ignore-missing -c SHA256SUMS
