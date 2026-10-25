@@ -33,7 +33,7 @@ python3 -m venv .venv
 .venv/bin/livingproof-capability-report --help
 ```
 
-The wheel installer resolves dependencies normally; the architecture-specific downloadable wheelhouse
+The wheel installer resolves dependencies normally; the architecture-specific downloadable wheelhouse targets CPython 3.12 and
 supports offline installation with `--no-index --find-links=./wheels`. The source
 archive is also attached. Release package versions come from the release tag;
 there are no generated version commits. Python 3.11, 3.12 and 3.13 are exercised through the distribution packages below.
@@ -152,7 +152,7 @@ Packaging uses the official Python build backend, pip, venv and `dpkg-deb`.
 
 CI attaches wheel, source archive, Debian package, native dependency wheelhouses, saved images
 and SHA-256 checksums. The shared release workflow is pinned to
-[collaboration-guidelines v2.1.0](https://github.com/Living-Proof-Labs/collaboration-guidelines/tree/v2.1.0).
+[collaboration-guidelines v2.2.0](https://github.com/Living-Proof-Labs/collaboration-guidelines/tree/v2.2.0).
 Release builds install the exact published package version. Clean containers test
 wheel and Debian installations without mounting source. A normal `docker run`
 tests the convenience entrypoint; a separate shell override tests the same image
@@ -222,3 +222,9 @@ Existing `render report.json -o report.html` commands still default to HTML. Use
 `--format html`, or `--format csv` with stdout or a new output file. Library
 `render(report)` continues to default to lossless JSON. Scripts should name their
 format explicitly. Existing output files are never overwritten.
+
+Release automation assembles packages and checksums on a draft, verifies native
+image consumption and the same Debian asset on both architectures, then publishes
+the complete immutable release. Historical v1.0.1 and v1.1.0 release records lack
+package assets because their earlier workflow attempted upload after publication;
+use v1.2.0 or later for these packaging improvements.

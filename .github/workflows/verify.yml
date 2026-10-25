@@ -89,10 +89,12 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: write
-    uses: Living-Proof-Labs/collaboration-guidelines/.github/workflows/semantic-release.yml@v2.1.0
+    uses: Living-Proof-Labs/collaboration-guidelines/.github/workflows/semantic-release.yml@v2.2.0
+    with:
+      draft-release: true
   publish:
     needs: release
-    if: needs.release.outputs.published == 'true'
+    if: needs.release.outputs.draft-created == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -153,7 +155,7 @@ jobs:
           docker logout ghcr.io
   manifest:
     needs: [release, publish]
-    if: needs.release.outputs.published == 'true'
+    if: needs.release.outputs.draft-created == 'true'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -177,7 +179,7 @@ jobs:
           gh release upload "$RELEASE_TAG" SHA256SUMS --repo "$GITHUB_REPOSITORY"
   verify-registry:
     needs: [release, manifest]
-    if: needs.release.outputs.published == 'true'
+    if: needs.release.outputs.draft-created == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -198,14 +200,13 @@ jobs:
           docker run --rm "$image:$VERSION" --version
           docker run --rm --entrypoint /bin/sh "$image:$VERSION" -c 'livingproof-capability-report --help'
           echo "Native ${{ matrix.architecture }} anonymous consumption passed for $image:$VERSION" >> "$GITHUB_STEP_SUMMARY"
-      - name: Test the same published all.deb on native distribution runtimes
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-packages-${{ needs.release.outputs.version }}-amd64
+          path: downloaded
+      - name: Test the same candidate all.deb on native distribution runtimes
         run: |
-          mkdir downloaded
-          base="https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION"
-          curl -fsSL "$base/livingproof-capability-report_${VERSION}_all.deb" -o downloaded/report.deb
-          curl -fsSL "$base/SHA256SUMS" -o downloaded/SHA256SUMS
-          mv downloaded/report.deb "downloaded/livingproof-capability-report_${VERSION}_all.deb"
-          (cd downloaded && sha256sum --ignore-missing -c SHA256SUMS)
+          (cd downloaded && sha256sum --ignore-missing -c SHA256SUMS-amd64)
           curl -fsSL https://github.com/Living-Proof-Labs/capability-verifier/releases/download/v1.1.1/report.json -o downloaded/report.json
           for distro in ubuntu:24.04 debian:12-slim debian:13-slim; do
             docker run --rm -v "$PWD/downloaded:/packages:ro" "$distro" sh -ec '
@@ -218,3 +219,24 @@ jobs:
               python3 -c "import json; assert len(json.load(open(\"/tmp/copy.json\"))[\"decisions\"]) == 8"
             '
           done
+  publish-release:
+    needs: [release, verify-registry]
+    if: needs.release.outputs.draft-created == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ needs.release.outputs.git-tag }}
+    steps:
+      - name: Publish tested draft with all assets attached
+        run: gh release edit "$RELEASE_TAG" --draft=false --repo "$GITHUB_REPOSITORY"
+      - name: Verify anonymous release asset download
+        run: |
+          base="https://github.com/$GITHUB_REPOSITORY/releases/download/$RELEASE_TAG"
+          version="${RELEASE_TAG#v}"
+          curl -fsSL "$base/SHA256SUMS" -o SHA256SUMS
+          curl -fsSL "$base/livingproof-capability-report_${version}_all.deb" -o "livingproof-capability-report_${version}_all.deb"
+          curl -fsSL "$base/compatibility-arm64.json" -o compatibility-arm64.json
+          curl -fsSL "$base/compatibility-amd64.json" -o compatibility-amd64.json
+          sha256sum --ignore-missing -c SHA256SUMS
