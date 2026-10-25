@@ -182,7 +182,8 @@ The jobs use `ubuntu-24.04` and `ubuntu-24.04-arm` hosts, with matching-architec
 clean distribution containers. This is native CPU testing, not QEMU emulation or
 testing on a particular Googlebook. Installation, commands, importable logic and
 removal are checked; distribution-owned dependencies remain after removal.
-The release verification downloads the same published `all.deb` on both CPUs.
+Release verification installs the same candidate `all.deb` on both CPUs before
+publication, then checks anonymous downloads against the published checksums.
 
 The older v1.0.0 package really is amd64/Python-3.12-specific: its private environment
 contains `rpds.cpython-312-x86_64-linux-gnu.so`. Do not force its architecture or
