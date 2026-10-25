@@ -7,9 +7,9 @@ name = "livingproof-capability-report"
 dynamic = ["version"]
 description = "Portable evidence and capability reports for Living Proof Labs"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 license = "Apache-2.0"
-dependencies = ["click==8.3.0", "jsonschema==4.25.1"]
+dependencies = ["click>=8.1,<9", "jsonschema>=4.10,<5"]
 
 [project.scripts]
 livingproof-capability-report = "livingproof_capability_report.cli:report"

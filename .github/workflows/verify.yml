@@ -10,7 +10,15 @@ jobs:
     permissions:
       contents: read
       checks: write
-    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: amd64
+            runner: ubuntu-24.04
+          - architecture: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,7 +40,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: dorny/test-reporter@d1b5dff021aa968b288b02285a8bf47471c5928a
         with:
-          name: Reporter tests
+          name: Reporter tests (${{ matrix.architecture }})
           path: artifacts/tests.xml
           reporter: python-xunit
           use-actions-summary: 'true'
@@ -43,7 +51,7 @@ jobs:
         if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
         uses: dorny/test-reporter@d1b5dff021aa968b288b02285a8bf47471c5928a
         with:
-          name: Reporter tests
+          name: Reporter tests (${{ matrix.architecture }})
           path: artifacts/tests.xml
           reporter: python-xunit
           use-actions-summary: 'false'
@@ -53,7 +61,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: reporter-tests-${{ github.event.pull_request.head.sha || github.sha }}
+          name: reporter-tests-${{ matrix.architecture }}-${{ github.event.pull_request.head.sha || github.sha }}
           path: artifacts/tests.xml
           if-no-files-found: error
       - run: task package
@@ -62,26 +70,40 @@ jobs:
       - run: task smoke
         env:
           VERSION: 0.0.0
+          RUNNER_LABEL: ${{ matrix.runner }}
+      - name: Generated compatibility evidence
+        if: ${{ !cancelled() }}
+        run: uv run --locked --no-sync python tools/compatibility_summary.py >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: ${{ always() && hashFiles('dist/**') != '' }}
         with:
-          name: packages-${{ github.event.pull_request.head.sha || github.sha }}
+          name: packages-${{ matrix.architecture }}-${{ github.event.pull_request.head.sha || github.sha }}
           path: dist/
           if-no-files-found: error
       - name: Package evidence
         run: |
-          echo 'Wheel, source distribution, Ubuntu 24.04 Debian package and installed-package Docker image passed clean installation checks.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Wheel, source distribution, architecture-independent Debian package and installed-package Docker image passed clean installation checks.' >> "$GITHUB_STEP_SUMMARY"
           echo 'Normal image entrypoint and shell override were tested separately. Packages and SHA256SUMS are in the run artifacts.' >> "$GITHUB_STEP_SUMMARY"
   release:
     needs: verify
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: write
-    uses: Living-Proof-Labs/collaboration-guidelines/.github/workflows/semantic-release.yml@v2.1.0
+    uses: Living-Proof-Labs/collaboration-guidelines/.github/workflows/semantic-release.yml@v2.2.0
+    with:
+      draft-release: true
   publish:
     needs: release
-    if: needs.release.outputs.published == 'true'
-    runs-on: ubuntu-24.04
+    if: needs.release.outputs.draft-created == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: amd64
+            runner: ubuntu-24.04
+          - architecture: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: write
       packages: write
@@ -106,28 +128,115 @@ jobs:
       - run: task setup
       - run: task package
       - run: task smoke
+        env:
+          RUNNER_LABEL: ${{ matrix.runner }}
+      - name: Generated release compatibility evidence
+        if: ${{ !cancelled() }}
+        run: uv run --locked --no-sync python tools/compatibility_summary.py >> "$GITHUB_STEP_SUMMARY"
       - name: Attach packages before attempting registry publication
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tar -C dist -czf dist/wheelhouse.tar.gz wheels
-          (cd dist && sha256sum wheelhouse.tar.gz >> SHA256SUMS)
-          gh release upload "$RELEASE_TAG" dist/*.whl dist/*.tar.gz dist/*.deb dist/image.tar dist/SHA256SUMS dist/requirements.txt
+          if [ "${{ matrix.architecture }}" = amd64 ]; then
+            gh release upload "$RELEASE_TAG" dist/*.whl dist/livingproof*.tar.gz dist/*.deb dist/requirements.txt
+          fi
+          gh release upload "$RELEASE_TAG" "dist/image-${{ matrix.architecture }}.tar" "dist/wheelhouse-${{ matrix.architecture }}.tar.gz" "dist/SHA256SUMS-${{ matrix.architecture }}" "dist/compatibility-${{ matrix.architecture }}.json" "dist/compatibility-${{ matrix.architecture }}.md"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: release-packages-${{ needs.release.outputs.version }}
+          name: release-packages-${{ needs.release.outputs.version }}-${{ matrix.architecture }}
           path: dist/
       - name: Publish exact version through the repository token
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          docker push "ghcr.io/living-proof-labs/livingproof-capability-report:$VERSION"
+          docker push "ghcr.io/living-proof-labs/livingproof-capability-report:$VERSION-${{ matrix.architecture }}"
           docker logout ghcr.io
-      - name: Verify anonymous registry consumption
+  manifest:
+    needs: [release, publish]
+    if: needs.release.outputs.draft-created == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      packages: write
+    env:
+      VERSION: ${{ needs.release.outputs.version }}
+      RELEASE_TAG: ${{ needs.release.outputs.git-tag }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Publish one versioned multi-architecture manifest
         run: |
-          docker image rm "ghcr.io/living-proof-labs/livingproof-capability-report:$VERSION"
-          docker pull "ghcr.io/living-proof-labs/livingproof-capability-report:$VERSION"
-          docker run --rm "ghcr.io/living-proof-labs/livingproof-capability-report:$VERSION" --help
-          echo "Released image verified: ghcr.io/living-proof-labs/livingproof-capability-report:$VERSION" >> "$GITHUB_STEP_SUMMARY"
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          image=ghcr.io/living-proof-labs/livingproof-capability-report
+          docker manifest create "$image:$VERSION" "$image:$VERSION-amd64" "$image:$VERSION-arm64"
+          docker manifest push "$image:$VERSION"
+          docker logout ghcr.io
+      - name: Attach combined public checksums
+        run: |
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --pattern 'SHA256SUMS-*'
+          cat SHA256SUMS-amd64 SHA256SUMS-arm64 > SHA256SUMS
+          gh release upload "$RELEASE_TAG" SHA256SUMS --repo "$GITHUB_REPOSITORY"
+  verify-registry:
+    needs: [release, manifest]
+    if: needs.release.outputs.draft-created == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: amd64
+            runner: ubuntu-24.04
+          - architecture: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    env:
+      VERSION: ${{ needs.release.outputs.version }}
+    steps:
+      - name: Anonymous native pull and command smoke
+        run: |
+          image=ghcr.io/living-proof-labs/livingproof-capability-report
+          docker pull "$image:$VERSION"
+          test "$(docker image inspect "$image:$VERSION" --format '{{.Architecture}}')" = "${{ matrix.architecture }}"
+          docker run --rm "$image:$VERSION" --version
+          docker run --rm --entrypoint /bin/sh "$image:$VERSION" -c 'livingproof-capability-report --help'
+          echo "Native ${{ matrix.architecture }} anonymous consumption passed for $image:$VERSION" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-packages-${{ needs.release.outputs.version }}-amd64
+          path: downloaded
+      - name: Test the same candidate all.deb on native distribution runtimes
+        run: |
+          (cd downloaded && sha256sum --ignore-missing -c SHA256SUMS-amd64)
+          curl -fsSL https://github.com/Living-Proof-Labs/capability-verifier/releases/download/v1.1.1/report.json -o downloaded/report.json
+          for distro in ubuntu:24.04 debian:12-slim debian:13-slim; do
+            docker run --rm -v "$PWD/downloaded:/packages:ro" "$distro" sh -ec '
+              apt-get update -qq
+              apt-get install -y /packages/*_all.deb
+              livingproof-capability-report --version
+              livingproof-capability-report render /packages/report.json > /tmp/table.txt
+              grep -q "Separate contexts" /tmp/table.txt
+              livingproof-capability-report render /packages/report.json --format json -o /tmp/copy.json
+              python3 -c "import json; assert len(json.load(open(\"/tmp/copy.json\"))[\"decisions\"]) == 8"
+            '
+          done
+  publish-release:
+    needs: [release, verify-registry]
+    if: needs.release.outputs.draft-created == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ needs.release.outputs.git-tag }}
+    steps:
+      - name: Publish tested draft with all assets attached
+        run: gh release edit "$RELEASE_TAG" --draft=false --repo "$GITHUB_REPOSITORY"
+      - name: Verify anonymous release asset download
+        run: |
+          base="https://github.com/$GITHUB_REPOSITORY/releases/download/$RELEASE_TAG"
+          version="${RELEASE_TAG#v}"
+          curl -fsSL "$base/SHA256SUMS" -o SHA256SUMS
+          curl -fsSL "$base/livingproof-capability-report_${version}_all.deb" -o "livingproof-capability-report_${version}_all.deb"
+          curl -fsSL "$base/compatibility-arm64.json" -o compatibility-arm64.json
+          curl -fsSL "$base/compatibility-amd64.json" -o compatibility-amd64.json
+          sha256sum --ignore-missing -c SHA256SUMS

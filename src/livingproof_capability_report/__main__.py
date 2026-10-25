@@ -1,3 +1,3 @@
 from .cli import report
 
-report()
+report(prog_name="livingproof-capability-report")

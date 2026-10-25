@@ -1,5 +1,9 @@
 # Living Proof Labs capability report
 
+[![Tests, builds and compatibility](https://github.com/Living-Proof-Labs/livingproof-capability-report/actions/workflows/verify.yml/badge.svg?branch=main)](https://github.com/Living-Proof-Labs/livingproof-capability-report/actions/workflows/verify.yml)
+[![Latest release](https://img.shields.io/github/v/release/Living-Proof-Labs/livingproof-capability-report)](https://github.com/Living-Proof-Labs/livingproof-capability-report/releases/latest)
+[![License](https://img.shields.io/github/license/Living-Proof-Labs/livingproof-capability-report)](LICENSE)
+
 An installable Python library and thin Click command group for portable capability
 results. Validate evidence bundles, grade under an explicit versioned policy, and
 render stored decisions as lossless JSON, offline HTML or explicitly flattened CSV.
@@ -10,37 +14,41 @@ No server, simulator, source checkout or Task installation is needed by consumer
 
 Download the wheel or Debian package and `SHA256SUMS` from
 [Releases](https://github.com/Living-Proof-Labs/livingproof-capability-report/releases).
-The Debian package targets Ubuntu 24.04 on amd64 and keeps dependencies in
-`/opt/livingproof-capability-report`; it does not install into system Python.
+The Debian package is `Architecture: all`: it ships only pure-Python reporter
+files and metadata. Apt installs architecture-appropriate `python3-click` and
+`python3-jsonschema` dependencies. All files are managed by dpkg; no pip writes
+into system Python, private interpreter, native wheel or vendored virtual
+environment is included. The native support matrix is documented below.
 
 ```sh
-sudo apt install ./livingproof-capability-report_1.0.0_amd64.deb
+sudo apt install ./livingproof-capability-report_1.2.0_all.deb
 livingproof-capability-report --help
 ```
 
-Alternatively, use a Python 3.12+ virtual environment (never system-wide pip):
+Alternatively, use a Python 3.11+ virtual environment (never system-wide pip):
 
 ```sh
 python3 -m venv .venv
-.venv/bin/pip install ./livingproof_capability_report-1.0.0-py3-none-any.whl
+.venv/bin/pip install ./livingproof_capability_report-1.2.0-py3-none-any.whl
 .venv/bin/livingproof-capability-report --help
 ```
 
-The wheel installer resolves dependencies normally; the downloadable wheelhouse
+The wheel installer resolves dependencies normally; the architecture-specific downloadable wheelhouse targets CPython 3.12 and
 supports offline installation with `--no-index --find-links=./wheels`. The source
 archive is also attached. Release package versions come from the release tag;
-there are no generated version commits. Python 3.12 on Linux is tested. Other
-Python versions and platforms are not yet verified.
+there are no generated version commits. Python 3.11, 3.12 and 3.13 are exercised through the distribution packages below.
+Other Python versions and platforms are not claimed.
 
-The release job builds `ghcr.io/living-proof-labs/livingproof-capability-report:1.0.0`
-with the installed wheel and the reporting command as its entrypoint. A saved
-`image.tar` is attached even if registry publication is unavailable; use
-`docker load -i image.tar` before the commands below. Registry publication and
+The release job builds `ghcr.io/living-proof-labs/livingproof-capability-report:1.2.0`
+with the installed wheel and the reporting command as its entrypoint. Saved `image-amd64.tar` and `image-arm64.tar` files are attached even if registry
+publication is unavailable. `docker load -i image-arm64.tar` loads the
+architecture-specific `:1.2.0-arm64` tag; use that tag when working offline.
+The registry's `:1.2.0` tag selects the native architecture automatically. Registry publication and
 anonymous availability are separate checks; see the release job for their results.
 
 ```sh
 docker run --rm -v "$PWD/bundle:/data:ro" \
-  ghcr.io/living-proof-labs/livingproof-capability-report:1.0.0 validate manifest.json
+  ghcr.io/living-proof-labs/livingproof-capability-report:1.2.0 validate manifest.json
 ```
 
 ## Report a portable bundle
@@ -142,9 +150,9 @@ Task delegates to locked native tools. `PACKAGE_NETWORK=host` optionally selects
 Docker networking for environments that require it; no daemon configuration changes.
 Packaging uses the official Python build backend, pip, venv and `dpkg-deb`.
 
-CI attaches wheel, source archive, Debian package, dependency wheelhouse, saved image
+CI attaches wheel, source archive, Debian package, native dependency wheelhouses, saved images
 and SHA-256 checksums. The shared release workflow is pinned to
-[collaboration-guidelines v2.1.0](https://github.com/Living-Proof-Labs/collaboration-guidelines/tree/v2.1.0).
+[collaboration-guidelines v2.2.0](https://github.com/Living-Proof-Labs/collaboration-guidelines/tree/v2.2.0).
 Release builds install the exact published package version. Clean containers test
 wheel and Debian installations without mounting source. A normal `docker run`
 tests the convenience entrypoint; a separate shell override tests the same image
@@ -153,6 +161,47 @@ startup behavior across CI providers is not claimed. JUnit expectation tests sta
 separate from the capability decisions. No PyPI publication or new credentials.
 
 Original code and fixture adaptations are Apache-2.0; see [LICENSE](LICENSE).
+
+## Debian and ARM support
+
+The authoritative compatibility results are generated by the
+[CI matrix](https://github.com/Living-Proof-Labs/livingproof-capability-report/actions/workflows/verify.yml),
+not manually contributed machine claims. Each run summary and package artifact
+contains `compatibility-amd64.json` / `.md` and `compatibility-arm64.json` / `.md`.
+Published versions attach those same machine-generated reports to
+[Releases](https://github.com/Living-Proof-Labs/livingproof-capability-report/releases).
+They record actual OS/version details, architecture, Python, installation method,
+native versus emulated execution, outcome and the evidence run URL. A missing
+probe is explicitly NOT_COMPLETED, never counted as supported.
+
+The current automated coverage targets Debian 12, Debian 13 and Ubuntu 24.04,
+plus wheel/source/image installations, on amd64 and arm64. Consult a release's
+records for what actually passed rather than assuming a configured target passed.
+
+The jobs use `ubuntu-24.04` and `ubuntu-24.04-arm` hosts, with matching-architecture
+clean distribution containers. This is native CPU testing, not QEMU emulation or
+testing on a particular Googlebook. Installation, commands, importable logic and
+removal are checked; distribution-owned dependencies remain after removal.
+Release verification installs the same candidate `all.deb` on both CPUs before
+publication, then checks anonymous downloads against the published checksums.
+
+The older v1.0.0 package really is amd64/Python-3.12-specific: its private environment
+contains `rpds.cpython-312-x86_64-linux-gnu.so`. Do not force its architecture or
+install it on Debian's Python 3.11/3.13. Version 1.2 uses distribution dependencies
+with tested minimum versions instead. Apt owns any native dependencies; their
+architecture labels remain intact. This is a packaging change, not a file rename.
+If upgrading an old installation, apt removes the old package-owned `/opt` files.
+
+Use `cat /etc/os-release`, `python3 --version`, and `dpkg --print-architecture`
+to match a device to these automated results. Debian variants outside the coverage are not
+verified. The ARM Docker image includes its own Python runtime, so a host's
+Python minor version does not control it; working Docker support is still needed.
+No changes to a user's device or system Python are performed by this project.
+
+Multi-architecture releases publish immutable version-specific `-amd64` and
+`-arm64` images, then one versioned manifest after both native checks pass.
+Published previous tags are unchanged. Check `SHA256SUMS` for the common wheel,
+source archive and `all.deb`, plus architecture-specific images and wheelhouses.
 
 ## Test results in GitHub
 
@@ -174,3 +223,9 @@ Existing `render report.json -o report.html` commands still default to HTML. Use
 `--format html`, or `--format csv` with stdout or a new output file. Library
 `render(report)` continues to default to lossless JSON. Scripts should name their
 format explicitly. Existing output files are never overwritten.
+
+Release automation assembles packages and checksums on a draft, verifies native
+image consumption and the same Debian asset on both architectures, then publishes
+the complete immutable release. Historical v1.0.1 and v1.1.0 release records lack
+package assets because their earlier workflow attempted upload after publication;
+use v1.2.0 or later for these packaging improvements.
