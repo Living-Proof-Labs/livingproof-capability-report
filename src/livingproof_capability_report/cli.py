@@ -18,8 +18,20 @@ def errors(function):
     return invoke
 
 
+def show_version(ctx, param, value):
+    if not value or ctx.resilient_parsing:
+        return
+    from .version import current_version
+    identity, package_version, source = current_version()
+    click.echo(f"livingproof-capability-report, version {identity}")
+    click.echo(f"Package: {package_version}; identity source: {source}")
+    ctx.exit()
+
+
 @click.group()
-@click.version_option(package_name="livingproof-capability-report")
+@click.option("--version", is_flag=True, is_eager=True, expose_value=False,
+              callback=show_version,
+              help="Show release or development identity, package version and provenance source.")
 def report():
     """Validate a bundle, grade its evidence, then render the saved report.
 

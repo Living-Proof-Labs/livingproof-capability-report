@@ -5,3 +5,4 @@ __pycache__/
 dist/
 artifacts/
 *.egg-info/
+src/livingproof_capability_report/_build_provenance.json

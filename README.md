@@ -21,7 +21,7 @@ into system Python, private interpreter, native wheel or vendored virtual
 environment is included. The native support matrix is documented below.
 
 ```sh
-sudo apt install ./livingproof-capability-report_1.2.0_all.deb
+sudo apt install ./python3-livingproof-common_1.0.0_all.deb ./livingproof-capability-report_*_all.deb
 livingproof-capability-report --help
 ```
 
@@ -29,11 +29,14 @@ Alternatively, use a Python 3.11+ virtual environment (never system-wide pip):
 
 ```sh
 python3 -m venv .venv
-.venv/bin/pip install ./livingproof_capability_report-1.2.0-py3-none-any.whl
+.venv/bin/pip install ./livingproof_common-1.0.0-py3-none-any.whl ./livingproof_capability_report-*.whl
 .venv/bin/livingproof-capability-report --help
 ```
 
-The wheel installer resolves dependencies normally; the architecture-specific downloadable wheelhouse targets CPython 3.12 and
+The common wheel and `python3-livingproof-common_1.0.0_all.deb` are included as
+unchanged, checksum-verified upstream release assets. Install the common Debian
+package alongside the reporter `.deb` with apt. No PyPI or apt index is assumed
+for this library. Other wheel dependencies resolve normally; the architecture-specific downloadable wheelhouse targets CPython 3.12 and
 supports offline installation with `--no-index --find-links=./wheels`. The source
 archive is also attached. Release package versions come from the release tag;
 there are no generated version commits. Python 3.11, 3.12 and 3.13 are exercised through the distribution packages below.
@@ -365,3 +368,60 @@ revision; both grades remain insufficient unless a retained failure takes
 precedence. History preserves the original declared evidence digests and prior
 integrity observations, but does not prove that missing or mismatched evidence
 bytes stayed unchanged. Use a separate bundle/report to record changed evidence.
+
+## Identify the version you are testing
+
+Version policy is supplied by released [livingproof-common v1.0.0](https://github.com/Living-Proof-Labs/livingproof-common/releases/tag/v1.0.0).
+The reporter supplies only its own package and repository context; no version
+algorithm is copied here. Build and runtime dependencies pin the same library.
+
+Run `livingproof-capability-report --version` and include both output lines in a
+problem report. For example:
+
+```text
+livingproof-capability-report, version 1.4.0-dev.3+branch.fix-input-a1b2c3d4.gabcdef123456.dirty
+Package: 1.4.1.dev3; identity source: checkout
+```
+
+The first line identifies source state. A clean checkout or build exactly on a
+`vX.Y.Z` release tag displays plain `X.Y.Z`. Development identities include the
+nearest release tag, Git's commit distance from that tag, a bounded branch label,
+the first 12 commit-hash characters, and `clean` or `dirty`. Tracked modifications,
+staged changes and nonignored untracked files count as dirty. Ignored build
+outputs do not. The dirty marker identifies a state, not a digest of uncommitted
+contents; two different dirty trees can display the same identity.
+
+Only branch names present in local `origin` tracking refs for this public
+repository are eligible for display. Other local branches display `local`;
+detached checkouts use a unique matching public tracking branch if available,
+otherwise `detached`. Public slugs are at most 33 characters, including a hash
+suffix to distinguish normalized/truncated names. These local observations are
+not authenticated origin or release attestations. URLs, local paths and private
+local branch names are not printed or stored in build provenance.
+
+`dev.empty` means Git has no commits. `dev.untagged.N` means there is no usable
+release tag and N commits are visible from the history root, not since a release.
+Shallow histories display `dev.unknown` with a `shallow` marker; missing Git or
+provenance displays `0.0.0-dev.unknown+nogit.unknown`. Unknown state is never
+presented as a clean release.
+
+The second line reports the installed PEP 440 package version and the identity
+source. `checkout` is refreshed from the reporter's own source tree on each call,
+so editable installs reflect changes without reinstalling; the caller's working
+directory is never used. `recorded-build` uses provenance embedded in the wheel
+or source distribution, retained by Debian and container packaging without `.git`.
+If a live checkout's Git cannot be read, `checkout-unavailable` reports unknown
+current identity instead of presenting a stale build snapshot as current.
+
+Package metadata still comes from the existing
+[Hatch-VCS](https://github.com/ofek/hatch-vcs) / setuptools-scm integration, with
+its stock `no-local-version` scheme to avoid wall-clock dirty dates. The display
+identity is separate from package ordering: it is SemVer-shaped but is not a
+release number to pass to an installer. Release `VERSION` overrides control
+package metadata, not observed source identity. A small
+[Hatch build hook](https://hatch.pypa.io/1.13/plugins/build-hook/custom/) embeds
+`_build_provenance.json`; source-distribution rebuilds retain that snapshot.
+No current timestamp is included. Identical source observations and package
+versions produce identical provenance JSON. The installed-package smoke tests
+check its retention and CLI agreement for wheels, source distributions, Debian
+packages and container images.
