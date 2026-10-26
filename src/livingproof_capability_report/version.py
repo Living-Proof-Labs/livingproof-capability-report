@@ -4,7 +4,6 @@ import json
 import os
 import re
 import subprocess
-import tomllib
 from importlib import metadata
 from pathlib import Path
 
@@ -157,13 +156,8 @@ def current_version(package_dir=None):
         package_version = saved["package_version"] if saved else "unavailable"
     # Only the known src layout can be live. Installed packages never probe cwd.
     root = package_dir.parent.parent
-    is_source = False
-    if package_dir.parent.name == "src":
-        try:
-            project = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
-            is_source = project.get("project", {}).get("name") == PACKAGE
-        except (OSError, ValueError):
-            pass
+    is_source = (package_dir.name == "livingproof_capability_report"
+                 and package_dir.parent.name == "src")
     if is_source and (root / ".git").exists():
         identity = source_identity(root)
         return display(identity or unknown()), package_version, (

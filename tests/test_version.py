@@ -236,3 +236,15 @@ def test_built_wheel_and_source_archive_retain_provenance(tmp_path):
     assert snapshots[0] == snapshots[1]
     assert snapshots[0]["package_version"] == "1.4.1.dev0"
     assert display(snapshots[0]["identity"]).endswith(".dirty")
+
+
+
+@pytest.mark.parametrize("change", ["invalid", "deleted"])
+def test_edited_pyproject_still_reports_live_dirty_identity(repository, change):
+    if change == "invalid":
+        (repository / "pyproject.toml").write_text("[broken configuration")
+    else:
+        (repository / "pyproject.toml").unlink()
+    identity, _, origin = current_version(repository / "src/livingproof_capability_report")
+    assert origin == "checkout"
+    assert identity.endswith(".dirty")
