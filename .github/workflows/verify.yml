@@ -62,7 +62,7 @@ jobs:
         if: always()
         with:
           name: reporter-tests-${{ matrix.architecture }}-${{ github.event.pull_request.head.sha || github.sha }}
-          path: artifacts/tests.xml
+          path: artifacts/
           if-no-files-found: error
       - run: task package
         env:

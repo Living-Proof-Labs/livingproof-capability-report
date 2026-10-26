@@ -12,6 +12,8 @@ from pathlib import Path, PurePosixPath
 
 from jsonschema import Draft202012Validator
 
+from .policy import POLICY_V2, decide, explain
+
 PASS, FAIL, INSUFFICIENT, INCOMPATIBLE = (
     "PASS", "FAIL", "INSUFFICIENT_EVIDENCE", "INCOMPATIBLE"
 )
@@ -124,19 +126,27 @@ def aggregate(results):
     return [{"context": decode(key), "result_ids": ids} for key, ids in sorted(groups.items())]
 
 
-def grade(loaded, policy=POLICY, human=None):
+def grade(loaded, policy=POLICY, human=None, previous=None):
     """Return a new report; keep every original result and contributed assessment."""
     bundle = validate_bundle(loaded["bundle"])
     contributions = copy.deepcopy(human or {"schema_version": "1.0.0", "assessments": []})
     schema = decode(Path(__file__).with_name("human.schema.json").read_text())
     Draft202012Validator(schema).validate(contributions)
+    if previous is not None:
+        render(previous)  # Validate stored input, without applying any current grading policy.
+        if (previous["source_bundle"] != bundle
+                or previous["evidence_state"] != loaded["evidence_state"]):
+            raise ValueError("Grade revision must retain the original bundle and evidence state")
+        contributions["assessments"] = (
+            copy.deepcopy(previous["human_contributions"]["assessments"])
+            + contributions["assessments"])
     known = {r["id"]: r for r in bundle["results"]}
     for contribution in contributions["assessments"]:
         result = known.get(contribution["result_id"])
         if result is None or contribution["result_sha256"] != digest(result):
             raise ValueError("Human contribution does not match the original result digest")
         a = contribution["assessment"]
-        if a["evaluator"] != "human-fixture" or a["kind"] != "human":
+        if a["evaluator"] not in {"human-fixture", "human-review"} or a["kind"] != "human":
             raise ValueError("Contribution must be a human assessment")
         if not set(a["evidence_ids"]) <= {e["id"] for e in result["evidence"]}:
             raise ValueError("Human contribution refers to undeclared evidence")
@@ -145,12 +155,23 @@ def grade(loaded, policy=POLICY, human=None):
         additions = [c["assessment"] for c in contributions["assessments"]
                      if c["result_id"] == result["id"]]
         assessments = result["assessments"] + additions
+        if len({a["id"] for a in assessments}) != len(assessments):
+            raise ValueError("Duplicate assessment identifier across original and human contributions")
+        for a in assessments:
+            if a["evaluator"] == "human-review" and any(
+                not isinstance(a["provenance"].get(key), str)
+                or not a["provenance"][key].strip() for key in ("reviewer", "recorded_at")
+            ):
+                raise ValueError("Human review requires reviewer and recorded_at provenance")
         states = loaded["evidence_state"].get(result["id"], {})
-        supported = (policy == POLICY and result["spec"]["capability"] == "pause"
+        supported = (policy in {POLICY, POLICY_V2} and result["spec"]["capability"] == "pause"
                      and tuple(result["spec"][key] for key in
                                ("repository", "tag", "commit", "revision")) in CONTRACTS)
+        members = dict(MEMBERS)
+        if policy == POLICY_V2:
+            members["human-review"] = "human"
         supported = supported and all(
-            a["evaluator"] in MEMBERS and a["kind"] == MEMBERS[a["evaluator"]]
+            a["evaluator"] in members and a["kind"] == members[a["evaluator"]]
             and a["version"] in ({"1.0.0", "1.1.0"} if a["evaluator"] == "pause-rules"
                                   else {"1.0.0"}) for a in assessments
         )
@@ -158,8 +179,21 @@ def grade(loaded, policy=POLICY, human=None):
             states.get(e["id"]) == "verified" for e in result["evidence"]
         )
         membership = Counter(a["evaluator"] for a in assessments)
-        if not supported:
+        compatibility = result["provenance"].get("compatibility")
+        if "compatibility" in result["provenance"] and (
+            not isinstance(compatibility, dict)
+            or compatibility.get("status") != INCOMPATIBLE
+            or compatibility.get("scope") != "execution"
+            or not isinstance(compatibility.get("reason"), str)
+            or not compatibility["reason"].strip()
+        ):
+            raise ValueError("Invalid execution compatibility declaration")
+        if compatibility is not None:
+            status, reason = INCOMPATIBLE, compatibility["reason"]
+        elif not supported:
             status, reason = INCOMPATIBLE, "Unsupported contract, evaluator or policy version"
+        elif policy == POLICY_V2:
+            status, reason = decide(assessments, complete)
         elif any(a["status"] == FAIL for a in assessments):
             status, reason = FAIL, "A retained assessment failed; failures are never averaged away"
         elif not complete:
@@ -171,11 +205,20 @@ def grade(loaded, policy=POLICY, human=None):
             status, reason = INSUFFICIENT, "Missing, duplicate or insufficient required assessment"
         else:
             status, reason = PASS, "All required assessments pass with verified evidence"
-        decisions.append({"result_id": result["id"], "status": status, "reason": reason})
-    return {"report_version": "1.0.0", "policy": policy, "source_bundle": bundle,
+        decision = {"result_id": result["id"], "status": status, "reason": reason}
+        if policy == POLICY_V2:
+            decision.update(explain(result, assessments, states))
+        decisions.append(decision)
+    report = {"report_version": "1.0.0", "policy": policy, "source_bundle": bundle,
             "source_bundle_sha256": digest(bundle), "human_contributions": contributions,
             "evidence_state": copy.deepcopy(loaded["evidence_state"]),
             "groups": aggregate(bundle["results"]), "decisions": decisions}
+    if policy == POLICY_V2 or previous is not None:
+        report["grade_revision"] = 1 if previous is None else previous.get("grade_revision", 1) + 1
+    if previous is not None:
+        report["previous_report_sha256"] = digest(previous)
+        report["previous_report"] = copy.deepcopy(previous)
+    return report
 
 
 def render(report, format="json"):
@@ -185,6 +228,17 @@ def render(report, format="json"):
     bundle = validate_bundle(report["source_bundle"])
     if digest(bundle) != report["source_bundle_sha256"]:
         raise ValueError("Source bundle digest does not match report")
+    if "previous_report" in report:
+        previous = report["previous_report"]
+        if (digest(previous) != report.get("previous_report_sha256")
+                or report.get("grade_revision") != previous.get("grade_revision", 1) + 1
+                or previous["source_bundle"] != bundle
+                or previous["evidence_state"] != report["evidence_state"]
+                or report["human_contributions"]["assessments"][:len(
+                    previous["human_contributions"]["assessments"])]
+                != previous["human_contributions"]["assessments"]):
+            raise ValueError("Invalid grade revision history")
+        render(previous)
     decisions = report["decisions"]
     if (len(decisions) != len(bundle["results"])
             or {d["result_id"] for d in decisions} != {r["id"] for r in bundle["results"]}
@@ -198,11 +252,21 @@ def render(report, format="json"):
              "environment": canonical(results[d["result_id"]]["environment"]),
              "status": d["status"], "reason": d["reason"]} for d in decisions]
     if format == "table":
-        return terminal_table(rows, aggregate(bundle["results"]))
+        text = terminal_table(rows, aggregate(bundle["results"]))
+        details = ["Policy: " + canonical(report["policy"]),
+                   "Grade revision: " + str(report.get("grade_revision", 1))]
+        for decision in decisions:
+            details.append(json.dumps(decision, ensure_ascii=True, sort_keys=True))
+        return text + "\n".join(details) + "\n"
     if format == "csv":
+        if any("assessment_details" in d for d in decisions):
+            for row, decision in zip(rows, decisions):
+                row.update(policy=report["policy"],
+                           grade_revision=str(report.get("grade_revision", 1)),
+                           assessments=canonical(decision.get("assessment_details", [])),
+                           evidence_groups=canonical(decision.get("evidence_groups", [])))
         stream = io.StringIO(newline="")
-        writer = csv.DictWriter(stream, fieldnames=["result_id", "spec_tag", "revision",
-                                                   "environment", "status", "reason"])
+        writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
         writer.writeheader()
         for row in rows:
             # Explicitly flattened and spreadsheet-safe; JSON remains lossless.

@@ -89,3 +89,12 @@ def test_help_teaches_runnable_workflow(command):
     assert [result.output.index(line) for line in commands] == sorted(
         result.output.index(line) for line in commands)
     assert "observation" in result.output
+
+
+
+def test_workflow_help_retains_grade_revision_options():
+    result = CliRunner().invoke(report, ["grade", "--help"])
+    assert result.exit_code == 0
+    assert "--previous" in result.output
+    assert "--require-pass" in result.output
+    assert "livingproof-capability-report render report.json" in result.output

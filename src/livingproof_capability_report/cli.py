@@ -71,10 +71,13 @@ def validate_command(manifest):
 @report.command("grade")
 @click.argument("manifest", type=click.Path(exists=True, dir_okay=False, path_type=Path))
 @click.option("--human", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option("--previous", type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              help="Retain a completed report and append a new grade revision.")
+@click.option("--require-pass", is_flag=True, help="Write report, then exit nonzero unless all pass.")
 @click.option("--policy", default="all-required-v1@1.0.0", show_default=True)
 @click.option("--output", "-o", required=True, type=click.Path(path_type=Path))
 @errors
-def grade_command(manifest, human, policy, output):
+def grade_command(manifest, human, previous, require_pass, policy, output):
     """Grade a bundle MANIFEST into a new JSON report (no overwriting).
 
     Use the bundle manifest, not an individual observation. From the repository
@@ -87,10 +90,13 @@ def grade_command(manifest, human, policy, output):
 
     Choose a new output filename when rerunning.
     """
-    result = grade(load_bundle(manifest), policy, decode(human.read_text()) if human else None)
+    result = grade(load_bundle(manifest), policy, decode(human.read_text()) if human else None,
+                   decode(previous.read_text()) if previous else None)
     with output.open("x", encoding="utf-8") as stream:
         stream.write(render(result))
     click.echo(str(output))
+    if require_pass and any(d["status"] != "PASS" for d in result["decisions"]):
+        raise click.ClickException("Report retained; not all coordinates passed")
 
 
 @report.command("render")
@@ -129,8 +135,11 @@ def render_command(report_file, format, output):
 @click.argument("manifest", type=click.Path(exists=True, dir_okay=False, path_type=Path))
 @click.option("--result", "result_id", required=True)
 @click.option("--output", "-o", required=True, type=click.Path(path_type=Path))
+@click.option("--assessment-id", default="human-review", show_default=True)
+@click.option("--reviewer", help="Self-declared reviewer identity; enables human-review evaluator.")
+@click.option("--recorded-at", help="Review timestamp, required with --reviewer.")
 @errors
-def human_template(manifest, result_id, output):
+def human_template(manifest, result_id, output, assessment_id, reviewer, recorded_at):
     """Create an insufficient assessment for a person to review and complete."""
     import json
     from .core import digest
@@ -138,14 +147,17 @@ def human_template(manifest, result_id, output):
     selected = next((r for r in bundle["results"] if r["id"] == result_id), None)
     if selected is None:
         raise ValueError("Unknown result identifier")
+    if bool(reviewer) != bool(recorded_at):
+        raise ValueError("Supply both --reviewer and --recorded-at")
     contribution = {"schema_version": "1.0.0", "assessments": [{
         "result_id": result_id, "result_sha256": digest(selected), "assessment": {
-            "id": "human-review", "evaluator": "human-fixture", "kind": "human",
+            "id": assessment_id, "evaluator": "human-review" if reviewer else "human-fixture",
+            "kind": "human",
             "version": "1.0.0", "mandatory": False, "status": "INSUFFICIENT_EVIDENCE",
             "rationale": "Review the referenced evidence and record your reasoning here",
             "evidence_ids": [e["id"] for e in selected["evidence"]],
-            "provenance": {"reviewer": "Replace with reviewer identity",
-                           "recorded_at": "Replace with review date",
+            "provenance": {"reviewer": reviewer or "Replace with reviewer identity",
+                           "recorded_at": recorded_at or "Replace with review date",
                            "source": "human file contribution; identity is self-declared"}}}]}
     with output.open("x", encoding="utf-8") as stream:
         stream.write(json.dumps(contribution, indent=2) + "\n")
