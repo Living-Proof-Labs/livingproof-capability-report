@@ -248,3 +248,32 @@ def test_edited_pyproject_still_reports_live_dirty_identity(repository, change):
     identity, _, origin = current_version(repository / "src/livingproof_capability_report")
     assert origin == "checkout"
     assert identity.endswith(".dirty")
+
+
+
+@pytest.mark.parametrize("annotated", [False, True])
+@pytest.mark.parametrize("competing_tag", ["v1.1.0-rc.1", "v1.1.0+build.1", "v01.1.0"])
+def test_nonrelease_tags_cannot_hide_older_valid_release(repository, annotated, competing_tag):
+    git(repository, "tag", "-d", "v1.4.0")
+    git(repository, "tag", "v1.0.0")
+    ahead(repository)
+    if annotated:
+        git(repository, "tag", "-a", competing_tag, "-m", "nonrelease fixture")
+    else:
+        git(repository, "tag", competing_tag)
+    identity = source_identity(repository)
+    assert identity["history"] == "tagged"
+    assert identity["base_version"] == "1.0.0"
+    assert identity["distance"] == 1
+    assert display(identity).startswith("1.0.0-dev.1+")
+    git(repository, "tag", "v1.1.0")
+    assert display(source_identity(repository)) == "1.1.0"
+
+
+def test_only_prerelease_tags_remain_explicitly_untagged(repository):
+    git(repository, "tag", "-d", "v1.4.0")
+    git(repository, "tag", "v1.1.0-rc.1")
+    identity = source_identity(repository)
+    assert identity["history"] == "untagged"
+    assert identity["base_version"] is None
+    assert display(identity).startswith("0.0.0-dev.untagged.1+")

@@ -81,8 +81,13 @@ def source_identity(root):
     if git(root, "rev-parse", "--is-shallow-repository") == "true":
         result["history"] = "shallow"
         return result
-    description = git(root, "describe", "--tags", "--long", "--abbrev=12",
-                      "--match=v[0-9]*.[0-9]*.[0-9]*")
+    # Git --match accepts globs, not regular expressions. Filter tag names
+    # before describe so a nearer prerelease cannot hide an older release.
+    tags = git(root, "tag", "--list", "v*")
+    releases = [tag for tag in (tags or "").splitlines()
+                if re.fullmatch(rf"v{RELEASE}", tag)]
+    description = (git(root, "describe", "--tags", "--long", "--abbrev=12",
+                       *(f"--match={tag}" for tag in releases)) if releases else None)
     match = re.fullmatch(rf"v({RELEASE})-(\d+)-g[0-9a-f]+", description or "")
     if match:
         result.update(base_version=match[1], distance=int(match[5]), history="tagged")
