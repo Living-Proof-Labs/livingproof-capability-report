@@ -12,7 +12,7 @@ wheels = out / "wheels"
 wheels.mkdir(exist_ok=True)
 # These native wheels are ONLY for the architecture-specific container/offline wheelhouse.
 subprocess.run(["python3", "-m", "pip", "download", "--only-binary=:all:",
-                "--dest", str(wheels), "-r", "/requirements.txt", str(wheel)], check=True)
+                "--dest", str(wheels), "-r", "/requirements.txt", str(wheel), str(out / "livingproof_common-1.0.0-py3-none-any.whl")], check=True)
 root = Path("/tmp/debian-stage")
 packages = root / "usr/lib/python3/dist-packages"
 with zipfile.ZipFile(wheel) as archive:
@@ -37,7 +37,7 @@ Version: {version}
 Section: python
 Priority: optional
 Architecture: all
-Depends: python3 (>= 3.11), python3-click (>= 8.1), python3-jsonschema (>= 4.10)
+Depends: python3-livingproof-common (= 1.0.0), python3 (>= 3.11), python3-click (>= 8.1), python3-jsonschema (>= 4.10)
 Maintainer: Living Proof Labs <rivet@rollerbot.ai>
 Description: Portable capability reports using distribution-managed Python dependencies
 """)

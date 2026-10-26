@@ -21,7 +21,7 @@ into system Python, private interpreter, native wheel or vendored virtual
 environment is included. The native support matrix is documented below.
 
 ```sh
-sudo apt install ./livingproof-capability-report_1.2.0_all.deb
+sudo apt install ./python3-livingproof-common_1.0.0_all.deb ./livingproof-capability-report_*_all.deb
 livingproof-capability-report --help
 ```
 
@@ -29,11 +29,14 @@ Alternatively, use a Python 3.11+ virtual environment (never system-wide pip):
 
 ```sh
 python3 -m venv .venv
-.venv/bin/pip install ./livingproof_capability_report-1.2.0-py3-none-any.whl
+.venv/bin/pip install ./livingproof_common-1.0.0-py3-none-any.whl ./livingproof_capability_report-*.whl
 .venv/bin/livingproof-capability-report --help
 ```
 
-The wheel installer resolves dependencies normally; the architecture-specific downloadable wheelhouse targets CPython 3.12 and
+The common wheel and `python3-livingproof-common_1.0.0_all.deb` are included as
+unchanged, checksum-verified upstream release assets. Install the common Debian
+package alongside the reporter `.deb` with apt. No PyPI or apt index is assumed
+for this library. Other wheel dependencies resolve normally; the architecture-specific downloadable wheelhouse targets CPython 3.12 and
 supports offline installation with `--no-index --find-links=./wheels`. The source
 archive is also attached. Release package versions come from the release tag;
 there are no generated version commits. Python 3.11, 3.12 and 3.13 are exercised through the distribution packages below.
@@ -367,6 +370,10 @@ integrity observations, but does not prove that missing or mismatched evidence
 bytes stayed unchanged. Use a separate bundle/report to record changed evidence.
 
 ## Identify the version you are testing
+
+Version policy is supplied by released [livingproof-common v1.0.0](https://github.com/Living-Proof-Labs/livingproof-common/releases/tag/v1.0.0).
+The reporter supplies only its own package and repository context; no version
+algorithm is copied here. Build and runtime dependencies pin the same library.
 
 Run `livingproof-capability-report --version` and include both output lines in a
 problem report. For example:

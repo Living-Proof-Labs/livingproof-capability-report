@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling==1.27.0", "hatch-vcs==0.5.0"]
+requires = ["hatchling==1.27.0", "hatch-vcs==0.5.0", "livingproof-common @ https://github.com/Living-Proof-Labs/livingproof-common/releases/download/v1.0.0/livingproof_common-1.0.0-py3-none-any.whl#sha256=8b7795748b54eeb89610f3716245f45db48ac0474465a5abbf974e7075c1476c"]
 build-backend = "hatchling.build"
 
 [project]
@@ -9,7 +9,7 @@ description = "Portable evidence and capability reports for Living Proof Labs"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
-dependencies = ["click>=8.1,<9", "jsonschema>=4.10,<5"]
+dependencies = ["livingproof-common==1.0.0", "click>=8.1,<9", "jsonschema>=4.10,<5"]
 
 [project.scripts]
 livingproof-capability-report = "livingproof_capability_report.cli:report"
@@ -33,3 +33,6 @@ dev = ["pytest==8.4.2", "ruff==0.14.2", "build==1.3.0"]
 addopts = "-ra"
 [tool.ruff]
 line-length = 100
+
+[tool.uv.sources]
+livingproof-common = { url = "https://github.com/Living-Proof-Labs/livingproof-common/releases/download/v1.0.0/livingproof_common-1.0.0-py3-none-any.whl" }

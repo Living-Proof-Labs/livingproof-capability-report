@@ -58,7 +58,7 @@ subprocess.run(["docker", "run", *network, *trust, *probe, "--rm", "-v", f"{dist
                check=True)
 debian = """set -eu
 apt-get update -qq
-apt-get install -y /packages/livingproof-capability-report_*_all.deb
+apt-get install -y /packages/livingproof-capability-report_*_all.deb /packages/python3-livingproof-common_*_all.deb
 cd /tmp
 livingproof-capability-report validate /input/manifest.json
 livingproof-capability-report grade /input/manifest.json -o /tmp/report.json

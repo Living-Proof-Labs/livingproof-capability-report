@@ -8,13 +8,15 @@ import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
-from livingproof_capability_report.version import current_version, read_provenance, PROVENANCE
+from livingproof_capability_report.version import current_version
+from livingproof_common.versioning import read_provenance, PROVENANCE
 import livingproof_capability_report
 
 identity, package_version, identity_source = current_version()
 if identity_source != "recorded-build":
     raise SystemExit("Installed package must retain recorded build provenance without a checkout")
-provenance = read_provenance(Path(livingproof_capability_report.__file__).parent / PROVENANCE)
+provenance = read_provenance(Path(livingproof_capability_report.__file__).parent / PROVENANCE,
+                             "livingproof-capability-report")
 if provenance is None or provenance["identity"]["commit"] is None:
     raise SystemExit("Installed package lost its build commit identity")
 
@@ -43,6 +45,6 @@ data = {
     "outcome": "PASS", "recorded_at": datetime.now(timezone.utc).isoformat(),
     "evidence": os.environ.get("COMPATIBILITY_EVIDENCE", "local execution"),
     "versions": {name: importlib.metadata.version(name)
-                 for name in ("livingproof-capability-report", "click", "jsonschema")},
+                 for name in ("livingproof-capability-report", "livingproof-common", "click", "jsonschema")},
 }
 Path(path).write_text(json.dumps(data, indent=2) + "\n")
