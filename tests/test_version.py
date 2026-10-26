@@ -252,7 +252,9 @@ def test_edited_pyproject_still_reports_live_dirty_identity(repository, change):
 
 
 @pytest.mark.parametrize("annotated", [False, True])
-@pytest.mark.parametrize("competing_tag", ["v1.1.0-rc.1", "v1.1.0+build.1", "v01.1.0"])
+@pytest.mark.parametrize("competing_tag", [
+    "v1.1.0-rc.1", "v1.1.0+build.1", "v01.1.0", "v1\u0661.1.0",
+])
 def test_nonrelease_tags_cannot_hide_older_valid_release(repository, annotated, competing_tag):
     git(repository, "tag", "-d", "v1.4.0")
     git(repository, "tag", "v1.0.0")

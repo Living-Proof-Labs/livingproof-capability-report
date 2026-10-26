@@ -14,7 +14,7 @@ PUBLIC_ORIGINS = {
     "https://github.com/living-proof-labs/livingproof-capability-report.git",
     "git@github.com:living-proof-labs/livingproof-capability-report.git",
 }
-RELEASE = r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
+RELEASE = r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
 
 
 def git(root, *args):
