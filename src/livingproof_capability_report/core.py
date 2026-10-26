@@ -163,7 +163,7 @@ def grade(loaded, policy=POLICY, human=None, previous=None):
         )
         membership = Counter(a["evaluator"] for a in assessments)
         compatibility = result["provenance"].get("compatibility")
-        if compatibility is not None and (
+        if "compatibility" in result["provenance"] and (
             not isinstance(compatibility, dict)
             or compatibility.get("status") != INCOMPATIBLE
             or compatibility.get("scope") != "execution"

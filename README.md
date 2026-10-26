@@ -302,8 +302,9 @@ livingproof-capability-report grade bundle/manifest.json \
 The new report embeds the complete `previous_report` and its
 `previous_report_sha256`, increments `grade_revision`, and retains cumulative
 human contributions alongside the unchanged `source_bundle` and `evidence_state`.
-A revision requires the same original bundle and observed evidence integrity;
-changed evidence requires a separate report. Contributions bind to the original
+A revision requires the same original bundle and recorded evidence integrity
+labels; a change in those labels requires a separate report. These labels do not
+snapshot evidence bytes (see the integrity limitation below). Contributions bind to the original
 result digest, cannot introduce undeclared references, and cannot reuse an
 assessment identifier within a run. Prior reports remain renderable without
 regrading, including when their policy is no longer supported. These digests
@@ -339,3 +340,11 @@ Both policies recognize this declaration before capability grading. It must have
 that status/scope and a nonempty reason; malformed declarations are rejected.
 Empty assessments or `original_result.status` alone do not establish execution
 incompatibility. Run and fixture provenance are preserved unchanged.
+
+Revision integrity checks compare the recorded labels (`verified`, `missing`,
+`digest_mismatch`), not snapshots of evidence bytes. Different contents that both
+mismatch the declared digest have the same label and can produce a linked
+revision; both grades remain insufficient unless a retained failure takes
+precedence. History preserves the original declared evidence digests and prior
+integrity observations, but does not prove that missing or mismatched evidence
+bytes stayed unchanged. Use a separate bundle/report to record changed evidence.

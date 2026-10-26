@@ -166,12 +166,13 @@ def test_execution_incompatibility_precedes_capability_grading(loaded, policy):
     assert decision["reason"] == result["provenance"]["compatibility"]["reason"]
 
 
-@pytest.mark.parametrize("declaration", ["INCOMPATIBLE", {},
+@pytest.mark.parametrize("policy", ["all-required-v1@1.0.0", POLICY_V2])
+@pytest.mark.parametrize("declaration", [None, "INCOMPATIBLE", {},
     {"status": "INCOMPATIBLE", "scope": "execution", "reason": " "}])
-def test_malformed_compatibility_rejected(loaded, declaration):
+def test_malformed_compatibility_rejected(loaded, declaration, policy):
     loaded["bundle"]["results"][0]["provenance"]["compatibility"] = declaration
     with pytest.raises(ValueError, match="compatibility"):
-        grade(loaded, POLICY_V2)
+        grade(loaded, policy)
 
 
 def test_installed_cli_human_revision(tmp_path):
@@ -194,3 +195,89 @@ def test_installed_cli_human_revision(tmp_path):
     assert revision["grade_revision"] == 2
     assert revision["decisions"][0]["status"] == "FAIL"
     assert first.read_bytes() == original_bytes
+
+
+@pytest.mark.parametrize("status, expected_exit", [
+    ("PASS", 0), ("INSUFFICIENT_EVIDENCE", 1), ("INCOMPATIBLE", 1),
+])
+def test_require_pass_exit_by_outcome(loaded, tmp_path, status, expected_exit):
+    import shutil
+    source = Path(__file__).parents[1] / "examples/bundle"
+    shutil.copytree(source, tmp_path / "bundle")
+    result = loaded["bundle"]["results"][0]
+    if status == "INCOMPATIBLE":
+        result["provenance"]["compatibility"] = {
+            "status": status, "scope": "execution", "reason": "Fixture execution mismatch"}
+        result["assessments"] = []
+    elif status == "INSUFFICIENT_EVIDENCE":
+        result["assessments"] = []
+    manifest = tmp_path / "bundle/manifest.json"
+    manifest.write_text(json.dumps(loaded["bundle"]))
+    output = tmp_path / "outcome.json"
+    run = subprocess.run([
+        "livingproof-capability-report", "grade", str(manifest), "--policy", POLICY_V2,
+        "--require-pass", "-o", str(output)], capture_output=True, text=True)
+    assert run.returncode == expected_exit
+    saved = json.loads(output.read_text())
+    assert saved["decisions"][0]["status"] == status
+    assert ("Report retained" in run.stderr) == (expected_exit == 1)
+
+
+def test_parsed_output_status_and_evidence_agree(loaded):
+    from html.parser import HTMLParser
+
+    class ReportHTML(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.tag = None
+            self.cells = []
+            self.lossless = ""
+
+        def handle_starttag(self, tag, attrs):
+            if tag in {"td", "pre"}:
+                self.tag = tag
+
+        def handle_endtag(self, tag):
+            if tag == self.tag:
+                self.tag = None
+
+        def handle_data(self, data):
+            if self.tag == "td":
+                self.cells.append(data)
+            elif self.tag == "pre":
+                self.lossless += data
+
+    saved = grade(loaded, POLICY_V2, contribution(loaded, status="FAIL"))
+    decision = json.loads(render(saved))["decisions"][0]
+    csv_row = next(csv.DictReader(io.StringIO(render(saved, "csv"))))
+    parser = ReportHTML()
+    parser.feed(render(saved, "html"))
+    terminal = render(saved, "table")
+    terminal_decision = next(json.loads(line) for line in terminal.splitlines()
+                             if line.startswith('{"assessment_details"'))
+    assert csv_row["status"] == parser.cells[4] == terminal_decision["status"] == decision["status"]
+    assert json.loads(parser.lossless)["decisions"][0] == decision
+    assert terminal_decision == decision
+    assert json.loads(csv_row["evidence_groups"]) == decision["evidence_groups"]
+    assert json.loads(csv_row["assessments"]) == decision["assessment_details"]
+
+
+def test_revision_integrity_labels_do_not_prove_unchanged_mismatched_bytes(tmp_path):
+    import shutil
+    source = Path(__file__).parents[1] / "examples/bundle"
+    shutil.copytree(source, tmp_path / "bundle")
+    manifest = tmp_path / "bundle/manifest.json"
+    bundle = json.loads(manifest.read_text())
+    bundle["results"] = [bundle["results"][0]]
+    manifest.write_text(json.dumps(bundle))
+    evidence = manifest.parent / bundle["results"][0]["evidence"][0]["path"]
+    evidence.write_text("first changed content")
+    first = grade(load_bundle(manifest), POLICY_V2)
+    evidence.write_text("different changed content")
+    second = grade(load_bundle(manifest), POLICY_V2, previous=first)
+    assert second["previous_report"] == first
+    assert second["source_bundle"] == first["source_bundle"] == bundle
+    assert second["evidence_state"] == first["evidence_state"]
+    assert second["decisions"][0]["status"] == "INSUFFICIENT_EVIDENCE"
+    assert first["decisions"][0]["evidence_groups"][0]["integrity"] == "digest_mismatch"
+    assert second["decisions"][0]["evidence_groups"][0]["integrity"] == "digest_mismatch"
