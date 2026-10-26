@@ -23,7 +23,10 @@ def test_observation_hint_keeps_failure_and_does_not_write(tmp_path, command):
     result = CliRunner().invoke(report, args)
     assert result.exit_code == 1
     assert "Invalid bundle" in result.output
-    assert "looks like a pause observation" in result.output
+    assert "looks like an individual pause observation" in result.output
+    assert result.output.startswith("Error: Expected a bundle manifest")
+    assert result.output.index("validate examples/bundle/manifest.json") < result.output.index(
+        "Details: Invalid bundle")
     assert "validate examples/bundle/manifest.json" in result.output
     assert "Do not add schema_version" in result.output
     assert not output.exists()
@@ -60,3 +63,29 @@ def test_quickstart_manifest_grade_render_flow(tmp_path):
     assert "PASS" in rendered.output
     assert "not an individual evidence/observation file" in runner.invoke(
         report, ["validate", "--help"]).output
+
+
+
+def test_real_user_command_leads_with_recovery(monkeypatch):
+    monkeypatch.chdir(EXAMPLES.parents[1])
+    result = CliRunner().invoke(report, ["validate", "examples/bundle/evidence/pass.json"])
+    assert result.exit_code == 1
+    assert result.output.startswith("Error: Expected a bundle manifest containing version")
+    assert "evidence paths and assessment references" in result.output
+    assert "livingproof-capability-report validate examples/bundle/manifest.json" in result.output
+    assert result.output.index("Use the containing bundle") < result.output.index("schema_version")
+
+
+@pytest.mark.parametrize("command", [[], ["validate"], ["grade"], ["render"]])
+def test_help_teaches_runnable_workflow(command):
+    result = CliRunner().invoke(report, [*command, "--help"])
+    assert result.exit_code == 0
+    commands = [
+        "livingproof-capability-report validate examples/bundle/manifest.json",
+        "livingproof-capability-report grade examples/bundle/manifest.json -o report.json",
+        "livingproof-capability-report render report.json",
+    ]
+    assert all(line in result.output for line in commands)
+    assert [result.output.index(line) for line in commands] == sorted(
+        result.output.index(line) for line in commands)
+    assert "observation" in result.output
