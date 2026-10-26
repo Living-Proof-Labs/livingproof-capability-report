@@ -265,3 +265,86 @@ builds this Docker target on native AMD64 and ARM64 and runs those same Task
 commands. This verifies the image and setup/verification lifecycle, not a live
 Codespaces session or a particular editor launch. No paid Codespace or new account
 grant is provisioned by these checks.
+
+## Retain human reviews as grade revisions
+
+The opt-in `all-required-v2@1.0.0` policy accepts multiple assessments for each
+required role (deterministic, mock-agent and human). The default remains
+`all-required-v1@1.0.0`; its membership rules and existing command exit behavior
+are unchanged. Bundle, human contribution and report versions remain `1.0.0`.
+No producer changes are required. Assessments retain evaluator identity/version,
+assessment identifier, evidence references, rationale, status and provenance.
+Mock-agent entries are fixture conclusions, never real model calls; the new
+policy explicitly marks them `fixture: true` in its explanation.
+
+The new policy supports the existing pinned pause contracts and evaluator versions,
+plus `human-review@1.0.0` with nonempty, self-declared `reviewer` and `recorded_at`
+provenance. It evaluates each run separately. Unsupported contracts, evaluators or
+policies yield `INCOMPATIBLE`, even if a retained assessment failed; the failure
+is still visible in the explanation. For supported inputs any retained failure
+wins, including mandatory failures. Otherwise every declared evidence digest must
+verify, all three roles must be present, every assessment must pass with evidence
+references, and at least one deterministic assessment must be mandatory. There
+is no majority vote or automatic replacement of dissent or insufficient reviews.
+
+```sh
+livingproof-capability-report grade bundle/manifest.json \
+  --policy all-required-v2@1.0.0 -o initial.json
+livingproof-capability-report human-template bundle/manifest.json \
+  --result RESULT_ID --assessment-id review-2026-10-26 \
+  --reviewer 'Reviewer name' --recorded-at '2026-10-26T00:00:00Z' -o human.json
+# Complete the rationale and conclusion in human.json, then:
+livingproof-capability-report grade bundle/manifest.json \
+  --policy all-required-v2@1.0.0 --previous initial.json --human human.json \
+  -o revision-2.json
+```
+
+The new report embeds the complete `previous_report` and its
+`previous_report_sha256`, increments `grade_revision`, and retains cumulative
+human contributions alongside the unchanged `source_bundle` and `evidence_state`.
+A revision requires the same original bundle and recorded evidence integrity
+labels; a change in those labels requires a separate report. These labels do not
+snapshot evidence bytes (see the integrity limitation below). Contributions bind to the original
+result digest, cannot introduce undeclared references, and cannot reuse an
+assessment identifier within a run. Prior reports remain renderable without
+regrading, including when their policy is no longer supported. These digests
+identify content; they do not authenticate reviewers or sign reports.
+
+New-policy decisions add `coordinate`, `assessment_details`, `evidence_groups`,
+`mandatory_failures` and `dissent`. Evidence groups associate references with
+assessment identifiers within a specific run, never combine grades across runs.
+JSON and HTML retain full history. Terminal output explains current decisions;
+CSV adds policy, revision, assessments and evidence groups as quoted JSON cells
+for new-policy reports, while legacy CSV columns remain unchanged.
+
+For continuous integration, `grade --require-pass` writes the report first and
+then exits 1 if any coordinate is not `PASS` (including incompatibility or
+insufficient evidence). Ordinary `grade` keeps its historical success-on-write
+behavior. Tests exercise the nonzero path and retain its JSON, HTML, CSV and
+terminal reports under `artifacts/`; both verification workflows upload artifacts
+regardless of test success. Expected failing capability cases are successful tests
+only when the asserted command actually fails and retains its report. Unexpected
+test failures continue to fail Task and continuous integration.
+
+The compatibility matrix producer can declare an execution mismatch through the
+existing extensible provenance field, without changing bundle version:
+
+```json
+{"provenance": {"compatibility": {
+  "status": "INCOMPATIBLE", "scope": "execution",
+  "reason": "Released executor supports pause revision 1.0.0 only"
+}}}
+```
+
+Both policies recognize this declaration before capability grading. It must have
+that status/scope and a nonempty reason; malformed declarations are rejected.
+Empty assessments or `original_result.status` alone do not establish execution
+incompatibility. Run and fixture provenance are preserved unchanged.
+
+Revision integrity checks compare the recorded labels (`verified`, `missing`,
+`digest_mismatch`), not snapshots of evidence bytes. Different contents that both
+mismatch the declared digest have the same label and can produce a linked
+revision; both grades remain insufficient unless a retained failure takes
+precedence. History preserves the original declared evidence digests and prior
+integrity observations, but does not prove that missing or mismatched evidence
+bytes stayed unchanged. Use a separate bundle/report to record changed evidence.
