@@ -28,7 +28,10 @@ def report():
 @click.argument("manifest", type=click.Path(exists=True, dir_okay=False, path_type=Path))
 @errors
 def validate_command(manifest):
-    """Validate bundle structure and inspect evidence integrity (no grading)."""
+    """Validate a bundle MANIFEST and its evidence integrity (no grading).
+
+    Pass the manifest JSON, not an individual evidence/observation file.
+    """
     loaded = load_bundle(manifest)
     click.echo("Valid bundle structure")
     for result, evidence in loaded["evidence_state"].items():
@@ -46,7 +49,10 @@ def validate_command(manifest):
 @click.option("--output", "-o", required=True, type=click.Path(path_type=Path))
 @errors
 def grade_command(manifest, human, policy, output):
-    """Create a new JSON report without overwriting any existing file."""
+    """Grade a bundle MANIFEST into a new JSON report (no overwriting).
+
+    Use render on the saved report to view its decisions.
+    """
     result = grade(load_bundle(manifest), policy, decode(human.read_text()) if human else None)
     with output.open("x", encoding="utf-8") as stream:
         stream.write(render(result))

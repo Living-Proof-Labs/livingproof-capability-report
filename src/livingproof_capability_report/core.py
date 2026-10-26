@@ -46,7 +46,20 @@ def validate_bundle(bundle):
     schema = decode(Path(__file__).with_name("bundle.schema.json").read_text())
     errors = sorted(Draft202012Validator(schema).iter_errors(bundle), key=lambda e: str(e.path))
     if errors:
-        raise ValueError(f"Invalid bundle at {list(errors[0].path)}: {errors[0].message}")
+        message = f"Invalid bundle at {list(errors[0].path)}: {errors[0].message}"
+        if (isinstance(bundle, dict)
+                and not {"schema_version", "producer", "results"}.intersection(bundle)
+                and isinstance(bundle.get("requested"), str)
+                and isinstance(bundle.get("observed"), str)
+                and isinstance(bundle.get("motion_inhibited"), bool)
+                and isinstance(bundle.get("assessments"), dict)):
+            message += (
+                "\nThis looks like a pause observation, not a bundle manifest. "
+                "Pass the containing bundle's manifest to validate or grade. "
+                "For the bundled example, run from the repository root: "
+                "livingproof-capability-report validate examples/bundle/manifest.json. "
+                "Do not add schema_version to the observation.")
+        raise ValueError(message)
     canonical(bundle)  # Reject non-finite numbers in extension/provenance fields too.
     ids = [r["id"] for r in bundle["results"]]
     if len(ids) != len(set(ids)):

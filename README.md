@@ -58,12 +58,29 @@ docker run --rm -v "$PWD/bundle:/data:ro" \
 
 ## Report a portable bundle
 
+With the reporter installed, run this quickstart from the repository root (or
+from the extracted source archive containing `examples/`):
+
 ```sh
-livingproof-capability-report validate bundle/manifest.json
-livingproof-capability-report grade bundle/manifest.json -o report.json
+livingproof-capability-report validate examples/bundle/manifest.json
+livingproof-capability-report grade examples/bundle/manifest.json -o report.json
+livingproof-capability-report render report.json
 livingproof-capability-report render report.json --format html -o report.html
 livingproof-capability-report render report.json --format csv -o report.csv
 ```
+
+`validate` checks the manifest structure and evidence digests; `grade` saves the
+policy decisions; `render` displays the saved report (a terminal table by default).
+For your own portable bundle, replace `examples/bundle/manifest.json` with its
+manifest path. Installed packages do not require a checkout to report your bundle.
+
+The **manifest** describes the results, contract versions, assessments and
+relative evidence paths with their digests. An **observation**, such as
+`examples/bundle/evidence/pass.json`, contains measurements referenced by that
+manifest. It is not standalone reporter input: pass the manifest to `validate`
+and `grade`, and the generated report to `render`. Do not add `schema_version`
+to observation files to make them look like manifests. Keep the evidence files
+at the relative paths declared by their manifest.
 
 Outputs must be new files. Rendering never invokes grading or silently substitutes
 a newer policy. JSON retains the entire source manifest, original producer
@@ -77,7 +94,7 @@ Importable API:
 
 ```python
 from livingproof_capability_report import load_bundle, grade, render
-saved = grade(load_bundle("bundle/manifest.json"))
+saved = grade(load_bundle("examples/bundle/manifest.json"))
 html = render(saved, "html")
 ```
 
