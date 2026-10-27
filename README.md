@@ -1,5 +1,8 @@
 # Living Proof Labs capability report
 
+Documentation previews: [build and verification guide](docs/verification.md) (14-day CI artifacts).
+Public manual activation is pending; see the [Pages plan](.github/PAGES.md).
+
 [![Tests, builds and compatibility](https://github.com/Living-Proof-Labs/livingproof-capability-report/actions/workflows/verify.yml/badge.svg?branch=main)](https://github.com/Living-Proof-Labs/livingproof-capability-report/actions/workflows/verify.yml)
 [![Latest release](https://img.shields.io/github/v/release/Living-Proof-Labs/livingproof-capability-report)](https://github.com/Living-Proof-Labs/livingproof-capability-report/releases/latest)
 [![License](https://img.shields.io/github/license/Living-Proof-Labs/livingproof-capability-report)](LICENSE)
