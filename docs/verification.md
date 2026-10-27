@@ -17,8 +17,8 @@ not a clean OS, Debian, Docker runtime or network-installation check; those rema
 in the existing package/smoke pipeline.
 
 Download the documentation preview from the documentation workflow's artifacts
-(retained **14 days**). Extract it and serve `html/` with
-`python -m http.server 8000 --directory html --bind 127.0.0.1`, then visit
+(retained **14 days**). Extract it and serve `docs/html/` with
+`python -m http.server 8000 --directory docs/html --bind 127.0.0.1`, then visit
 <http://127.0.0.1:8000/>. Browser assets and search require HTTP; opening a local
 file is not the supported preview path.
 
