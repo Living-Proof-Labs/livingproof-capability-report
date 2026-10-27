@@ -46,22 +46,23 @@ archive is also attached. Release package versions come from the release tag;
 there are no generated version commits. Python 3.11, 3.12 and 3.13 are exercised through the distribution packages below.
 Other Python versions and platforms are not claimed.
 
-The release job builds `ghcr.io/living-proof-labs/livingproof-capability-report:1.2.0`
-with the installed wheel and the reporting command as its entrypoint. Saved `image-amd64.tar` and `image-arm64.tar` files are attached even if registry
-publication is unavailable. `docker load -i image-arm64.tar` loads the
-architecture-specific `:1.2.0-arm64` tag; use that tag when working offline.
-A published multi-architecture registry tag selects the native architecture automatically.
-Version 1.2.0 initially encountered a `write_package` denial. The
-[recovery workflow](https://github.com/Living-Proof-Labs/livingproof-capability-report/actions/workflows/recover-registry.yml)
-verifies and publishes its original saved images after the approved repository
-Actions access correction. Consult that run for actual registry availability. Registry publication and
-anonymous availability are separate checks; see the release job for their results.
+Container images are published to public GHCR for Linux AMD64 and ARM64.
+Each new release includes its registry manifest digest, supported platforms and
+copy/paste pull and run commands in the release notes. Prefer that immutable
+reference for reproducible use. The manifest digest is distinct from Docker's
+local image ID; native release jobs verify both the installed version and that
+the pulled image matches the exact CI-tested image.
 
-```sh
-docker load -i image-arm64.tar  # use the amd64 asset/tag on amd64
-docker run --rm -v "$PWD/bundle:/data:ro" \
-  ghcr.io/living-proof-labs/livingproof-capability-report:1.2.0-arm64 validate manifest.json
-```
+Routine releases attach wheels, source archives, Debian packages, offline
+wheelhouses, compatibility reports and their checksums. Image archives remain
+short-lived internal CI transfers, retained for 14 days, rather than routine
+public release attachments. Historical saved-image release assets remain intact.
+For an explicit offline image export, first pull the release's digest for the
+required platform, tag it locally, and save that local tag with `docker save`.
+The receiving machine can use `docker load` with that archive.
+
+See [release notes](https://github.com/Living-Proof-Labs/livingproof-capability-report/releases)
+for immutable image instructions verified by both native architecture jobs.
 
 ## Report a portable bundle
 

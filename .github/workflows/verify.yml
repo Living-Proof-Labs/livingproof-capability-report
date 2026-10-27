@@ -79,6 +79,7 @@ jobs:
         if: ${{ always() && hashFiles('dist/**') != '' }}
         with:
           name: packages-${{ matrix.architecture }}-${{ github.event.pull_request.head.sha || github.sha }}
+          retention-days: 14
           path: dist/
           if-no-files-found: error
       - name: Package evidence
@@ -134,18 +135,13 @@ jobs:
       - name: Generated release compatibility evidence
         if: ${{ !cancelled() }}
         run: uv run --locked --no-sync python tools/compatibility_summary.py >> "$GITHUB_STEP_SUMMARY"
-      - name: Attach packages before attempting registry publication
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if [ "${{ matrix.architecture }}" = amd64 ]; then
-            gh release upload "$RELEASE_TAG" dist/*.whl dist/livingproof*.tar.gz dist/*.deb dist/requirements.txt
-          fi
-          gh release upload "$RELEASE_TAG" "dist/image-${{ matrix.architecture }}.tar" "dist/wheelhouse-${{ matrix.architecture }}.tar.gz" "dist/SHA256SUMS-${{ matrix.architecture }}" "dist/compatibility-${{ matrix.architecture }}.json" "dist/compatibility-${{ matrix.architecture }}.md"
+      - name: Record exact CI-tested local image identity
+        run: docker image inspect "ghcr.io/living-proof-labs/livingproof-capability-report:$VERSION-${{ matrix.architecture }}" --format '{{.Id}}' > "dist/image-id-${{ matrix.architecture }}.txt"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: release-packages-${{ needs.release.outputs.version }}-${{ matrix.architecture }}
+          retention-days: 14
           path: dist/
       - name: Publish exact version through the repository token
         env:
@@ -166,6 +162,10 @@ jobs:
       RELEASE_TAG: ${{ needs.release.outputs.git-tag }}
       GH_TOKEN: ${{ github.token }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.git-tag }}
+          persist-credentials: false
       - name: Publish one versioned multi-architecture manifest
         run: |
           echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
@@ -173,11 +173,14 @@ jobs:
           docker manifest create "$image:$VERSION" "$image:$VERSION-amd64" "$image:$VERSION-arm64"
           docker manifest push "$image:$VERSION"
           docker logout ghcr.io
-      - name: Attach combined public checksums
-        run: |
-          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --pattern 'SHA256SUMS-*'
-          cat SHA256SUMS-amd64 SHA256SUMS-arm64 > SHA256SUMS
-          gh release upload "$RELEASE_TAG" SHA256SUMS --repo "$GITHUB_REPOSITORY"
+      - name: Resolve anonymous registry manifest
+        run: python3 tools/registry_release.py resolve "$VERSION"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: registry-${{ needs.release.outputs.version }}
+          retention-days: 14
+          path: registry.json
+          if-no-files-found: error
   verify-registry:
     needs: [release, manifest]
     if: needs.release.outputs.draft-created == 'true'
@@ -193,14 +196,26 @@ jobs:
     env:
       VERSION: ${{ needs.release.outputs.version }}
     steps:
-      - name: Anonymous native pull and command smoke
+      - uses: actions/download-artifact@v4
+        with:
+          name: registry-${{ needs.release.outputs.version }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-packages-${{ needs.release.outputs.version }}-${{ matrix.architecture }}
+          path: native
+      - name: Anonymous immutable native pull and installed-package smoke
         run: |
+          export DOCKER_CONFIG="$(mktemp -d)"
           image=ghcr.io/living-proof-labs/livingproof-capability-report
-          docker pull "$image:$VERSION"
-          test "$(docker image inspect "$image:$VERSION" --format '{{.Architecture}}')" = "${{ matrix.architecture }}"
-          docker run --rm "$image:$VERSION" --version
-          docker run --rm --entrypoint /bin/sh "$image:$VERSION" -c 'livingproof-capability-report --help'
-          echo "Native ${{ matrix.architecture }} anonymous consumption passed for $image:$VERSION" >> "$GITHUB_STEP_SUMMARY"
+          digest=$(python3 -c 'import json; print(json.load(open("registry.json"))["manifest_digest"])')
+          reference="$image@$digest"
+          docker pull --platform "linux/${{ matrix.architecture }}" "$reference"
+          test "$(docker image inspect "$reference" --format '{{.Architecture}}')" = "${{ matrix.architecture }}"
+          test "$(docker image inspect "$reference" --format '{{.Id}}')" = "$(cat native/image-id-${{ matrix.architecture }}.txt)"
+          docker run --rm "$reference" --version | grep -F "$VERSION"
+          docker run --rm --entrypoint /bin/sh "$reference" -c 'livingproof-capability-report --help && python -m pip check'
+          docker run --rm --entrypoint python "$reference" -c 'import importlib.metadata as m, sys; assert m.version("livingproof-capability-report") == sys.argv[1]; print({n:m.version(n) for n in ("livingproof-capability-report", "livingproof-common", "click", "jsonschema")})' "$VERSION"
+          echo "Native ${{ matrix.architecture }} anonymous immutable consumption passed for $reference; local image ID equals the exact CI-tested image." >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/download-artifact@v4
         with:
           name: release-packages-${{ needs.release.outputs.version }}-amd64
@@ -230,6 +245,32 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       RELEASE_TAG: ${{ needs.release.outputs.git-tag }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.git-tag }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-packages-${{ needs.release.outputs.version }}-amd64
+          path: downloaded
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-packages-${{ needs.release.outputs.version }}-arm64
+          path: arm64
+      - name: Stage non-image packages and public checksums
+        run: |
+          cp arm64/wheelhouse-arm64.tar.gz arm64/compatibility-arm64.json arm64/compatibility-arm64.md downloaded/
+          python3 tools/release_assets.py downloaded public
+      - name: Attach verified packages
+        run: gh release upload "$RELEASE_TAG" public/* --repo "$GITHUB_REPOSITORY"
+      - uses: actions/download-artifact@v4
+        with:
+          name: registry-${{ needs.release.outputs.version }}
+      - name: Append verified immutable image instructions
+        run: |
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body > notes.md
+          python3 tools/registry_release.py notes registry.json >> notes.md
+          gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --notes-file notes.md
       - name: Publish tested draft with all assets attached
         run: gh release edit "$RELEASE_TAG" --draft=false --repo "$GITHUB_REPOSITORY"
       - name: Verify anonymous release asset download
