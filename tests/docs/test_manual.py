@@ -125,3 +125,70 @@ def test_documented_command_serves_extracted_artifact(tmp_path):
         server.shutdown()
         thread.join(timeout=5)
         server.server_close()
+
+
+def test_published_paths_and_heading_bookmarks_survive():
+    inventory = json.loads((ROOT / 'tests/docs/published-anchors.json').read_text())
+    assert inventory['source_commit'] == 'fa1a4e708f3d1330667967fe420adcdf18cbb8ef'
+    for name, anchors in inventory['pages'].items():
+        page = Page(SITE / name)
+        assert set(anchors) <= page.ids, (name, set(anchors) - page.ids)
+
+
+def test_common_navigation_and_exact_docs_identity_on_every_page():
+    record = json.loads((SITE / 'build.json').read_text())
+    repo = 'https://github.com/Living-Proof-Labs/livingproof-capability-report'
+    for path in SITE.glob('*.html'):
+        if path.name == '404.html':
+            continue
+        page = Page(path)
+        assert 'https://docs.livingprooflabs.com/' in page.links, path.name
+        assert repo in page.links and repo + '/issues' in page.links, path.name
+        local_links = {link.removeprefix('./') for link in page.links}
+        assert 'license.html' in local_links and 'contributing.html' in local_links, path.name
+        assert repo + '/tree/' + record['source_commit'] in page.links, path.name
+        assert 'Docs: development' in path.read_text(), path.name
+    assert record['guidelines'] == 'v6.0.0'
+    assert record['guidelines_commit'] == '52a2f274576dab20e96ee1152b6c8d187cfbf377'
+    provenance = (SITE / 'provenance.html').read_text()
+    assert record['package_version'] in provenance
+    assert 'Candidate metadata is not a claim of a published package release.' in provenance
+
+
+def test_api_reference_matches_installed_wheel_and_consumer_example(tmp_path):
+    import subprocess
+    import sys
+
+    env = {**os.environ, 'PYTHONPATH': str(ROOT / 'artifacts/docs/packages')}
+    probe = '''import inspect, json, sys
+from pathlib import Path
+import livingproof_capability_report as api
+assert Path(api.__file__).is_relative_to(Path(sys.argv[1]))
+loaded = api.load_bundle(sys.argv[2])
+saved = api.grade(loaded)
+assert len(saved['decisions']) == 8 and len(saved['groups']) == 4
+assert {d['status'] for d in saved['decisions']} == {'PASS', 'FAIL', 'INSUFFICIENT_EVIDENCE'}
+assert '<html' in api.render(saved, 'html')
+print(json.dumps([{'name': n, 'signature': str(inspect.signature(getattr(api, n))),
+                   'docstring': inspect.getdoc(getattr(api, n)) or ''} for n in api.__all__]))
+'''
+    actual = json.loads(subprocess.check_output(
+        [sys.executable, '-c', probe, str(ROOT / 'artifacts/docs/packages'),
+         str(ROOT / 'examples/bundle/manifest.json')], cwd=tmp_path, env=env, text=True))
+    assert actual == json.loads((SITE / 'api.json').read_text())
+    assert len(actual) == 5
+    text = (ROOT / 'artifacts/docs/source/api.md').read_text()
+    for function in actual:
+        assert function['name'] + function['signature'] in text
+        assert function['docstring'] in text
+
+
+def test_task_reference_matches_current_native_listing():
+    import subprocess
+
+    listing = json.loads(subprocess.check_output(['task', '--list', '--json'], cwd=ROOT, text=True))
+    text = (ROOT / 'artifacts/docs/source/tasks.md').read_text()
+    for task in listing['tasks']:
+        assert f"## {task['name']}" in text
+        summary = subprocess.check_output(['task', '--summary', task['name']], cwd=ROOT, text=True)
+        assert summary in text

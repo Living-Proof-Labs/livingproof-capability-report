@@ -1,0 +1,75 @@
+{
+  "source_commit": "fa1a4e708f3d1330667967fe420adcdf18cbb8ef",
+  "pages": {
+    "index.html": [
+      "living-proof-labs-capability-report",
+      "install-a-release",
+      "report-a-portable-bundle",
+      "bundle-and-grading-contract",
+      "compatibility-evidence",
+      "contribute-a-human-assessment",
+      "contributors-and-delivery",
+      "debian-and-arm-support",
+      "test-results-in-github",
+      "terminal-rendering-and-compatibility",
+      "container-development",
+      "retain-human-reviews-as-grade-revisions",
+      "identify-the-version-you-are-testing"
+    ],
+    "commands.html": [
+      "installed-command-reference",
+      "livingproof-capability-report",
+      "grade",
+      "human-template",
+      "render",
+      "validate"
+    ],
+    "terminal-help.html": [
+      "installed-terminal-help",
+      "livingproof-capability-report",
+      "livingproof-capability-report-grade",
+      "livingproof-capability-report-human-template",
+      "livingproof-capability-report-render",
+      "livingproof-capability-report-validate"
+    ],
+    "scenarios.html": [
+      "installed-feature-scenarios",
+      "test_validate_portable_bundle",
+      "test_require_pass_retains_report",
+      "test_render_stored_decisions",
+      "test_reject_malformed_manifest"
+    ],
+    "provenance.html": [
+      "development-documentation"
+    ],
+    "verification.html": [
+      "verification-and-manual-previews",
+      "initial-feature-inventory-and-gaps",
+      "publication-status"
+    ],
+    "tasks.html": [
+      "task-reference",
+      "check",
+      "docs",
+      "package",
+      "setup",
+      "smoke",
+      "test",
+      "verify",
+      "devbuild",
+      "devdocs",
+      "devshell",
+      "devverify",
+      "docsprepare",
+      "docsverify",
+      "testdocs",
+      "testfeatures"
+    ],
+    "pages.html": [
+      "reporter-pages-activation-plan"
+    ],
+    "working-agreement.html": [
+      "working-agreement"
+    ]
+  }
+}

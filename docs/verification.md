@@ -53,10 +53,33 @@ navigation, mobile layout, search-result opening and theme behavior still requir
 independent artifact review; static checks do not establish browser usability.
 The parent independent reviewer must exercise the delivered preview before merge.
 
-## Publication status
+<a id="publication-status"></a>
 
-The public manual is not yet enabled or verified. See the
-[Pages activation plan](../.github/PAGES.md) for the exact approval boundary.
-Only after live verification should the README link prominently to the public
-manual and the organization documentation directory include it. Related tooling:
+## Published manual
+
+Start with the [reporter manual](https://docs.livingprooflabs.com/livingproof-capability-report/).
+Live browser verification on 2026-10-27 confirmed source revision
+`fa1a4e708f3d1330667967fe420adcdf18cbb8ef`, command reference, four passing bounded
+scenarios, navigation, search for `manifest` (19 results), navigation to the grade
+anchor and reload, and dark theme. This records that deployed snapshot; it does
+not establish that every installed release has the same behavior.
+
+See [Pages operation](../.github/PAGES.md) for deployment boundaries and repeat
+live verification after delivery. Related tooling:
 [Livingproof manual](https://docs.livingprooflabs.com/livingproof/).
+
+## Recipe adoption scope
+
+The manual applies the released v6.0.0 documentation recipe. Authored Markdown
+remains canonical; generated API, Click, Task and scenario pages describe the
+installed candidate and observed results. The five functions in the package's
+`__all__` are its public Python API; internal helpers are outside that interface.
+Public API signatures and docstrings are inspected from the same installed wheel
+as the command reference. The original published HTML paths and heading anchors
+are retained and checked against the initial live-manual inventory.
+
+The reporter continues to own bundle schemas, grading policies and rendering
+contracts. Organization vision and the full manual directory belong to
+[Documentation home](https://docs.livingprooflabs.com/); this adoption moves no
+organization content. Common navigation and current rendered-manual links are
+bounded reading exceptions, not floating executable dependencies or guidance.

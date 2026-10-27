@@ -15,7 +15,9 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'artifacts/docs'
 SOURCES = {'README.md': 'index.md', 'docs/verification.md': 'verification.md',
-           '.github/PAGES.md': 'pages.md', 'AGENTS.md': 'working-agreement.md'}
+           '.github/PAGES.md': 'pages.md', 'AGENTS.md': 'working-agreement.md',
+           'CONTRIBUTING.md': 'contributing.md', 'docs/api.md': 'api.md',
+           'docs/license.md': 'license.md'}
 REPO = 'https://github.com/Living-Proof-Labs/livingproof-capability-report'
 
 
@@ -61,11 +63,14 @@ def results():
 def rewrite(text, source, commit):
     def link(match):
         target = match[2]
+        if target == 'https://docs.livingprooflabs.com/livingproof-capability-report/':
+            return f'[{match[1]}](index.md)'
         if ':' in target or target.startswith('#'):
             return match[0]
         path, sep, fragment = target.partition('#')
         path = posixpath.normpath(posixpath.join(posixpath.dirname(source), path))
-        destination = SOURCES.get(path, f'{REPO}/blob/{commit}/{path}')
+        destination = 'LICENSE' if path == 'LICENSE' else SOURCES.get(
+            path, f'{REPO}/blob/{commit}/{path}')
         return f'[{match[1]}]({destination}{sep}{fragment})'
     return re.sub(r'\[([^\]]+)\]\(([^\s)]+)\)', link, text)
 
@@ -81,8 +86,8 @@ def build():
         'source_commit': commit,
         'source_dirty': bool(run(['git', 'status', '--porcelain'], cwd=ROOT).strip()),
         'wheel': wheel.name, 'wheel_sha256': digest(wheel),
-        'guidelines': 'v5.0.0',
-        'guidelines_commit': 'dd4b0391a9a66fa7944f6655aac57c67d3f8c002',
+        'guidelines': 'v6.0.0',
+        'guidelines_commit': '52a2f274576dab20e96ee1152b6c8d187cfbf377',
         'sources': {path: digest(ROOT / path) for path in SOURCES},
         'scenario_source_sha256': digest(ROOT / 'tests/features/test_installed.py'),
         'results_sha256': (digest(ROOT / 'artifacts/feature-tests.xml')
@@ -92,16 +97,7 @@ def build():
         'scenario_results': outcomes,
     }
     for path, dest in SOURCES.items():
-        (source / dest).write_text(
-            f'> Development snapshot `{commit}`. [Version and evidence](provenance.md).\n\n'
-            + rewrite((ROOT / path).read_text(), path, commit))
-    (source / 'build.json').write_text(json.dumps(provenance, indent=2) + '\n')
-    (source / 'provenance.md').write_text(
-        '# Development documentation\n\n'
-        'This is a development snapshot, not documentation for every installed release.\n'
-        'Historical manuals are not maintained. Consult the corresponding source tag.\n\n'
-        '[Machine-readable build record](build.json)\n\n```json\n' +
-        json.dumps(provenance, indent=2) + '\n```\n')
+        (source / dest).write_text(rewrite((ROOT / path).read_text(), path, commit))
     lines = ['# Installed feature scenarios', '',
              'Four bounded examples, not exhaustive coverage or robot safety certification.',
              'No software line coverage was measured. See verification for gaps.', '']
@@ -110,7 +106,9 @@ def build():
                   '```text', description, '```', '']
     (source / 'scenarios.md').write_text('\n'.join(lines))
     env = {**os.environ, 'PYTHONPATH': str(OUT / 'packages')}
-    probe = '''import json
+    probe = '''import inspect
+import importlib.metadata
+import json
 from pathlib import Path
 import click
 import livingproof_capability_report as package
@@ -124,9 +122,23 @@ def walk(command, name):
         for child in command.list_commands(ctx):
             rows += walk(command.get_command(ctx, child), name + ' ' + child)
     return rows
-print(json.dumps(walk(report, 'livingproof-capability-report')))
+api = [{'name': name, 'signature': str(inspect.signature(getattr(package, name))),
+        'docstring': inspect.getdoc(getattr(package, name)) or ''}
+       for name in package.__all__]
+print(json.dumps({'commands': walk(report, 'livingproof-capability-report'),
+                  'api': api, 'package_version': importlib.metadata.version(
+                      'livingproof-capability-report')}))
 '''
-    commands = json.loads(run([sys.executable, '-c', probe], cwd=OUT, env=env))
+    installed = json.loads(run([sys.executable, '-c', probe], cwd=OUT, env=env))
+    commands = installed['commands']
+    provenance['package_version'] = installed['package_version']
+    (source / 'api.json').write_text(json.dumps(installed['api'], indent=2) + '\n')
+    with (source / 'api.md').open('a') as stream:
+        stream.write('\n## Installed signatures and docstrings\n\n')
+        for function in installed['api']:
+            stream.write(f"### {function['name']}\n\n```python\n"
+                         f"{function['name']}{function['signature']}\n```\n\n"
+                         f"{function['docstring']}\n\n")
     (source / 'commands.json').write_text(json.dumps(commands, indent=2))
     (source / 'commands.md').write_text(
         '# Installed command reference\n\n'
@@ -135,16 +147,43 @@ print(json.dumps(walk(report, 'livingproof-capability-report')))
         '    :depth: 1\n')
     (source / 'terminal-help.md').write_text('# Installed terminal help\n\n' + '\n'.join(
         f"## {c['name']}\n\n```text\n{c['help']}\n```\n" for c in commands))
+    (source / 'build.json').write_text(json.dumps(provenance, indent=2) + '\n')
+    (source / 'provenance.md').write_text(
+        '# Development documentation\n\n'
+        f"[Exact documentation source]({REPO}/tree/{commit})\n\n"
+        f"Installed candidate package metadata: `{installed['package_version']}`.\n"
+        'Candidate metadata is not a claim of a published package release.\n'
+        f'[Published package releases]({REPO}/releases) are separate from this manual.\n\n'
+        'Historical manuals are not maintained. Consult the corresponding '
+        f'[source release tag]({REPO}/tags) for earlier behavior.\n\n'
+        '[Machine-readable build record](build.json)\n\n```json\n' +
+        json.dumps(provenance, indent=2) + '\n```\n')
     task_list = json.loads(run(['task', '--list', '--json'], cwd=ROOT))
-    (source / 'tasks.md').write_text('# Task reference\n\n' + '\n'.join(
+    (source / 'tasks.md').write_text('# Task reference\n\n'
+        'Use setup/verify/docs commands inside the prepared environment. `dev:*` tasks\n'
+        'are host wrappers requiring Docker; do not invoke them inside the container.\n\n'
+        + '\n'.join(
         f"## {t['name']}\n\n```text\n" + run(['task', '--summary', t['name']], cwd=ROOT) +
         '\n```\n' for t in task_list['tasks']))
+    identity = (f'> [Docs: development · {commit[:12]}]({REPO}/tree/{commit})'
+                + (' (uncommitted changes)' if provenance['source_dirty'] else '')
+                + '. [Version and source](provenance.md).\n\n')
+    for page in source.glob('*.md'):
+        page.write_text(identity + page.read_text())
     config = yaml.safe_load((ROOT / 'docs/site/mkdocs.yml').read_text())
-    config.update(docs_dir='source', site_dir='html', nav=[
-        {'Home': 'index.md'}, {'Commands': 'commands.md'}, {'Terminal help': 'terminal-help.md'},
-        {'Scenarios': 'scenarios.md'}, {'Version and evidence': 'provenance.md'},
-        {'Verification': 'verification.md'}, {'Tasks': 'tasks.md'},
-        {'Pages': 'pages.md'}, {'Working agreement': 'working-agreement.md'}])
+    config.update(docs_dir='source', site_dir='html', repo_url=REPO, repo_name='Source', nav=[
+        {'Documentation home': 'https://docs.livingprooflabs.com/'},
+        {'Start here': 'index.md'},
+        {'Guides': [{'Installation and quickstart': 'index.html#install-a-release'},
+                    {'Python consumer example': 'api.md'}]},
+        {'Reference': [{'Commands': 'commands.md'}, {'API': 'api.md'},
+                       {'Tasks': 'tasks.md'},
+                       {'Contracts': 'index.html#bundle-and-grading-contract'},
+                       {'Installed terminal help': 'terminal-help.md'}]},
+        {'Scenarios and results': 'scenarios.md'}, {'Verification': 'verification.md'},
+        {'Contribute': 'contributing.md'}, {'Version and source': 'provenance.md'},
+        {'Help / report an issue': REPO + '/issues'}, {'License': 'license.md'},
+        {'Maintainers': [{'Pages': 'pages.md'}, {'Working agreement': 'working-agreement.md'}]}])
     (OUT / 'mkdocs.yml').write_text(yaml.safe_dump(config, sort_keys=False))
     subprocess.run([sys.executable, '-m', 'zensical', 'build', '--clean', '-f',
                     str(OUT / 'mkdocs.yml')], cwd=OUT, env=env, check=True)

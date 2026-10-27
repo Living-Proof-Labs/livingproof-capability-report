@@ -1,10 +1,11 @@
 # Living Proof Labs capability report
 
+**Start here: [documentation](https://docs.livingprooflabs.com/livingproof-capability-report/).**
+
 Documentation previews: [build and verification guide](docs/verification.md) (14-day CI artifacts).
-Public manual activation is pending; see the [Pages plan](.github/PAGES.md).
 
 [![Tests, builds and compatibility](https://github.com/Living-Proof-Labs/livingproof-capability-report/actions/workflows/verify.yml/badge.svg?branch=main)](https://github.com/Living-Proof-Labs/livingproof-capability-report/actions/workflows/verify.yml)
-[![Latest release](https://img.shields.io/github/v/release/Living-Proof-Labs/livingproof-capability-report)](https://github.com/Living-Proof-Labs/livingproof-capability-report/releases/latest)
+[![Package release](https://img.shields.io/github/v/release/Living-Proof-Labs/livingproof-capability-report)](https://github.com/Living-Proof-Labs/livingproof-capability-report/releases/latest)
 [![License](https://img.shields.io/github/license/Living-Proof-Labs/livingproof-capability-report)](LICENSE)
 
 An installable Python library and thin Click command group for portable capability
@@ -174,6 +175,10 @@ The bundled examples already include recorded human fixtures, so adding a human
 review to them demonstrates duplicate handling rather than filling a missing review.
 
 ## Contributors and delivery
+
+Read [Contribute](CONTRIBUTING.md) for the deliberately adopted
+[collaboration-guidelines v6.0.0](https://github.com/Living-Proof-Labs/collaboration-guidelines/tree/v6.0.0)
+and local instructions. This guidance pin is separate from the release workflow below.
 
 Install Python 3.12, uv, Docker and Task 3.54.0, then use `task setup`, `task verify`,
 `VERSION=0.0.0 task package` and `VERSION=0.0.0 task smoke` from a fresh checkout.
