@@ -23,7 +23,11 @@ class Page(HTMLParser):
         super().__init__()
         self.ids = set()
         self.links = []
+        self.text = []
         self.feed(path.read_text())
+
+    def handle_data(self, data):
+        self.text.append(data)
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
@@ -186,9 +190,16 @@ print(json.dumps([{'name': n, 'signature': str(inspect.signature(getattr(api, n)
 def test_task_reference_matches_current_native_listing():
     import subprocess
 
-    listing = json.loads(subprocess.check_output(['task', '--list', '--json'], cwd=ROOT, text=True))
+    listing = json.loads(subprocess.check_output(['task', '--color=false', '--list', '--json'], cwd=ROOT, text=True))
     text = (ROOT / 'artifacts/docs/source/tasks.md').read_text()
     for task in listing['tasks']:
         assert f"## {task['name']}" in text
-        summary = subprocess.check_output(['task', '--summary', task['name']], cwd=ROOT, text=True)
+        summary = subprocess.check_output(['task', '--color=false', '--summary', task['name']], cwd=ROOT, text=True)
         assert summary in text
+
+
+def test_rendered_task_reference_has_no_terminal_color_controls():
+    text = ''.join(Page(SITE / 'tasks.html').text)
+    assert 'uv run --locked --no-sync' in text
+    assert 'docker compose build development' in text
+    assert not re.search(r'\x1b|\x9b|\[[0-9;]*m', text)

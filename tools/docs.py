@@ -158,12 +158,12 @@ print(json.dumps({'commands': walk(report, 'livingproof-capability-report'),
         f'[source release tag]({REPO}/tags) for earlier behavior.\n\n'
         '[Machine-readable build record](build.json)\n\n```json\n' +
         json.dumps(provenance, indent=2) + '\n```\n')
-    task_list = json.loads(run(['task', '--list', '--json'], cwd=ROOT))
+    task_list = json.loads(run(['task', '--color=false', '--list', '--json'], cwd=ROOT))
     (source / 'tasks.md').write_text('# Task reference\n\n'
         'Use setup/verify/docs commands inside the prepared environment. `dev:*` tasks\n'
         'are host wrappers requiring Docker; do not invoke them inside the container.\n\n'
         + '\n'.join(
-        f"## {t['name']}\n\n```text\n" + run(['task', '--summary', t['name']], cwd=ROOT) +
+        f"## {t['name']}\n\n```text\n" + run(['task', '--color=false', '--summary', t['name']], cwd=ROOT) +
         '\n```\n' for t in task_list['tasks']))
     identity = (f'> [Docs: development · {commit[:12]}]({REPO}/tree/{commit})'
                 + (' (uncommitted changes)' if provenance['source_dirty'] else '')
