@@ -62,6 +62,7 @@ jobs:
         if: always()
         with:
           name: reporter-tests-${{ matrix.architecture }}-${{ github.event.pull_request.head.sha || github.sha }}
+          retention-days: 14
           path: artifacts/
           if-no-files-found: error
       - run: task package

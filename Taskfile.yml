@@ -12,9 +12,9 @@ tasks:
     cmds:
       - uv run --locked --no-sync --no-python-downloads ruff check .
   test:
-    desc: Run locked pytest --junitxml=artifacts/tests.xml
+    desc: Run locked pytest tests --ignore=tests/features --ignore=tests/docs --junitxml=artifacts/tests.xml
     cmds:
-      - uv run --locked --no-sync --no-python-downloads pytest --junitxml=artifacts/tests.xml
+      - uv run --locked --no-sync --no-python-downloads pytest tests --ignore=tests/features --ignore=tests/docs --junitxml=artifacts/tests.xml
   verify:
     desc: Run checks and tests
     cmds:
@@ -44,3 +44,33 @@ tasks:
     interactive: true
     cmds:
       - docker compose run --rm --user "$(id -u):$(id -g)" development bash -c 'task setup && exec bash'
+
+  docs:prepare:
+    desc: Build and install the documentation candidate wheel
+    cmds:
+      - uv run --locked --no-sync python tools/docs.py prepare
+  test:features:
+    desc: Exercise four named installed reporter scenarios
+    cmds:
+      - uv run --locked --no-sync pytest tests/features --junitxml=artifacts/feature-tests.xml
+  docs:
+    desc: Render Markdown and installed Click references with observed results
+    cmds:
+      - uv run --locked --no-sync python tools/docs.py build
+  test:docs:
+    desc: Check generated navigation, references, provenance and local links
+    cmds:
+      - uv run --locked --no-sync pytest tests/docs --junitxml=artifacts/docs-tests.xml
+  docs:verify:
+    desc: Build and verify installed scenarios and the manual
+    cmds:
+      - task: docs:prepare
+      - task: test:features
+      - task: docs
+      - task: test:docs
+
+  dev:docs:
+    platforms: [linux]
+    desc: Verify the manual in the shared Docker development environment
+    cmds:
+      - docker compose run --rm --user "$(id -u):$(id -g)" development bash -c 'task setup && task docs:verify'
