@@ -310,6 +310,13 @@ def markdown(report, links=None):
                     for r, a in pick[:1]
                 ]
                 lines += ["", f"{_robot(s['system'])}: " + " ".join(cells)]
+        from . import links as evidence_links
+
+        for s in runs:
+            found = evidence_links.lines(report, s)
+            if found:
+                head = f"**Evidence links · {_robot(s['system'])}**" if len(runs) > 1 else None
+                lines += ["", *([head] if head else []), *found]
         if links:
             row = [
                 f"[{label}]({links[key]})"

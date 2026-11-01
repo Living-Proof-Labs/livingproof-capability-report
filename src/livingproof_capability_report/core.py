@@ -14,6 +14,7 @@ from pathlib import Path, PurePosixPath
 from jsonschema import Draft202012Validator
 
 from . import hallway
+from . import links as elinks
 from .policy import POLICY_V2, decide, explain
 
 PASS, FAIL, INSUFFICIENT, INCOMPATIBLE = ("PASS", "FAIL", "INSUFFICIENT_EVIDENCE", "INCOMPATIBLE")
@@ -149,7 +150,7 @@ def aggregate(results):
     return [{"context": decode(key), "result_ids": ids} for key, ids in sorted(groups.items())]
 
 
-def grade(loaded, policy=POLICY, human=None, previous=None):
+def grade(loaded, policy=POLICY, human=None, previous=None, evidence_links=None):
     """Return a new report; keep every original result and contributed assessment."""
     bundle = validate_bundle(loaded["bundle"])
     contributions = copy.deepcopy(human or {"schema_version": "1.0.0", "assessments": []})
@@ -275,6 +276,8 @@ def grade(loaded, policy=POLICY, human=None, previous=None):
     runs = hallway.summaries(bundle, decisions)
     if runs:
         report["summaries"] = runs
+    if evidence_links:
+        report["evidence_links"] = elinks.merge(evidence_links)
     if policy == POLICY_V2 or previous is not None:
         report["grade_revision"] = 1 if previous is None else previous.get("grade_revision", 1) + 1
     if previous is not None:
@@ -311,6 +314,8 @@ def render(report, format="json", links=None):
         or any(d["status"] not in {PASS, FAIL, INSUFFICIENT, INCOMPATIBLE} for d in decisions)
     ):
         raise ValueError("Invalid stored decisions")
+    if "evidence_links" in report:
+        elinks.validate(report["evidence_links"])
     if format == "json":
         return json.dumps(report, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
     if format == "markdown":
@@ -369,6 +374,24 @@ def render(report, format="json", links=None):
         "<tr>" + "".join(f"<td>{escape(v)}</td>" for v in row.values()) + "</tr>" for row in rows
     )
     full = escape(json.dumps(report, indent=2, ensure_ascii=False, allow_nan=False))
+    evidence = ""
+    stored = report.get("evidence_links")
+    if stored:
+        items = [("CI run", stored["run"])] if stored.get("run") else []
+        items += [
+            (
+                e["label"]
+                if "seed" not in e
+                else f"seed {e['seed']} ({e['status']}): {e['label']}",
+                e["url"],
+            )
+            for e in stored["links"]
+        ]
+        evidence = (
+            "<h2>Evidence</h2><ul>"
+            + "".join(f"<li><a href='{escape(u)}'>{escape(t)}</a></li>" for t, u in items)
+            + "</ul>"
+        )
     return (
         "<!doctype html><html lang='en'><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width'>"
@@ -382,7 +405,9 @@ def render(report, format="json", links=None):
         "<table><thead><tr><th>Result</th><th>Catalog</th><th>Revision</th>"
         "<th>Environment</th><th>Status</th><th>Reason</th></tr></thead><tbody>"
         + table
-        + "</tbody></table><details><summary>Full lossless report</summary><pre>"
+        + "</tbody></table>"
+        + evidence
+        + "<details><summary>Full lossless report</summary><pre>"
         + full
         + "</pre></details></html>\n"
     )

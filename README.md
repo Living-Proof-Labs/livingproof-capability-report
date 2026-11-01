@@ -459,3 +459,19 @@ are in `<details>`, followed by a footer. Thumbnails appear only when results ca
 rendered markdown as one pull-request comment under `<!-- livingproof-capability-report -->`,
 updating that comment in place on later runs. It uses `GITHUB_TOKEN` (needs
 `pull-requests: write`) and the REST API directly; `--dry-run` posts nothing.
+
+`grade --evidence-links FILE` (repeatable) stores CI evidence links in `report.json` under
+`evidence_links`, outside the source bundle, so no digest or grade changes:
+
+```json
+{"run": "https://github.com/OWNER/REPO/actions/runs/1",
+ "links": [{"label": "evidence", "url": "https://...", "kind": "artifact"},
+           {"label": "video", "url": "https://...", "kind": "video", "seed": 1, "status": "PASS"}]}
+```
+
+Kinds are `artifact`, `video` and `mcap`; URLs must be https. Entries with an empty URL (an
+upload that was skipped) are dropped. Markdown shows an **Evidence:** row and one line per
+linked trial; HTML lists them under Evidence. Rendering refuses a per-trial link whose status
+disagrees with the stored decision for that seed. The PR comment is the rendered
+`report.md`, so it carries the same links. capability-verifier's walk-hallway workflow
+writes the links file from its `media` job (run URL, MCAP and per-seed video artifacts).

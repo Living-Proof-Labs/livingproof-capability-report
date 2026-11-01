@@ -338,3 +338,78 @@ def test_released_v161_commit_grades_like_v160(tmp_path):
     new = grade(load_bundle(bundle(tmp_path / "new", commit=released)))
     assert [d["status"] for d in new["decisions"]] == [d["status"] for d in old["decisions"]]
     assert "INCOMPATIBLE" not in {d["status"] for d in new["decisions"]}
+
+
+RUN = "https://github.com/Living-Proof-Labs/livingproof-unitree-g1/actions/runs/7"
+ART = RUN + "/artifacts/"
+
+
+def _links(**extra):
+    return {
+        "run": RUN,
+        "links": [
+            {"label": "evidence", "url": ART + "1", "kind": "artifact"},
+            {"label": "MCAP, all trials", "url": ART + "2", "kind": "mcap"},
+            {"label": "video", "url": ART + "3", "kind": "video", "seed": 1, "status": "PASS"},
+            {"label": "MCAP", "url": ART + "4", "kind": "mcap", "seed": 1, "status": "PASS"},
+            {"label": "video", "url": ART + "5", "kind": "video", "seed": 4, "status": "FAIL"},
+            {"label": "video", "url": "", "kind": "video", "seed": 2, "status": "FAIL"},
+        ],
+        **extra,
+    }
+
+
+def test_evidence_links_stored_in_report_and_rendered(tmp_path):
+    report = grade(load_bundle(bundle(tmp_path)), evidence_links=[_links()])
+    stored = report["evidence_links"]
+    assert stored["run"] == RUN
+    assert len(stored["links"]) == 5  # the empty URL (skipped upload) is dropped
+    assert report["source_bundle_sha256"] == digest(report["source_bundle"])  # no digest change
+    md = render(report, "markdown")
+    assert f"**Evidence:** [CI run]({RUN}) · [evidence]({ART}1) · [MCAP, all trials]({ART}2)" in md
+    assert f"- ▶️ seed 4 (fail): [video]({ART}5)" in md
+    assert f"- ▶️ seed 1 (pass): [video]({ART}3) · [MCAP]({ART}4)" in md
+    assert md.index("seed 4 (fail)") < md.index("seed 1 (pass)") < md.index("<details>")
+    page = render(report, "html")
+    assert f"<a href='{ART}5'>seed 4 (FAIL): video</a>" in page
+    assert json.loads(render(report, "json"))["evidence_links"] == stored
+
+
+def test_evidence_links_absent_leaves_markdown_unchanged(tmp_path):
+    loaded = load_bundle(bundle(tmp_path))
+    md = render(grade(loaded), "markdown")
+    assert "Evidence:" not in md and "evidence_links" not in grade(loaded)
+
+
+def test_evidence_link_status_must_match_stored_decision(tmp_path):
+    bad = _links()
+    bad["links"][2] = dict(bad["links"][2], seed=4)  # seed 4 failed; a "pass" video is a lie
+    report = grade(load_bundle(bundle(tmp_path)), evidence_links=[bad])
+    with pytest.raises(ValueError, match="seed 4 says PASS, stored decision is FAIL"):
+        render(report, "markdown")
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        {"label": "x", "url": "http://insecure", "kind": "artifact"},
+        {"label": "x](javascript:1)", "url": ART + "1", "kind": "artifact"},
+        {"label": "x", "url": ART + "1 extra", "kind": "artifact"},
+        {"label": "x", "url": ART + "1", "kind": "zip"},
+        {"label": "x", "url": ART + "1", "kind": "video", "seed": 1},
+        {"label": "x", "url": ART + "1", "kind": "artifact", "note": "?"},
+    ],
+)
+def test_evidence_links_rejected(tmp_path, entry):
+    with pytest.raises(ValueError):
+        grade(load_bundle(bundle(tmp_path)), evidence_links=[{"links": [entry]}])
+
+
+def test_evidence_links_files_merge_and_must_agree_on_run(tmp_path):
+    loaded = load_bundle(bundle(tmp_path))
+    first = {"run": RUN, "links": [{"label": "a", "url": ART + "1", "kind": "artifact"}]}
+    second = {"links": [{"label": "b", "url": ART + "2", "kind": "artifact"}]}
+    merged = grade(loaded, evidence_links=[first, second])["evidence_links"]
+    assert [e["label"] for e in merged["links"]] == ["a", "b"] and merged["run"] == RUN
+    with pytest.raises(ValueError, match="different CI runs"):
+        grade(loaded, evidence_links=[first, {"run": RUN + "0", "links": []}])

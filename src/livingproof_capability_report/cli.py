@@ -104,9 +104,16 @@ def validate_command(manifest):
     "--require-pass", is_flag=True, help="Write report, then exit nonzero unless all pass."
 )
 @click.option("--policy", default="all-required-v1@1.0.0", show_default=True)
+@click.option(
+    "--evidence-links",
+    "evidence_links",
+    multiple=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="JSON file of CI run, artifact and per-trial media links; repeatable, merged in order.",
+)
 @click.option("--output", "-o", required=True, type=click.Path(path_type=Path))
 @errors
-def grade_command(manifest, human, previous, require_pass, policy, output):
+def grade_command(manifest, human, previous, require_pass, policy, evidence_links, output):
     """Grade a bundle MANIFEST into a new JSON report (no overwriting).
 
     Use the bundle manifest, not an individual observation. From the repository
@@ -124,6 +131,7 @@ def grade_command(manifest, human, previous, require_pass, policy, output):
         policy,
         decode(human.read_text()) if human else None,
         decode(previous.read_text()) if previous else None,
+        [decode(p.read_text(encoding="utf-8")) for p in evidence_links] or None,
     )
     with output.open("x", encoding="utf-8") as stream:
         stream.write(render(result))
