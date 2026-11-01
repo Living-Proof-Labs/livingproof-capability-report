@@ -14,10 +14,14 @@ CAPABILITY = "walk-hallway"
 SPECS = "https://github.com/Living-Proof-Labs/robot-capability-specs"
 # Matched by repository, commit and revision. Specs v1.6.0 is 34681d2, the #24 merge
 # commit. Its tree is identical to b4ba31e, the pre-merge candidate that prototype
-# bundles were produced from, so both are accepted.
+# bundles were produced from, so both are accepted. Specs #25 (a378e92, unreleased)
+# rewords walk-hallway.feature (wall_contacts "an empty list", k-of-N Examples) with no
+# change to an evaluator, threshold or policy; it is accepted as a pre-release candidate
+# until its release commit is added here.
 CONTRACTS = {
     (SPECS, "34681d20bf13ba0a836e03ac09869c7fb13665f1", "0.1.0"),  # v1.6.0
     (SPECS, "b4ba31eb2c7eaca2721d68d5d375260e2a114449", "0.1.0"),  # pre-merge candidate
+    (SPECS, "a378e92216fd9498984f290e677b9f4e7a33232c", "0.1.0"),  # specs #25 candidate
 }
 EVALUATORS = {
     "hallway-exit-reached": "1.0.0",
