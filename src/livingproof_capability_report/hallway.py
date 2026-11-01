@@ -367,7 +367,7 @@ def markdown(report, links=None):
     lines += ["", "<sub>" + " · ".join(footer) + "</sub>"]
     notes = sorted({s["prototype"] for s in runs if s.get("prototype")})
     if notes:
-        lines.append("<sub>" + " ".join(notes) + "</sub>")
+        lines += ["", "<sub>" + " ".join(notes) + "</sub>"]  # own paragraph, one line
     return "\n".join(lines) + "\n"
 
 
