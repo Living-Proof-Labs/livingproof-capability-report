@@ -448,5 +448,9 @@ Wilson 95% interval and the plan's required passes.
 
     livingproof-capability-report render report.json --format markdown -o summary.md
 
-writes a PR-comment summary with failures grouped by check. Its layout is a draft
-awaiting Art's review.
+writes a PR-comment summary in Art's layout. It starts with a stable
+`<!-- livingproof-verification -->` marker so CI can update one comment in place. Then it gives
+a header (scenario, N, speed, pass bar, lock sha), a grade table, a plain verdict and
+"Why runs failed" bullets (each seed counted once, under its first failure). Per-seed tables
+are in `<details>`, followed by a footer. Thumbnails appear only when results carry
+`provenance.assets`. `--report-url`, `--clips-url` and `--lock-diff-url` add a links row.

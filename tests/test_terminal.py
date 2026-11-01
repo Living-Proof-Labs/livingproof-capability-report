@@ -42,8 +42,12 @@ def test_explicit_formats_stdout_and_file(saved, tmp_path, format):
     # Click normalizes newlines on stdout; exported files retain the format's line endings.
     assert result.output == render(value, format).replace("\r\n", "\n")
     output = tmp_path / ("export." + format)
-    assert runner.invoke(report, ["render", str(path), "--format", format,
-                                 "-o", str(output)]).exit_code == 0
+    assert (
+        runner.invoke(
+            report, ["render", str(path), "--format", format, "-o", str(output)]
+        ).exit_code
+        == 0
+    )
     assert output.read_bytes() == render(value, format).encode()
 
 

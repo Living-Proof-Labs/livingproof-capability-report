@@ -1,4 +1,5 @@
 """Policy and revision behavior through public API and installed CLI entry point."""
+
 import copy
 import csv
 import io
@@ -23,13 +24,26 @@ def loaded():
 
 def contribution(loaded, identifier="review-1", status="PASS"):
     result = loaded["bundle"]["results"][0]
-    return {"schema_version": "1.0.0", "assessments": [{
-        "result_id": result["id"], "result_sha256": digest(result), "assessment": {
-            "id": identifier, "evaluator": "human-review", "kind": "human",
-            "version": "1.0.0", "status": status, "mandatory": False,
-            "rationale": "Reviewed observation; self-declared identity",
-            "evidence_ids": [result["evidence"][0]["id"]],
-            "provenance": {"reviewer": "Fixture reviewer", "recorded_at": "2026-10-26"}}}]}
+    return {
+        "schema_version": "1.0.0",
+        "assessments": [
+            {
+                "result_id": result["id"],
+                "result_sha256": digest(result),
+                "assessment": {
+                    "id": identifier,
+                    "evaluator": "human-review",
+                    "kind": "human",
+                    "version": "1.0.0",
+                    "status": status,
+                    "mandatory": False,
+                    "rationale": "Reviewed observation; self-declared identity",
+                    "evidence_ids": [result["evidence"][0]["id"]],
+                    "provenance": {"reviewer": "Fixture reviewer", "recorded_at": "2026-10-26"},
+                },
+            }
+        ],
+    }
 
 
 def test_human_revision_retains_history_and_dissent(loaded):
@@ -61,12 +75,18 @@ def test_v1_unchanged_and_legacy_revision(loaded):
     assert grade(loaded, human=contribution(loaded))["decisions"][0]["status"] == "INCOMPATIBLE"
 
 
-@pytest.mark.parametrize("mutation, expected", [
-    ("mandatory-fail", "FAIL"), ("missing-human", "INSUFFICIENT_EVIDENCE"),
-    ("incompatible", "INCOMPATIBLE"), ("missing-evidence", "INSUFFICIENT_EVIDENCE"),
-    ("no-mandatory", "INSUFFICIENT_EVIDENCE"), ("no-refs", "INSUFFICIENT_EVIDENCE"),
-    ("insufficient", "INSUFFICIENT_EVIDENCE"),
-])
+@pytest.mark.parametrize(
+    "mutation, expected",
+    [
+        ("mandatory-fail", "FAIL"),
+        ("missing-human", "INSUFFICIENT_EVIDENCE"),
+        ("incompatible", "INCOMPATIBLE"),
+        ("missing-evidence", "INSUFFICIENT_EVIDENCE"),
+        ("no-mandatory", "INSUFFICIENT_EVIDENCE"),
+        ("no-refs", "INSUFFICIENT_EVIDENCE"),
+        ("insufficient", "INSUFFICIENT_EVIDENCE"),
+    ],
+)
 def test_policy_reasons(loaded, mutation, expected):
     result = loaded["bundle"]["results"][0]
     if mutation == "mandatory-fail":
@@ -135,8 +155,16 @@ def test_revision_rejects_replay_changed_evidence_and_history(loaded):
 def test_installed_cli_preserves_reports_before_nonzero_exit(tmp_path):
     source = Path(__file__).parents[1] / "examples/bundle/manifest.json"
     output = tmp_path / "failed.json"
-    command = ["livingproof-capability-report", "grade", str(source), "--policy", POLICY_V2,
-               "--require-pass", "-o", str(output)]
+    command = [
+        "livingproof-capability-report",
+        "grade",
+        str(source),
+        "--policy",
+        POLICY_V2,
+        "--require-pass",
+        "-o",
+        str(output),
+    ]
     run = subprocess.run(command, capture_output=True, text=True)
     assert run.returncode == 1
     assert "Report retained" in run.stderr
@@ -159,16 +187,20 @@ def test_execution_incompatibility_precedes_capability_grading(loaded, policy):
     result["original_result"]["status"] = "INCOMPATIBLE"
     assert grade(loaded, policy)["decisions"][0]["status"] == "INSUFFICIENT_EVIDENCE"
     result["provenance"]["compatibility"] = {
-        "status": "INCOMPATIBLE", "scope": "execution",
-        "reason": "Released executor supports pause revision 1.0.0 only"}
+        "status": "INCOMPATIBLE",
+        "scope": "execution",
+        "reason": "Released executor supports pause revision 1.0.0 only",
+    }
     decision = grade(loaded, policy)["decisions"][0]
     assert decision["status"] == "INCOMPATIBLE"
     assert decision["reason"] == result["provenance"]["compatibility"]["reason"]
 
 
 @pytest.mark.parametrize("policy", ["all-required-v1@1.0.0", POLICY_V2])
-@pytest.mark.parametrize("declaration", [None, "INCOMPATIBLE", {},
-    {"status": "INCOMPATIBLE", "scope": "execution", "reason": " "}])
+@pytest.mark.parametrize(
+    "declaration",
+    [None, "INCOMPATIBLE", {}, {"status": "INCOMPATIBLE", "scope": "execution", "reason": " "}],
+)
 def test_malformed_compatibility_rejected(loaded, declaration, policy):
     loaded["bundle"]["results"][0]["provenance"]["compatibility"] = declaration
     with pytest.raises(ValueError, match="compatibility"):
@@ -179,44 +211,98 @@ def test_installed_cli_human_revision(tmp_path):
     source = Path(__file__).parents[1] / "examples/bundle/manifest.json"
     first, second, human = [tmp_path / name for name in ("first.json", "second.json", "human.json")]
     prefix = ["livingproof-capability-report"]
-    subprocess.run(prefix + ["grade", str(source), "--policy", POLICY_V2, "-o", str(first)],
-                   check=True, capture_output=True)
+    subprocess.run(
+        prefix + ["grade", str(source), "--policy", POLICY_V2, "-o", str(first)],
+        check=True,
+        capture_output=True,
+    )
     identifier = load_bundle(source)["bundle"]["results"][0]["id"]
-    subprocess.run(prefix + ["human-template", str(source), "--result", identifier,
-                   "--assessment-id", "additional-human", "--reviewer", "Fixture reviewer",
-                   "--recorded-at", "2026-10-26", "-o", str(human)], check=True, capture_output=True)
+    subprocess.run(
+        prefix
+        + [
+            "human-template",
+            str(source),
+            "--result",
+            identifier,
+            "--assessment-id",
+            "additional-human",
+            "--reviewer",
+            "Fixture reviewer",
+            "--recorded-at",
+            "2026-10-26",
+            "-o",
+            str(human),
+        ],
+        check=True,
+        capture_output=True,
+    )
     content = json.loads(human.read_text())
     content["assessments"][0]["assessment"].update(status="FAIL", rationale="Dissent retained")
     human.write_text(json.dumps(content))
     original_bytes = first.read_bytes()
-    subprocess.run(prefix + ["grade", str(source), "--policy", POLICY_V2, "--previous", str(first),
-                   "--human", str(human), "-o", str(second)], check=True, capture_output=True)
+    subprocess.run(
+        prefix
+        + [
+            "grade",
+            str(source),
+            "--policy",
+            POLICY_V2,
+            "--previous",
+            str(first),
+            "--human",
+            str(human),
+            "-o",
+            str(second),
+        ],
+        check=True,
+        capture_output=True,
+    )
     revision = json.loads(second.read_text())
     assert revision["grade_revision"] == 2
     assert revision["decisions"][0]["status"] == "FAIL"
     assert first.read_bytes() == original_bytes
 
 
-@pytest.mark.parametrize("status, expected_exit", [
-    ("PASS", 0), ("INSUFFICIENT_EVIDENCE", 1), ("INCOMPATIBLE", 1),
-])
+@pytest.mark.parametrize(
+    "status, expected_exit",
+    [
+        ("PASS", 0),
+        ("INSUFFICIENT_EVIDENCE", 1),
+        ("INCOMPATIBLE", 1),
+    ],
+)
 def test_require_pass_exit_by_outcome(loaded, tmp_path, status, expected_exit):
     import shutil
+
     source = Path(__file__).parents[1] / "examples/bundle"
     shutil.copytree(source, tmp_path / "bundle")
     result = loaded["bundle"]["results"][0]
     if status == "INCOMPATIBLE":
         result["provenance"]["compatibility"] = {
-            "status": status, "scope": "execution", "reason": "Fixture execution mismatch"}
+            "status": status,
+            "scope": "execution",
+            "reason": "Fixture execution mismatch",
+        }
         result["assessments"] = []
     elif status == "INSUFFICIENT_EVIDENCE":
         result["assessments"] = []
     manifest = tmp_path / "bundle/manifest.json"
     manifest.write_text(json.dumps(loaded["bundle"]))
     output = tmp_path / "outcome.json"
-    run = subprocess.run([
-        "livingproof-capability-report", "grade", str(manifest), "--policy", POLICY_V2,
-        "--require-pass", "-o", str(output)], capture_output=True, text=True)
+    run = subprocess.run(
+        [
+            "livingproof-capability-report",
+            "grade",
+            str(manifest),
+            "--policy",
+            POLICY_V2,
+            "--require-pass",
+            "-o",
+            str(output),
+        ],
+        capture_output=True,
+        text=True,
+    )
     assert run.returncode == expected_exit
     saved = json.loads(output.read_text())
     assert saved["decisions"][0]["status"] == status
@@ -253,8 +339,11 @@ def test_parsed_output_status_and_evidence_agree(loaded):
     parser = ReportHTML()
     parser.feed(render(saved, "html"))
     terminal = render(saved, "table")
-    terminal_decision = next(json.loads(line) for line in terminal.splitlines()
-                             if line.startswith('{"assessment_details"'))
+    terminal_decision = next(
+        json.loads(line)
+        for line in terminal.splitlines()
+        if line.startswith('{"assessment_details"')
+    )
     assert csv_row["status"] == parser.cells[4] == terminal_decision["status"] == decision["status"]
     assert json.loads(parser.lossless)["decisions"][0] == decision
     assert terminal_decision == decision
@@ -264,6 +353,7 @@ def test_parsed_output_status_and_evidence_agree(loaded):
 
 def test_revision_integrity_labels_do_not_prove_unchanged_mismatched_bytes(tmp_path):
     import shutil
+
     source = Path(__file__).parents[1] / "examples/bundle"
     shutil.copytree(source, tmp_path / "bundle")
     manifest = tmp_path / "bundle/manifest.json"

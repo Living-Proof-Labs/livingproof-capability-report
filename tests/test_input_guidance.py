@@ -1,4 +1,5 @@
 """Newcomer guidance must not weaken manifest validation or guess nearby files."""
+
 import json
 from pathlib import Path
 
@@ -26,15 +27,17 @@ def test_observation_hint_keeps_failure_and_does_not_write(tmp_path, command):
     assert "looks like an individual pause observation" in result.output
     assert result.output.startswith("Error: Expected a bundle manifest")
     assert result.output.index("validate examples/bundle/manifest.json") < result.output.index(
-        "Details: Invalid bundle")
+        "Details: Invalid bundle"
+    )
     assert "validate examples/bundle/manifest.json" in result.output
     assert "Do not add schema_version" in result.output
     assert not output.exists()
     assert observation.read_bytes() == original
 
 
-@pytest.mark.parametrize("value", [{}, {"requested": "paused"}, [],
-    {"schema_version": "1.0.0"}, {"results": []}])
+@pytest.mark.parametrize(
+    "value", [{}, {"requested": "paused"}, [], {"schema_version": "1.0.0"}, {"results": []}]
+)
 def test_arbitrary_invalid_inputs_keep_schema_diagnostic(value):
     with pytest.raises(ValueError, match="Invalid bundle") as error:
         validate_bundle(value)
@@ -54,16 +57,21 @@ def test_quickstart_manifest_grade_render_flow(tmp_path):
     runner = CliRunner()
     saved = tmp_path / "report.json"
     assert runner.invoke(report, ["validate", str(EXAMPLES / "manifest.json")]).exit_code == 0
-    assert runner.invoke(report, ["grade", str(EXAMPLES / "manifest.json"),
-                                 "-o", str(saved)]).exit_code == 0
+    assert (
+        runner.invoke(
+            report, ["grade", str(EXAMPLES / "manifest.json"), "-o", str(saved)]
+        ).exit_code
+        == 0
+    )
     assert json.loads(saved.read_text())["decisions"]
     rendered = runner.invoke(report, ["render", str(saved)])
     assert rendered.exit_code == 0
     assert "Living Proof Labs capability report" in rendered.output
     assert "PASS" in rendered.output
-    assert "not an individual evidence/observation file" in runner.invoke(
-        report, ["validate", "--help"]).output
-
+    assert (
+        "not an individual evidence/observation file"
+        in runner.invoke(report, ["validate", "--help"]).output
+    )
 
 
 def test_real_user_command_leads_with_recovery(monkeypatch):
@@ -87,9 +95,9 @@ def test_help_teaches_runnable_workflow(command):
     ]
     assert all(line in result.output for line in commands)
     assert [result.output.index(line) for line in commands] == sorted(
-        result.output.index(line) for line in commands)
+        result.output.index(line) for line in commands
+    )
     assert "observation" in result.output
-
 
 
 def test_workflow_help_retains_grade_revision_options():
