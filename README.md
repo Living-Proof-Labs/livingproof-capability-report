@@ -132,6 +132,35 @@ remain INSUFFICIENT_EVIDENCE. Unsupported contracts, evaluators or policies are
 INCOMPATIBLE, not failures. There is no averaging and no overall numeric score.
 Aggregation groups exact spec, system and environment contexts separately from grading.
 
+## Version 2.0.0: render the verifier's grading (bundle 1.1.0)
+
+Reporter 2.0.0 is a major release. capability-verifier (from the release that adds
+`--bundle-version 1.1.0`) grades walk-hallway evidence itself and writes the outcome
+into a bundle with `schema_version` 1.1.0: each result carries a `decision` (status,
+reason, structured failures, assessor types, policy), and the bundle carries an
+`assessment` in robot-capability-specs' `livingproof-run-assessment/0.1` format (every
+decision, plus per run k of N, the Wilson 95% interval, the grade and its rationale).
+
+    livingproof-capability-report render bundle/manifest.json --format json -o report.json
+    livingproof-capability-report render bundle/manifest.json --format markdown -o report.md
+
+`render` accepts that manifest directly and computes nothing: statuses, k, N, interval and
+grade are shown as stored. `report.json` is the same report document `grade` writes
+(`summaries` keep the `wilson95` pair), so `report.md` and the `comment` body are
+byte-identical to what 1.x produced from the same evidence. `--evidence-links` works as
+it does for `grade`. A missing or malformed required field is an error naming the field
+and the result. Evidence is still checked: a stored PASS whose evidence is missing or
+changed is refused.
+
+What changes for callers:
+
+- The packaged bundle schema accepts `schema_version` 1.0.0 and 1.1.0.
+- `grade` refuses a 1.1.0 bundle (its decisions are the verifier's; render it instead).
+- `grade` for 1.0.0 bundles is unchanged for now and will be removed in a later major
+  release, once every robot repository pins a verifier that writes 1.1.0.
+- Human re-grading (`--human`, `--previous`, `human-template`) still works on 1.0.0
+  bundles through `grade`; how human reviews apply to 1.1.0 bundles is not decided yet.
+
 ## Compatibility evidence
 
 The example bundle is produced by
