@@ -301,3 +301,8 @@ def test_pause_example_still_grades(tmp_path):
         "INCOMPATIBLE",
     }
     assert "Result" in render(report, "markdown")
+
+
+def test_released_v160_commit_is_a_known_contract():
+    assert (hallway.SPECS, "34681d20bf13ba0a836e03ac09869c7fb13665f1", "0.1.0") in hallway.CONTRACTS
+    assert (hallway.SPECS, COMMIT, "0.1.0") in hallway.CONTRACTS

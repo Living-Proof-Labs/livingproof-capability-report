@@ -12,9 +12,13 @@ import math
 PASS, FAIL, INSUFFICIENT, INCOMPATIBLE = "PASS", "FAIL", "INSUFFICIENT_EVIDENCE", "INCOMPATIBLE"
 CAPABILITY = "walk-hallway"
 SPECS = "https://github.com/Living-Proof-Labs/robot-capability-specs"
-# Matched by repository, commit and revision. b4ba31e is the candidate for specs v1.6.0;
-# add the release commit here if v1.6.0 is cut from a different commit.
-CONTRACTS = {(SPECS, "b4ba31eb2c7eaca2721d68d5d375260e2a114449", "0.1.0")}
+# Matched by repository, commit and revision. Specs v1.6.0 is 34681d2, the #24 merge
+# commit. Its tree is identical to b4ba31e, the pre-merge candidate that prototype
+# bundles were produced from, so both are accepted.
+CONTRACTS = {
+    (SPECS, "34681d20bf13ba0a836e03ac09869c7fb13665f1", "0.1.0"),  # v1.6.0
+    (SPECS, "b4ba31eb2c7eaca2721d68d5d375260e2a114449", "0.1.0"),  # pre-merge candidate
+}
 EVALUATORS = {
     "hallway-exit-reached": "1.0.0",
     "hallway-lateral-limit": "1.0.0",
