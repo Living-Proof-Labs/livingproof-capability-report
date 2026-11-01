@@ -454,3 +454,17 @@ a header (scenario, N, speed, pass bar, lock sha), a grade table, a plain verdic
 "Why runs failed" bullets (each seed counted once, under its first failure). Per-seed tables
 are in `<details>`, followed by a footer. Thumbnails appear only when results carry
 `provenance.assets`. `--report-url`, `--clips-url` and `--lock-diff-url` add a links row.
+
+`grade --evidence-links FILE` (repeatable) stores CI evidence links in `report.json` under
+`evidence_links`, outside the source bundle, so no digest or grade changes:
+
+```json
+{"run": "https://github.com/OWNER/REPO/actions/runs/1",
+ "links": [{"label": "evidence", "url": "https://...", "kind": "artifact"},
+           {"label": "video", "url": "https://...", "kind": "video", "seed": 1, "status": "PASS"}]}
+```
+
+Kinds are `artifact`, `video` and `mcap`; URLs must be https. Entries with an empty URL (an
+upload that was skipped) are dropped. Markdown shows an **Evidence:** row and one line per
+linked trial; HTML lists them under Evidence. Rendering refuses a per-trial link whose status
+disagrees with the stored decision for that seed.
