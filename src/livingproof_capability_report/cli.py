@@ -188,6 +188,47 @@ def render_command(report_file, format, output, report_url, clips_url, lock_diff
     click.echo(str(output))
 
 
+@report.command("comment")
+@click.argument(
+    "reports", nargs=-1, required=True, type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option("--repo", required=True, help="OWNER/NAME of the pull request's repository.")
+@click.option("--pr", required=True, type=int, help="Pull request number.")
+@click.option("--dry-run", is_flag=True, help="Read existing comments; print, post nothing.")
+@click.option(
+    "--comments",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="With --dry-run: a JSON list of existing comments instead of the API (offline).",
+)
+@errors
+def comment_command(reports, repo, pr, dry_run, comments):
+    """Post or update the one PR comment holding the markdown REPORTS (render output).
+
+    Each REPORT is a markdown file from ``render --format markdown``; they are joined, sorted
+    by path, under the hidden marker. The comment carrying the marker is updated in place.
+    """
+    from . import comment
+
+    text = comment.body(p.read_text(encoding="utf-8") for p in sorted(reports))
+    if comments is not None:
+        if not dry_run:
+            raise ValueError("--comments needs --dry-run")
+        listed = decode(comments.read_text(encoding="utf-8"))
+
+        def call(method, path, payload=None):
+            return listed, ""
+    else:
+        secret = comment.token()
+
+        def call(method, path, payload=None):
+            return comment.http(method, path, payload, secret)
+
+    method, path = comment.publish(repo, pr, text, call, dry_run)
+    click.echo(f"{'would ' if dry_run else ''}{method} {path} ({len(text)} chars)")
+    if dry_run:
+        click.echo(text, nl=False)
+
+
 @report.command("human-template")
 @click.argument("manifest", type=click.Path(exists=True, dir_okay=False, path_type=Path))
 @click.option("--result", "result_id", required=True)
