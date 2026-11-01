@@ -454,3 +454,8 @@ a header (scenario, N, speed, pass bar, lock sha), a grade table, a plain verdic
 "Why runs failed" bullets (each seed counted once, under its first failure). Per-seed tables
 are in `<details>`, followed by a footer. Thumbnails appear only when results carry
 `provenance.assets`. `--report-url`, `--clips-url` and `--lock-diff-url` add a links row.
+
+`livingproof-capability-report comment --repo OWNER/NAME --pr N reports/*/report.md` posts the
+rendered markdown as one pull-request comment under `<!-- livingproof-capability-report -->`,
+updating that comment in place on later runs. It uses `GITHUB_TOKEN` (needs
+`pull-requests: write`) and the REST API directly; `--dry-run` posts nothing.
