@@ -139,6 +139,9 @@ def summaries(bundle, decisions):
         plan = results[0]["provenance"].get("plan") or {}
         n, need = plan.get("trials"), plan.get("required_passes")
         k = statuses.count(PASS)
+        # Planned N, as in the capability verifier: a missing trial counts as not passed.
+        # Without a usable plan the grade is INSUFFICIENT_EVIDENCE and N is what was recorded.
+        planned = n if type(n) is int and n > 0 else len(results)
         if INCOMPATIBLE in statuses:
             grade = INCOMPATIBLE
         elif not (type(n) is int and type(need) is int) or len(results) != n:
@@ -157,9 +160,9 @@ def summaries(bundle, decisions):
                 "environment": dict(results[0]["environment"]),
                 "run_id": key[-1],
                 "k": k,
-                "n": len(results) if n is None else n,
+                "n": planned,
                 "required_passes": need,
-                "wilson95": wilson(k, len(results)),
+                "wilson95": wilson(k, planned),
                 "grade": grade,
                 "result_ids": [r["id"] for r in results],
                 "failures": [f for r in results for f in by_id[r["id"]].get("failures", [])],
