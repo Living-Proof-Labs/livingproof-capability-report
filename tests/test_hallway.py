@@ -136,6 +136,14 @@ def test_k_of_n_pass_and_missing_trials(tmp_path):
     assert report["summaries"][0]["grade"] == "INSUFFICIENT_EVIDENCE"  # 3 of 20 planned trials
 
 
+def test_missing_trials_use_the_planned_n(tmp_path):
+    """Same rule as capability-verifier hallway.aggregate: N and Wilson use the plan."""
+    s = grade(load_bundle(bundle(tmp_path, seeds=[1, 2, 3])))["summaries"][0]
+    assert (s["k"], s["n"]) == (3, 20)
+    assert s["wilson95"] == hallway.wilson(3, 20)
+    assert s["wilson95"] != hallway.wilson(3, 3)
+
+
 def test_human_and_agent_assessments_are_graded(tmp_path):
     loaded = load_bundle(bundle(tmp_path))
     result = loaded["bundle"]["results"][0]
