@@ -79,7 +79,7 @@ jobs:
           gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir assets
           (cd assets && sha256sum -c SHA256SUMS-amd64 && sha256sum -c SHA256SUMS-arm64)
           cat assets/SHA256SUMS-amd64 assets/SHA256SUMS-arm64 > SHA256SUMS
-          gh release upload "$RELEASE_TAG" SHA256SUMS --repo "$GITHUB_REPOSITORY"
+          gh release upload "$RELEASE_TAG" SHA256SUMS --repo "$GITHUB_REPOSITORY" --clobber
       - name: Publish tested downloadable packages with explicit registry limitation
         run: |
           gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body > notes.md

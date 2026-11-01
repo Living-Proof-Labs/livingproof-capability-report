@@ -139,9 +139,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if [ "${{ matrix.architecture }}" = amd64 ]; then
-            gh release upload "$RELEASE_TAG" dist/*.whl dist/livingproof*.tar.gz dist/*.deb dist/requirements.txt
+            gh release upload "$RELEASE_TAG" dist/*.whl dist/livingproof*.tar.gz dist/*.deb dist/requirements.txt --clobber
           fi
-          gh release upload "$RELEASE_TAG" "dist/image-${{ matrix.architecture }}.tar" "dist/wheelhouse-${{ matrix.architecture }}.tar.gz" "dist/SHA256SUMS-${{ matrix.architecture }}" "dist/compatibility-${{ matrix.architecture }}.json" "dist/compatibility-${{ matrix.architecture }}.md"
+          gh release upload "$RELEASE_TAG" "dist/image-${{ matrix.architecture }}.tar" "dist/wheelhouse-${{ matrix.architecture }}.tar.gz" "dist/SHA256SUMS-${{ matrix.architecture }}" "dist/compatibility-${{ matrix.architecture }}.json" "dist/compatibility-${{ matrix.architecture }}.md" --clobber
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -177,7 +177,7 @@ jobs:
         run: |
           gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --pattern 'SHA256SUMS-*'
           cat SHA256SUMS-amd64 SHA256SUMS-arm64 > SHA256SUMS
-          gh release upload "$RELEASE_TAG" SHA256SUMS --repo "$GITHUB_REPOSITORY"
+          gh release upload "$RELEASE_TAG" SHA256SUMS --repo "$GITHUB_REPOSITORY" --clobber
   verify-registry:
     needs: [release, manifest]
     if: needs.release.outputs.draft-created == 'true'
