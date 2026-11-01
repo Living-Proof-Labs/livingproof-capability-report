@@ -52,7 +52,7 @@ def test_help_invalid_options_and_terminal_controls(saved):
     runner = CliRunner()
     result = runner.invoke(report, ["render", "--help"])
     assert "Default: table on stdout" in result.output
-    assert "[table|json|html|csv]" in result.output
+    assert "[table|json|html|csv|markdown]" in result.output
     assert runner.invoke(report, ["render", str(path), "--format", "unknown"]).exit_code != 0
     value["decisions"][0]["reason"] = "\x1b[31mnot executed"
     value["groups"] = []  # Renderer derives contexts from the preserved source, not grades.

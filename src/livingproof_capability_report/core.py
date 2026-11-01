@@ -12,6 +12,7 @@ from pathlib import Path, PurePosixPath
 
 from jsonschema import Draft202012Validator
 
+from . import hallway
 from .policy import POLICY_V2, decide, explain
 
 PASS, FAIL, INSUFFICIENT, INCOMPATIBLE = (
@@ -146,7 +147,10 @@ def grade(loaded, policy=POLICY, human=None, previous=None):
         if result is None or contribution["result_sha256"] != digest(result):
             raise ValueError("Human contribution does not match the original result digest")
         a = contribution["assessment"]
-        if a["evaluator"] not in {"human-fixture", "human-review"} or a["kind"] != "human":
+        if hallway.is_hallway(result):
+            if a["kind"] not in {"human", "agent"} or a["evaluator"] in hallway.EVALUATORS:
+                raise ValueError("Contribution must be a human or agent assessment")
+        elif a["evaluator"] not in {"human-fixture", "human-review"} or a["kind"] != "human":
             raise ValueError("Contribution must be a human assessment")
         if not set(a["evidence_ids"]) <= {e["id"] for e in result["evidence"]}:
             raise ValueError("Human contribution refers to undeclared evidence")
@@ -188,8 +192,18 @@ def grade(loaded, policy=POLICY, human=None, previous=None):
             or not compatibility["reason"].strip()
         ):
             raise ValueError("Invalid execution compatibility declaration")
+        found = None
         if compatibility is not None:
             status, reason = INCOMPATIBLE, compatibility["reason"]
+        elif hallway.is_hallway(result):
+            if policy != POLICY:
+                status, reason = INCOMPATIBLE, "walk-hallway is graded with all-required-v1 only"
+            elif not hallway.contract_supported(result):
+                status, reason = INCOMPATIBLE, "Unsupported walk-hallway contract"
+            elif not hallway.members_supported(assessments):
+                status, reason = INCOMPATIBLE, "Unsupported hallway evaluator, version or assessor kind"
+            else:
+                status, reason, found, types = hallway.decide(assessments, complete)
         elif not supported:
             status, reason = INCOMPATIBLE, "Unsupported contract, evaluator or policy version"
         elif policy == POLICY_V2:
@@ -206,6 +220,8 @@ def grade(loaded, policy=POLICY, human=None, previous=None):
         else:
             status, reason = PASS, "All required assessments pass with verified evidence"
         decision = {"result_id": result["id"], "status": status, "reason": reason}
+        if found is not None:
+            decision.update(failures=found, assessor_types=types)
         if policy == POLICY_V2:
             decision.update(explain(result, assessments, states))
         decisions.append(decision)
@@ -213,6 +229,9 @@ def grade(loaded, policy=POLICY, human=None, previous=None):
             "source_bundle_sha256": digest(bundle), "human_contributions": contributions,
             "evidence_state": copy.deepcopy(loaded["evidence_state"]),
             "groups": aggregate(bundle["results"]), "decisions": decisions}
+    runs = hallway.summaries(bundle, decisions)
+    if runs:
+        report["summaries"] = runs
     if policy == POLICY_V2 or previous is not None:
         report["grade_revision"] = 1 if previous is None else previous.get("grade_revision", 1) + 1
     if previous is not None:
@@ -246,6 +265,8 @@ def render(report, format="json"):
         raise ValueError("Invalid stored decisions")
     if format == "json":
         return json.dumps(report, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+    if format == "markdown":
+        return hallway.markdown(report)
     results = {r["id"]: r for r in bundle["results"]}
     rows = [{"result_id": d["result_id"], "spec_tag": results[d["result_id"]]["spec"]["tag"],
              "revision": results[d["result_id"]]["spec"]["revision"],
@@ -253,7 +274,10 @@ def render(report, format="json"):
              "status": d["status"], "reason": d["reason"]} for d in decisions]
     if format == "table":
         text = terminal_table(rows, aggregate(bundle["results"]))
-        details = ["Policy: " + canonical(report["policy"]),
+        details = [f"Run {s['system']['id']}: {s['k']}/{s['n']} PASS, needs {s['required_passes']}, "
+                   f"Wilson 95% [{s['wilson95'][0]:.4f}, {s['wilson95'][1]:.4f}]: {s['grade']}"
+                   for s in report.get("summaries", [])]
+        details += ["Policy: " + canonical(report["policy"]),
                    "Grade revision: " + str(report.get("grade_revision", 1))]
         for decision in decisions:
             details.append(json.dumps(decision, ensure_ascii=True, sort_keys=True))

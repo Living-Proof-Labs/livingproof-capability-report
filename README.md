@@ -433,3 +433,20 @@ No current timestamp is included. Identical source observations and package
 versions produce identical provenance JSON. The installed-package smoke tests
 check its retention and CLI agreement for wheels, source distributions, Debian
 packages and container images.
+
+## Walk-hallway results
+
+Bundles from capability-verifier's hallway evaluators are graded one trial per result
+under `all-required-v1@1.0.0`. The contract is matched by catalog repository, commit and
+revision (`hallway.CONTRACTS`). A trial needs each of `hallway-exit-reached`,
+`hallway-lateral-limit`, `hallway-wall-contact` and `hallway-fall` (deterministic,
+1.0.0, mandatory) to pass. `human` and `agent` assessments, whether in the bundle or
+contributed later, are retained and graded by the same rule: any FAIL fails the trial.
+Each failed check's structured fields `{check, observed, limit, unit, t, seed, wall}`
+are kept on its decision. The report adds a k-of-N `summaries` entry per run, with a
+Wilson 95% interval and the plan's required passes.
+
+    livingproof-capability-report render report.json --format markdown -o summary.md
+
+writes a PR-comment summary with failures grouped by check. Its layout is a draft
+awaiting Art's review.

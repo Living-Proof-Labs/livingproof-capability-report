@@ -113,7 +113,7 @@ def grade_command(manifest, human, previous, require_pass, policy, output):
 
 @report.command("render")
 @click.argument("report_file", type=click.Path(exists=True, dir_okay=False, path_type=Path))
-@click.option("--format", type=click.Choice(["table", "json", "html", "csv"]), default=None,
+@click.option("--format", type=click.Choice(["table", "json", "html", "csv", "markdown"]), default=None,
               help="Default: table on stdout; HTML when --output is supplied (v1 compatibility).")
 @click.option("--output", "-o", type=click.Path(path_type=Path),
               help="Write a new file; otherwise print to stdout. Existing files are never overwritten.")
