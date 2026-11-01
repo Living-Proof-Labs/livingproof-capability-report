@@ -314,3 +314,15 @@ def test_pause_example_still_grades(tmp_path):
 def test_released_v160_commit_is_a_known_contract():
     assert (hallway.SPECS, "34681d20bf13ba0a836e03ac09869c7fb13665f1", "0.1.0") in hallway.CONTRACTS
     assert (hallway.SPECS, COMMIT, "0.1.0") in hallway.CONTRACTS
+
+
+def test_specs_25_candidate_grades_like_v160(tmp_path):
+    """Specs #25 rewords the feature only; a bundle at its commit grades the same."""
+    candidate = "a378e92216fd9498984f290e677b9f4e7a33232c"
+    assert (hallway.SPECS, candidate, "0.1.0") in hallway.CONTRACTS
+    (tmp_path / "old").mkdir()
+    (tmp_path / "new").mkdir()
+    old = grade(load_bundle(bundle(tmp_path / "old")))
+    new = grade(load_bundle(bundle(tmp_path / "new", commit=candidate)))
+    assert [d["status"] for d in new["decisions"]] == [d["status"] for d in old["decisions"]]
+    assert "INCOMPATIBLE" not in {d["status"] for d in new["decisions"]}
