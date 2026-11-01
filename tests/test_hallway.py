@@ -326,3 +326,15 @@ def test_specs_25_candidate_grades_like_v160(tmp_path):
     new = grade(load_bundle(bundle(tmp_path / "new", commit=candidate)))
     assert [d["status"] for d in new["decisions"]] == [d["status"] for d in old["decisions"]]
     assert "INCOMPATIBLE" not in {d["status"] for d in new["decisions"]}
+
+
+def test_released_v161_commit_grades_like_v160(tmp_path):
+    """v1.6.1 is the #25 merge commit (0bdf1db); a bundle at it grades the same."""
+    released = "0bdf1db3f975b044692c0b8f1ec37737ad8b889f"
+    assert (hallway.SPECS, released, "0.1.0") in hallway.CONTRACTS
+    (tmp_path / "old").mkdir()
+    (tmp_path / "new").mkdir()
+    old = grade(load_bundle(bundle(tmp_path / "old")))
+    new = grade(load_bundle(bundle(tmp_path / "new", commit=released)))
+    assert [d["status"] for d in new["decisions"]] == [d["status"] for d in old["decisions"]]
+    assert "INCOMPATIBLE" not in {d["status"] for d in new["decisions"]}
