@@ -42,8 +42,12 @@ def test_explicit_formats_stdout_and_file(saved, tmp_path, format):
     # Click normalizes newlines on stdout; exported files retain the format's line endings.
     assert result.output == render(value, format).replace("\r\n", "\n")
     output = tmp_path / ("export." + format)
-    assert runner.invoke(report, ["render", str(path), "--format", format,
-                                 "-o", str(output)]).exit_code == 0
+    assert (
+        runner.invoke(
+            report, ["render", str(path), "--format", format, "-o", str(output)]
+        ).exit_code
+        == 0
+    )
     assert output.read_bytes() == render(value, format).encode()
 
 
@@ -52,7 +56,7 @@ def test_help_invalid_options_and_terminal_controls(saved):
     runner = CliRunner()
     result = runner.invoke(report, ["render", "--help"])
     assert "Default: table on stdout" in result.output
-    assert "[table|json|html|csv]" in result.output
+    assert "[table|json|html|csv|markdown]" in result.output
     assert runner.invoke(report, ["render", str(path), "--format", "unknown"]).exit_code != 0
     value["decisions"][0]["reason"] = "\x1b[31mnot executed"
     value["groups"] = []  # Renderer derives contexts from the preserved source, not grades.

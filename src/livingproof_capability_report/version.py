@@ -1,4 +1,5 @@
 """Supply this consumer's context to the released shared version library."""
+
 from pathlib import Path
 
 from livingproof_common.versioning import Consumer, current_version as shared_version

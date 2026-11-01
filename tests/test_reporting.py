@@ -15,21 +15,47 @@ def bundle(tmp_path):
     evidence = tmp_path / "evidence.json"
     evidence.write_text('{"elapsed_ms":120}')
     result = {
-        "id": "pause-120", "spec": {"repository": CONTRACTS[0][0],
-        "tag": "v1.1.1", "commit": CONTRACTS[0][2], "capability": "pause", "revision": "1.0.0"},
+        "id": "pause-120",
+        "spec": {
+            "repository": CONTRACTS[0][0],
+            "tag": "v1.1.1",
+            "commit": CONTRACTS[0][2],
+            "capability": "pause",
+            "revision": "1.0.0",
+        },
         "system": {"id": "fixtures", "version": "1.0.0"},
         "environment": {"id": "deterministic-fixture", "version": "1.0.0"},
-        "evidence": [{"id": "observation", "path": "evidence.json",
-                      "sha256": hashlib.sha256(evidence.read_bytes()).hexdigest()}],
-        "assessments": [{"id": name, "evaluator": name, "kind": kind, "version": "1.0.0",
-                         "status": "PASS", "rationale": "<script>alert(1)</script>",
-                         "mandatory": name == "pause-rules", "evidence_ids": ["observation"],
-                         "provenance": {"label": "MOCK; no model" if kind == "mock-agent"
-                                        else "recorded fixture"}}
-                        for name, kind in MEMBERS.items()],
-        "provenance": {"simulator": None}, "original_result": {"status": "PASS"}}
-    value = {"schema_version": "1.0.0", "producer": {"id": "test", "version": "1.0.0",
-             "commit": "b" * 40}, "results": [result]}
+        "evidence": [
+            {
+                "id": "observation",
+                "path": "evidence.json",
+                "sha256": hashlib.sha256(evidence.read_bytes()).hexdigest(),
+            }
+        ],
+        "assessments": [
+            {
+                "id": name,
+                "evaluator": name,
+                "kind": kind,
+                "version": "1.0.0",
+                "status": "PASS",
+                "rationale": "<script>alert(1)</script>",
+                "mandatory": name == "pause-rules",
+                "evidence_ids": ["observation"],
+                "provenance": {
+                    "label": "MOCK; no model" if kind == "mock-agent" else "recorded fixture"
+                },
+            }
+            for name, kind in MEMBERS.items()
+        ],
+        "provenance": {"simulator": None},
+        "original_result": {"status": "PASS"},
+    }
+    value = {
+        "schema_version": "1.0.0",
+        "producer": {"id": "test", "version": "1.0.0", "commit": "b" * 40},
+        "results": [result],
+    }
     manifest = tmp_path / "manifest.json"
     manifest.write_text(json.dumps(value))
     return manifest
@@ -47,11 +73,17 @@ def test_lossless_and_nonmutating(bundle):
     assert "INCOMPATIBLE" == grade(loaded, "future@2")["decisions"][0]["status"]
 
 
-@pytest.mark.parametrize("mutation,expected", [
-    ("fail", "FAIL"), ("missing", "INSUFFICIENT_EVIDENCE"),
-    ("duplicate", "INSUFFICIENT_EVIDENCE"), ("version", "INCOMPATIBLE"),
-    ("kind", "INCOMPATIBLE"), ("no_refs", "INSUFFICIENT_EVIDENCE"),
-])
+@pytest.mark.parametrize(
+    "mutation,expected",
+    [
+        ("fail", "FAIL"),
+        ("missing", "INSUFFICIENT_EVIDENCE"),
+        ("duplicate", "INSUFFICIENT_EVIDENCE"),
+        ("version", "INCOMPATIBLE"),
+        ("kind", "INCOMPATIBLE"),
+        ("no_refs", "INSUFFICIENT_EVIDENCE"),
+    ],
+)
 def test_policy(bundle, mutation, expected):
     loaded = load_bundle(bundle)
     assessments = loaded["bundle"]["results"][0]["assessments"]
@@ -81,8 +113,18 @@ def test_missing_and_tampered_evidence(bundle):
     assert grade(load_bundle(bundle))["decisions"][0]["status"] == "INSUFFICIENT_EVIDENCE"
 
 
-@pytest.mark.parametrize("path", ["../secret", "/etc/passwd", "https://example.org", "a\\b",
-                                   "a/../b", "a//b", "./evidence.json"])
+@pytest.mark.parametrize(
+    "path",
+    [
+        "../secret",
+        "/etc/passwd",
+        "https://example.org",
+        "a\\b",
+        "a/../b",
+        "a//b",
+        "./evidence.json",
+    ],
+)
 def test_unsafe_paths(bundle, path):
     value = decode(bundle.read_text())
     value["results"][0]["evidence"][0]["path"] = path
@@ -102,8 +144,12 @@ def test_human_addition_keeps_original(bundle):
     loaded = load_bundle(bundle)
     original = loaded["bundle"]["results"][0]
     human = original["assessments"].pop()
-    contributions = {"schema_version": "1.0.0", "assessments": [{"result_id": original["id"],
-                     "result_sha256": digest(original), "assessment": human}]}
+    contributions = {
+        "schema_version": "1.0.0",
+        "assessments": [
+            {"result_id": original["id"], "result_sha256": digest(original), "assessment": human}
+        ],
+    }
     result = grade(loaded, human=contributions)
     assert result["decisions"][0]["status"] == "PASS"
     assert len(result["source_bundle"]["results"][0]["assessments"]) == 2
@@ -135,8 +181,13 @@ def test_cli_and_no_overwrite(bundle):
     assert runner.invoke(report, ["validate", str(bundle)]).exit_code == 0
     assert runner.invoke(report, ["grade", str(bundle), "-o", str(output)]).exit_code == 0
     assert runner.invoke(report, ["grade", str(bundle), "-o", str(bundle)]).exit_code != 0
-    assert runner.invoke(report, ["render", str(output), "--format", "html", "-o",
-                                 str(bundle.parent / "report.html")]).exit_code == 0
+    assert (
+        runner.invoke(
+            report,
+            ["render", str(output), "--format", "html", "-o", str(bundle.parent / "report.html")],
+        ).exit_code
+        == 0
+    )
 
 
 def test_reject_bad_json_and_csv_formula(bundle):
@@ -157,10 +208,18 @@ def test_unknown_contract_is_incompatible(bundle):
 def test_human_template_binds_exact_result(bundle):
     output = bundle.parent / "human.json"
     runner = CliRunner()
-    assert runner.invoke(report, ["human-template", str(bundle), "--result", "pause-120",
-                                 "-o", str(output)]).exit_code == 0
+    assert (
+        runner.invoke(
+            report, ["human-template", str(bundle), "--result", "pause-120", "-o", str(output)]
+        ).exit_code
+        == 0
+    )
     contribution = decode(output.read_text())["assessments"][0]
     assert contribution["result_sha256"] == digest(load_bundle(bundle)["bundle"]["results"][0])
     assert contribution["assessment"]["status"] == "INSUFFICIENT_EVIDENCE"
-    assert runner.invoke(report, ["human-template", str(bundle), "--result", "absent",
-                                 "-o", str(output)]).exit_code != 0
+    assert (
+        runner.invoke(
+            report, ["human-template", str(bundle), "--result", "absent", "-o", str(output)]
+        ).exit_code
+        != 0
+    )

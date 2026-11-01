@@ -1,4 +1,5 @@
 """Versioned portable bundles and conservative, explicit grading policy."""
+
 import copy
 import csv
 import hashlib
@@ -12,13 +13,25 @@ from pathlib import Path, PurePosixPath
 
 from jsonschema import Draft202012Validator
 
+from . import hallway
 from .policy import POLICY_V2, decide, explain
 
-PASS, FAIL, INSUFFICIENT, INCOMPATIBLE = (
-    "PASS", "FAIL", "INSUFFICIENT_EVIDENCE", "INCOMPATIBLE"
-)
+PASS, FAIL, INSUFFICIENT, INCOMPATIBLE = ("PASS", "FAIL", "INSUFFICIENT_EVIDENCE", "INCOMPATIBLE")
 POLICY = "all-required-v1@1.0.0"
-CONTRACTS = [('https://github.com/Living-Proof-Labs/robot-capability-specs', 'v1.1.1', '60b7572df9f5e5c5ab5757a0b4674da16de2b0df', '1.0.0'), ('https://github.com/Living-Proof-Labs/robot-capability-specs', 'v1.2.0', 'f06c4a17a55d649ff78961c7391f90e34fab929d', '2.0.0')]
+CONTRACTS = [
+    (
+        "https://github.com/Living-Proof-Labs/robot-capability-specs",
+        "v1.1.1",
+        "60b7572df9f5e5c5ab5757a0b4674da16de2b0df",
+        "1.0.0",
+    ),
+    (
+        "https://github.com/Living-Proof-Labs/robot-capability-specs",
+        "v1.2.0",
+        "f06c4a17a55d649ff78961c7391f90e34fab929d",
+        "2.0.0",
+    ),
+]
 MEMBERS = {"pause-rules": "deterministic", "mock-ai": "mock-agent", "human-fixture": "human"}
 
 
@@ -30,8 +43,10 @@ def decode(raw):
                 raise ValueError(f"Duplicate JSON key: {key}")
             result[key] = value
         return result
+
     def invalid(value):
         raise ValueError(f"Non-finite JSON number: {value}")
+
     return json.loads(raw, object_pairs_hook=pairs, parse_constant=invalid)
 
 
@@ -49,12 +64,14 @@ def validate_bundle(bundle):
     errors = sorted(Draft202012Validator(schema).iter_errors(bundle), key=lambda e: str(e.path))
     if errors:
         message = f"Invalid bundle at {list(errors[0].path)}: {errors[0].message}"
-        if (isinstance(bundle, dict)
-                and not {"schema_version", "producer", "results"}.intersection(bundle)
-                and isinstance(bundle.get("requested"), str)
-                and isinstance(bundle.get("observed"), str)
-                and isinstance(bundle.get("motion_inhibited"), bool)
-                and isinstance(bundle.get("assessments"), dict)):
+        if (
+            isinstance(bundle, dict)
+            and not {"schema_version", "producer", "results"}.intersection(bundle)
+            and isinstance(bundle.get("requested"), str)
+            and isinstance(bundle.get("observed"), str)
+            and isinstance(bundle.get("motion_inhibited"), bool)
+            and isinstance(bundle.get("assessments"), dict)
+        ):
             message = (
                 "Expected a bundle manifest containing version information, evidence paths "
                 "and assessment references. This looks like an individual pause observation.\n"
@@ -64,7 +81,8 @@ def validate_bundle(bundle):
                 "Then use grade to save a report and render to view it; see "
                 "livingproof-capability-report --help for the full workflow.\n"
                 "Do not add schema_version to the observation.\n"
-                f"Details: {message}")
+                f"Details: {message}"
+            )
         raise ValueError(message)
     canonical(bundle)  # Reject non-finite numbers in extension/provenance fields too.
     ids = [r["id"] for r in bundle["results"]]
@@ -87,8 +105,13 @@ def validate_bundle(bundle):
 
 def safe_relative(name):
     path = PurePosixPath(name)
-    if (not name or "\\" in name or ":" in name or path.is_absolute()
-            or any(p in {"", ".", ".."} for p in name.split("/"))):
+    if (
+        not name
+        or "\\" in name
+        or ":" in name
+        or path.is_absolute()
+        or any(p in {"", ".", ".."} for p in name.split("/"))
+    ):
         raise ValueError(f"Unsafe bundle path: {name!r}")
     return path
 
@@ -134,46 +157,60 @@ def grade(loaded, policy=POLICY, human=None, previous=None):
     Draft202012Validator(schema).validate(contributions)
     if previous is not None:
         render(previous)  # Validate stored input, without applying any current grading policy.
-        if (previous["source_bundle"] != bundle
-                or previous["evidence_state"] != loaded["evidence_state"]):
+        if (
+            previous["source_bundle"] != bundle
+            or previous["evidence_state"] != loaded["evidence_state"]
+        ):
             raise ValueError("Grade revision must retain the original bundle and evidence state")
         contributions["assessments"] = (
             copy.deepcopy(previous["human_contributions"]["assessments"])
-            + contributions["assessments"])
+            + contributions["assessments"]
+        )
     known = {r["id"]: r for r in bundle["results"]}
     for contribution in contributions["assessments"]:
         result = known.get(contribution["result_id"])
         if result is None or contribution["result_sha256"] != digest(result):
             raise ValueError("Human contribution does not match the original result digest")
         a = contribution["assessment"]
-        if a["evaluator"] not in {"human-fixture", "human-review"} or a["kind"] != "human":
+        if hallway.is_hallway(result):
+            if a["kind"] not in {"human", "agent"} or a["evaluator"] in hallway.EVALUATORS:
+                raise ValueError("Contribution must be a human or agent assessment")
+        elif a["evaluator"] not in {"human-fixture", "human-review"} or a["kind"] != "human":
             raise ValueError("Contribution must be a human assessment")
         if not set(a["evidence_ids"]) <= {e["id"] for e in result["evidence"]}:
             raise ValueError("Human contribution refers to undeclared evidence")
     decisions = []
     for result in bundle["results"]:
-        additions = [c["assessment"] for c in contributions["assessments"]
-                     if c["result_id"] == result["id"]]
+        additions = [
+            c["assessment"] for c in contributions["assessments"] if c["result_id"] == result["id"]
+        ]
         assessments = result["assessments"] + additions
         if len({a["id"] for a in assessments}) != len(assessments):
-            raise ValueError("Duplicate assessment identifier across original and human contributions")
+            raise ValueError(
+                "Duplicate assessment identifier across original and human contributions"
+            )
         for a in assessments:
             if a["evaluator"] == "human-review" and any(
-                not isinstance(a["provenance"].get(key), str)
-                or not a["provenance"][key].strip() for key in ("reviewer", "recorded_at")
+                not isinstance(a["provenance"].get(key), str) or not a["provenance"][key].strip()
+                for key in ("reviewer", "recorded_at")
             ):
                 raise ValueError("Human review requires reviewer and recorded_at provenance")
         states = loaded["evidence_state"].get(result["id"], {})
-        supported = (policy in {POLICY, POLICY_V2} and result["spec"]["capability"] == "pause"
-                     and tuple(result["spec"][key] for key in
-                               ("repository", "tag", "commit", "revision")) in CONTRACTS)
+        supported = (
+            policy in {POLICY, POLICY_V2}
+            and result["spec"]["capability"] == "pause"
+            and tuple(result["spec"][key] for key in ("repository", "tag", "commit", "revision"))
+            in CONTRACTS
+        )
         members = dict(MEMBERS)
         if policy == POLICY_V2:
             members["human-review"] = "human"
         supported = supported and all(
-            a["evaluator"] in members and a["kind"] == members[a["evaluator"]]
-            and a["version"] in ({"1.0.0", "1.1.0"} if a["evaluator"] == "pause-rules"
-                                  else {"1.0.0"}) for a in assessments
+            a["evaluator"] in members
+            and a["kind"] == members[a["evaluator"]]
+            and a["version"]
+            in ({"1.0.0", "1.1.0"} if a["evaluator"] == "pause-rules" else {"1.0.0"})
+            for a in assessments
         )
         complete = bool(result["evidence"]) and all(
             states.get(e["id"]) == "verified" for e in result["evidence"]
@@ -188,8 +225,21 @@ def grade(loaded, policy=POLICY, human=None, previous=None):
             or not compatibility["reason"].strip()
         ):
             raise ValueError("Invalid execution compatibility declaration")
+        found = None
         if compatibility is not None:
             status, reason = INCOMPATIBLE, compatibility["reason"]
+        elif hallway.is_hallway(result):
+            if policy != POLICY:
+                status, reason = INCOMPATIBLE, "walk-hallway is graded with all-required-v1 only"
+            elif not hallway.contract_supported(result):
+                status, reason = INCOMPATIBLE, "Unsupported walk-hallway contract"
+            elif not hallway.members_supported(assessments):
+                status, reason = (
+                    INCOMPATIBLE,
+                    "Unsupported hallway evaluator, version or assessor kind",
+                )
+            else:
+                status, reason, found, types = hallway.decide(assessments, complete)
         elif not supported:
             status, reason = INCOMPATIBLE, "Unsupported contract, evaluator or policy version"
         elif policy == POLICY_V2:
@@ -198,21 +248,33 @@ def grade(loaded, policy=POLICY, human=None, previous=None):
             status, reason = FAIL, "A retained assessment failed; failures are never averaged away"
         elif not complete:
             status, reason = INSUFFICIENT, "Evidence missing or digest mismatch"
-        elif (membership != Counter(MEMBERS.keys()) or any(
-                a["status"] != PASS or not a["evidence_ids"] for a in assessments)
-                or not any(a["evaluator"] == "pause-rules" and a["mandatory"]
-                           for a in assessments)):
+        elif (
+            membership != Counter(MEMBERS.keys())
+            or any(a["status"] != PASS or not a["evidence_ids"] for a in assessments)
+            or not any(a["evaluator"] == "pause-rules" and a["mandatory"] for a in assessments)
+        ):
             status, reason = INSUFFICIENT, "Missing, duplicate or insufficient required assessment"
         else:
             status, reason = PASS, "All required assessments pass with verified evidence"
         decision = {"result_id": result["id"], "status": status, "reason": reason}
+        if found is not None:
+            decision.update(failures=found, assessor_types=types)
         if policy == POLICY_V2:
             decision.update(explain(result, assessments, states))
         decisions.append(decision)
-    report = {"report_version": "1.0.0", "policy": policy, "source_bundle": bundle,
-            "source_bundle_sha256": digest(bundle), "human_contributions": contributions,
-            "evidence_state": copy.deepcopy(loaded["evidence_state"]),
-            "groups": aggregate(bundle["results"]), "decisions": decisions}
+    report = {
+        "report_version": "1.0.0",
+        "policy": policy,
+        "source_bundle": bundle,
+        "source_bundle_sha256": digest(bundle),
+        "human_contributions": contributions,
+        "evidence_state": copy.deepcopy(loaded["evidence_state"]),
+        "groups": aggregate(bundle["results"]),
+        "decisions": decisions,
+    }
+    runs = hallway.summaries(bundle, decisions)
+    if runs:
+        report["summaries"] = runs
     if policy == POLICY_V2 or previous is not None:
         report["grade_revision"] = 1 if previous is None else previous.get("grade_revision", 1) + 1
     if previous is not None:
@@ -221,7 +283,7 @@ def grade(loaded, policy=POLICY, human=None, previous=None):
     return report
 
 
-def render(report, format="json"):
+def render(report, format="json", links=None):
     """Render stored decisions, never invoke grading or apply a current policy."""
     if report.get("report_version") != "1.0.0":
         raise ValueError("Unsupported report version")
@@ -230,96 +292,147 @@ def render(report, format="json"):
         raise ValueError("Source bundle digest does not match report")
     if "previous_report" in report:
         previous = report["previous_report"]
-        if (digest(previous) != report.get("previous_report_sha256")
-                or report.get("grade_revision") != previous.get("grade_revision", 1) + 1
-                or previous["source_bundle"] != bundle
-                or previous["evidence_state"] != report["evidence_state"]
-                or report["human_contributions"]["assessments"][:len(
-                    previous["human_contributions"]["assessments"])]
-                != previous["human_contributions"]["assessments"]):
+        if (
+            digest(previous) != report.get("previous_report_sha256")
+            or report.get("grade_revision") != previous.get("grade_revision", 1) + 1
+            or previous["source_bundle"] != bundle
+            or previous["evidence_state"] != report["evidence_state"]
+            or report["human_contributions"]["assessments"][
+                : len(previous["human_contributions"]["assessments"])
+            ]
+            != previous["human_contributions"]["assessments"]
+        ):
             raise ValueError("Invalid grade revision history")
         render(previous)
     decisions = report["decisions"]
-    if (len(decisions) != len(bundle["results"])
-            or {d["result_id"] for d in decisions} != {r["id"] for r in bundle["results"]}
-            or any(d["status"] not in {PASS, FAIL, INSUFFICIENT, INCOMPATIBLE} for d in decisions)):
+    if (
+        len(decisions) != len(bundle["results"])
+        or {d["result_id"] for d in decisions} != {r["id"] for r in bundle["results"]}
+        or any(d["status"] not in {PASS, FAIL, INSUFFICIENT, INCOMPATIBLE} for d in decisions)
+    ):
         raise ValueError("Invalid stored decisions")
     if format == "json":
         return json.dumps(report, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+    if format == "markdown":
+        return hallway.markdown(report, links)
     results = {r["id"]: r for r in bundle["results"]}
-    rows = [{"result_id": d["result_id"], "spec_tag": results[d["result_id"]]["spec"]["tag"],
-             "revision": results[d["result_id"]]["spec"]["revision"],
-             "environment": canonical(results[d["result_id"]]["environment"]),
-             "status": d["status"], "reason": d["reason"]} for d in decisions]
+    rows = [
+        {
+            "result_id": d["result_id"],
+            "spec_tag": results[d["result_id"]]["spec"]["tag"],
+            "revision": results[d["result_id"]]["spec"]["revision"],
+            "environment": canonical(results[d["result_id"]]["environment"]),
+            "status": d["status"],
+            "reason": d["reason"],
+        }
+        for d in decisions
+    ]
     if format == "table":
         text = terminal_table(rows, aggregate(bundle["results"]))
-        details = ["Policy: " + canonical(report["policy"]),
-                   "Grade revision: " + str(report.get("grade_revision", 1))]
+        details = [
+            f"Run {s['system']['id']}: {s['k']}/{s['n']} PASS, needs {s['required_passes']}, "
+            f"Wilson 95% [{s['wilson95'][0]:.4f}, {s['wilson95'][1]:.4f}]: {s['grade']}"
+            for s in report.get("summaries", [])
+        ]
+        details += [
+            "Policy: " + canonical(report["policy"]),
+            "Grade revision: " + str(report.get("grade_revision", 1)),
+        ]
         for decision in decisions:
             details.append(json.dumps(decision, ensure_ascii=True, sort_keys=True))
         return text + "\n".join(details) + "\n"
     if format == "csv":
         if any("assessment_details" in d for d in decisions):
             for row, decision in zip(rows, decisions):
-                row.update(policy=report["policy"],
-                           grade_revision=str(report.get("grade_revision", 1)),
-                           assessments=canonical(decision.get("assessment_details", [])),
-                           evidence_groups=canonical(decision.get("evidence_groups", [])))
+                row.update(
+                    policy=report["policy"],
+                    grade_revision=str(report.get("grade_revision", 1)),
+                    assessments=canonical(decision.get("assessment_details", [])),
+                    evidence_groups=canonical(decision.get("evidence_groups", [])),
+                )
         stream = io.StringIO(newline="")
         writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
         writer.writeheader()
         for row in rows:
             # Explicitly flattened and spreadsheet-safe; JSON remains lossless.
-            writer.writerow({k: "'" + v if re.match(r"^[\s]*[=+@-]", v) else v
-                             for k, v in row.items()})
+            writer.writerow(
+                {k: "'" + v if re.match(r"^[\s]*[=+@-]", v) else v for k, v in row.items()}
+            )
         return stream.getvalue()
     if format != "html":
         raise ValueError("Unknown output format")
+
     def escape(value):
         return html.escape(str(value), quote=True)
-    table = "".join("<tr>" + "".join(f"<td>{escape(v)}</td>" for v in row.values())
-                    + "</tr>" for row in rows)
+
+    table = "".join(
+        "<tr>" + "".join(f"<td>{escape(v)}</td>" for v in row.values()) + "</tr>" for row in rows
+    )
     full = escape(json.dumps(report, indent=2, ensure_ascii=False, allow_nan=False))
-    return ("<!doctype html><html lang='en'><meta charset='utf-8'>"
-            "<meta name='viewport' content='width=device-width'>"
-            "<title>Living Proof Labs capability report</title>"
-            "<style>body{font:16px system-ui;margin:2rem;max-width:90rem}"
-            "td,th{border:1px solid #aaa;padding:.6rem;text-align:left}"
-            "table{border-collapse:collapse}pre{white-space:pre-wrap;overflow-wrap:anywhere}"
-            "</style><h1>Living Proof Labs capability report</h1>"
-            "<p>Fixture evidence, not robot safety certification. Stored decisions; "
-            "no regrading. Incompatible environments and revisions remain separate.</p>"
-            "<table><thead><tr><th>Result</th><th>Catalog</th><th>Revision</th>"
-            "<th>Environment</th><th>Status</th><th>Reason</th></tr></thead><tbody>"
-            + table + "</tbody></table><details><summary>Full lossless report</summary><pre>"
-            + full + "</pre></details></html>\n")
+    return (
+        "<!doctype html><html lang='en'><meta charset='utf-8'>"
+        "<meta name='viewport' content='width=device-width'>"
+        "<title>Living Proof Labs capability report</title>"
+        "<style>body{font:16px system-ui;margin:2rem;max-width:90rem}"
+        "td,th{border:1px solid #aaa;padding:.6rem;text-align:left}"
+        "table{border-collapse:collapse}pre{white-space:pre-wrap;overflow-wrap:anywhere}"
+        "</style><h1>Living Proof Labs capability report</h1>"
+        "<p>Fixture evidence, not robot safety certification. Stored decisions; "
+        "no regrading. Incompatible environments and revisions remain separate.</p>"
+        "<table><thead><tr><th>Result</th><th>Catalog</th><th>Revision</th>"
+        "<th>Environment</th><th>Status</th><th>Reason</th></tr></thead><tbody>"
+        + table
+        + "</tbody></table><details><summary>Full lossless report</summary><pre>"
+        + full
+        + "</pre></details></html>\n"
+    )
 
 
 def terminal_table(rows, groups):
     """Plain ASCII table of stored decisions; safe for terminals and redirected output."""
+
     def safe(value):
         # Escape terminal controls (including ANSI and bidi controls), preserve data in exports.
         return json.dumps(str(value), ensure_ascii=True)[1:-1]
 
-    columns = [("Result", "result_id", 30), ("Catalog", "spec_tag", 10),
-               ("Revision", "revision", 8), ("Status", "status", 21)]
-    widths = [min(limit, max(len(title), *(len(safe(row[key])) for row in rows)))
-              for title, key, limit in columns]
+    columns = [
+        ("Result", "result_id", 30),
+        ("Catalog", "spec_tag", 10),
+        ("Revision", "revision", 8),
+        ("Status", "status", 21),
+    ]
+    widths = [
+        min(limit, max(len(title), *(len(safe(row[key])) for row in rows)))
+        for title, key, limit in columns
+    ]
     separator = "-+-".join("-" * width for width in widths)
-    lines = ["Living Proof Labs capability report", "Stored decisions; no regrading.", "",
-             " | ".join(title.ljust(width) for (title, _, _), width in zip(columns, widths)),
-             separator]
+    lines = [
+        "Living Proof Labs capability report",
+        "Stored decisions; no regrading.",
+        "",
+        " | ".join(title.ljust(width) for (title, _, _), width in zip(columns, widths)),
+        separator,
+    ]
     for row in rows:
-        cells = [textwrap.wrap(safe(row[key]), width=width) or [""]
-                 for (_, key, _), width in zip(columns, widths)]
+        cells = [
+            textwrap.wrap(safe(row[key]), width=width) or [""]
+            for (_, key, _), width in zip(columns, widths)
+        ]
         for index in range(max(map(len, cells))):
-            lines.append(" | ".join((cell[index] if index < len(cell) else "").ljust(width)
-                                    for cell, width in zip(cells, widths)).rstrip())
+            lines.append(
+                " | ".join(
+                    (cell[index] if index < len(cell) else "").ljust(width)
+                    for cell, width in zip(cells, widths)
+                ).rstrip()
+            )
     lines += ["", "Separate contexts (no overall grade):"]
     for group in groups:
         context = group["context"]
         lines.append("  " + safe(canonical(context)))
         lines.append("    Results: " + ", ".join(safe(i) for i in group["result_ids"]))
-    lines += ["", "Fixture evidence, not robot safety certification.",
-              "Use --format json/html/csv for full export details."]
+    lines += [
+        "",
+        "Fixture evidence, not robot safety certification.",
+        "Use --format json/html/csv for full export details.",
+    ]
     return "\n".join(lines) + "\n"
