@@ -153,6 +153,11 @@ def aggregate(results):
 def grade(loaded, policy=POLICY, human=None, previous=None, evidence_links=None):
     """Return a new report; keep every original result and contributed assessment."""
     bundle = validate_bundle(loaded["bundle"])
+    if bundle["schema_version"] != "1.0.0":
+        raise ValueError(
+            f"Bundle {bundle['schema_version']} carries the verifier's decisions; "
+            "render it (render MANIFEST), never regrade it"
+        )
     contributions = copy.deepcopy(human or {"schema_version": "1.0.0", "assessments": []})
     schema = decode(Path(__file__).with_name("human.schema.json").read_text())
     Draft202012Validator(schema).validate(contributions)

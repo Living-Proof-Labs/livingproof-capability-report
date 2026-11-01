@@ -157,8 +157,17 @@ def grade_command(manifest, human, previous, require_pass, policy, evidence_link
 @click.option("--report-url", help="Markdown only: link to the full report.")
 @click.option("--clips-url", help="Markdown only: link to all clips.")
 @click.option("--lock-diff-url", help="Markdown only: link to the verification.lock.json diff.")
+@click.option(
+    "--evidence-links",
+    "evidence_links",
+    multiple=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Bundle 1.1.0 input only: JSON file of CI run, artifact and per-trial media links.",
+)
 @errors
-def render_command(report_file, format, output, report_url, clips_url, lock_diff_url):
+def render_command(
+    report_file, format, output, report_url, clips_url, lock_diff_url, evidence_links
+):
     """Render saved decisions; never regrade or overwrite existing files.
 
     REPORT_FILE is the JSON report created by grade, not the bundle manifest or
@@ -171,12 +180,30 @@ def render_command(report_file, format, output, report_url, clips_url, lock_diff
     livingproof-capability-report render report.json
     livingproof-capability-report render report.json --format html -o report.html
 
+    REPORT_FILE may instead be a bundle 1.1.0 manifest from capability-verifier: its
+    stored decisions and run assessments are rendered as they are, nothing is graded, and
+    ``--format json`` writes the report ``grade`` would have written:
+
+    \b
+    livingproof-capability-report render bundle/manifest.json --format json -o report.json
+    livingproof-capability-report render bundle/manifest.json --format markdown -o report.md
+
     Default stdout is a terminal table. Choose new output filenames when rerunning.
     """
+    from . import assessed
+
+    stored = decode(report_file.read_text(encoding="utf-8"))
+    if assessed.is_assessed(stored):
+        stored = assessed.report_from_bundle(
+            load_bundle(report_file),
+            [decode(p.read_text(encoding="utf-8")) for p in evidence_links] or None,
+        )
+    elif evidence_links:
+        raise ValueError("--evidence-links applies to a bundle 1.1.0 manifest only")
     selected_format = format or ("html" if output is not None else "table")
     links = {"report": report_url, "clips": clips_url, "lock_diff": lock_diff_url}
     content = render(
-        decode(report_file.read_text(encoding="utf-8")),
+        stored,
         selected_format,
         links if any(links.values()) else None,
     )
