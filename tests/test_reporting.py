@@ -121,6 +121,19 @@ def test_grouping_and_render_never_regrade(bundle, tmp_path):
     assert "PASS" in render(saved, "html")
 
 
+def test_html_shows_policy_and_grade_revision_before_details(tmp_path):
+    """Reporter #23: the policy and grade revision are visible with <details> collapsed."""
+    saved = stored(example(tmp_path))
+    saved["policy"] = "all-required-v1@1.0.0"
+    saved["grade_revision"] = 3
+    html = render(saved, "html")
+    head = html[: html.index("<details>")]
+    assert "<dt>Policy</dt><dd>all-required-v1@1.0.0</dd>" in head
+    assert "<dt>Grade revision</dt><dd>3</dd>" in head
+    saved["policy"] = "<b>p</b>"
+    assert "&lt;b&gt;p&lt;/b&gt;" in render(saved, "html").split("<details>")[0]
+
+
 def test_cli_and_no_overwrite(bundle, tmp_path):
     runner = CliRunner()
     assert runner.invoke(report, ["validate", str(bundle)]).exit_code == 0
