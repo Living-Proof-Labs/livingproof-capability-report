@@ -242,17 +242,20 @@ def render(report, format="json", links=None):
             + "".join(f"<li><a href='{escape(u)}'>{escape(t)}</a></li>" for t, u in items)
             + "</ul>"
         )
+    summary = html_summary(report, bundle, escape)
     return (
         "<!doctype html><html lang='en'><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width'>"
         "<title>Living Proof Labs capability report</title>"
         "<style>body{font:16px system-ui;margin:2rem;max-width:90rem}"
         "td,th{border:1px solid #aaa;padding:.6rem;text-align:left}"
-        "table{border-collapse:collapse}pre{white-space:pre-wrap;overflow-wrap:anywhere}"
+        "table{border-collapse:collapse}dt{font-weight:600}dd{margin:0 0 .4rem 1rem}"
+        "pre{white-space:pre-wrap;overflow-wrap:anywhere}"
         "</style><h1>Living Proof Labs capability report</h1>"
         "<p>Fixture evidence, not robot safety certification. Stored decisions; "
         "no regrading. Incompatible environments and revisions remain separate.</p>"
-        "<table><thead><tr><th>Result</th><th>Catalog</th><th>Revision</th>"
+        + summary
+        + "<table><thead><tr><th>Result</th><th>Catalog</th><th>Revision</th>"
         "<th>Environment</th><th>Status</th><th>Reason</th></tr></thead><tbody>"
         + table
         + "</tbody></table>"
@@ -260,6 +263,97 @@ def render(report, format="json", links=None):
         + "<details><summary>Full lossless report</summary><pre>"
         + full
         + "</pre></details></html>\n"
+    )
+
+
+def html_summary(report, bundle, escape):
+    """The supplied run summaries and provenance, shown above the trial table.
+
+    Everything comes from stored fields (``summaries``, ``policy``, the source bundle's
+    ``assessment`` and ``producer``); a field that is absent is left out, and nothing is
+    graded or recalculated here.
+    """
+
+    def ref(value):
+        if not isinstance(value, dict):
+            return None if value is None else str(value)
+        name = value.get("id") or value.get("tag")
+        version = value.get("version") or value.get("revision")
+        return f"{name}@{version}" if name and version else name
+
+    def items(pairs):
+        return "".join(
+            f"<dt>{escape(k)}</dt><dd>{escape(v)}</dd>" for k, v in pairs if v not in (None, "")
+        )
+
+    parts = []
+    for s in report.get("summaries") or []:
+        spec = s.get("spec") if isinstance(s.get("spec"), dict) else {}
+        observed = (
+            f"{s['k']}/{s['n']} PASS" if s.get("k") is not None and s.get("n") is not None else None
+        )
+        interval = s.get("wilson95")
+        title = " ".join(x for x in (ref(s.get("system")), s.get("grade")) if x)
+        parts.append(
+            f"<section class='run'><h3>{escape(title or 'Run')}</h3><dl>"
+            + items(
+                [
+                    ("Robot", ref(s.get("system"))),
+                    ("Run", s.get("run_id")),
+                    ("Overall status", s.get("grade")),
+                    ("Observed", observed),
+                    (
+                        "Threshold",
+                        None
+                        if s.get("required_passes") is None
+                        else f"{s['required_passes']}/{s.get('n', '?')} PASS required",
+                    ),
+                    (
+                        "Wilson 95% (stored)",
+                        f"[{interval[0]}, {interval[1]}]"
+                        if isinstance(interval, list) and len(interval) == 2
+                        else None,
+                    ),
+                    ("Capability", s.get("capability")),
+                    (
+                        "Spec",
+                        " ".join(
+                            str(x)
+                            for x in (
+                                spec.get("tag"),
+                                spec.get("revision") and f"revision {spec['revision']}",
+                                spec.get("commit"),
+                            )
+                            if x
+                        ),
+                    ),
+                    ("Environment", ref(s.get("environment"))),
+                ]
+            )
+            + "</dl></section>"
+        )
+    assessment = bundle.get("assessment") if isinstance(bundle.get("assessment"), dict) else {}
+    producer = bundle.get("producer") if isinstance(bundle.get("producer"), dict) else {}
+    provenance = items(
+        [
+            ("Policy", report.get("policy")),
+            ("Grade revision", str(report.get("grade_revision", 1))),
+            ("Aggregation", ref(assessment.get("aggregation"))),
+            ("Assessment format", assessment.get("format")),
+            (
+                "Assessed by",
+                " ".join(str(x) for x in (ref(producer), producer.get("commit")) if x),
+            ),
+            ("Bundle", bundle.get("schema_version") and f"schema {bundle['schema_version']}"),
+        ]
+    )
+    if not parts and not provenance:
+        return ""
+    return (
+        "<section id='summary'><h2>Summary</h2>"
+        + "".join(parts)
+        + (f"<h3>Provenance</h3><dl>{provenance}</dl>" if provenance else "")
+        + "</section>"
     )
 
 

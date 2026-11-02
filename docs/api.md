@@ -20,7 +20,8 @@ written by capability-verifier. It produces 20 stored trial decisions (12 PASS, 
 and one run summary graded FAIL by the verifier. Those grades describe the example
 evidence, not a test runner outcome or robot safety certification. `render(saved)`
 defaults to lossless JSON; `render(saved, "html")` formats stored decisions without
-regrading. See [bundle and grading contract](../README.md#bundle-and-grading-contract)
+regrading, with the run summary, policy and grade revision shown above the trial table
+(see [what the HTML report shows](../README.md#what-the-html-report-shows)). See [bundle and grading contract](../README.md#bundle-and-grading-contract)
 for validation, provenance and compatibility limits.
 
 `validate_bundle` validates a decoded manifest without checking evidence bytes;
