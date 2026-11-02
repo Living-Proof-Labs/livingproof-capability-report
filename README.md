@@ -303,8 +303,9 @@ grant is provisioned by these checks.
 
 Grade revisions (`all-required-v2@1.0.0`, `--previous`, `--require-pass`) were
 removed with the reporter's grading. Earlier reports that embed a `previous_report`
-and `grade_revision` still render without regrading, and their history is still
-checked. For a CI gate, use the verifier's run grade in the bundle's `assessment`.
+and `grade_revision` still render their own stored decisions without regrading; the
+embedded history is kept in JSON but no longer checked or rendered. For a CI gate, use
+the verifier's run grade in the bundle's `assessment`.
 
 ## Identify the version you are testing
 
