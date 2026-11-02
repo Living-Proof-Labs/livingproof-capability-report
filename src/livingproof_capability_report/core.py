@@ -288,6 +288,9 @@ def html_summary(report, bundle, escape):
 
     parts = []
     for s in report.get("summaries") or []:
+        grade = s.get("grade")
+        if grade is not None and not isinstance(grade, str):
+            raise ValueError(f"Report summary grade is {grade!r}; expected a string")
         spec = s.get("spec") if isinstance(s.get("spec"), dict) else {}
         observed = (
             f"{s['k']}/{s['n']} PASS" if s.get("k") is not None and s.get("n") is not None else None

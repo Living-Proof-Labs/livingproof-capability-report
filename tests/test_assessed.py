@@ -324,3 +324,17 @@ def test_html_summary_leaves_out_absent_fields(pair):
     assert "Observed" not in top and "Threshold" not in top and "Overall status" not in top
     assert "<dt>Policy</dt><dd>all-required-v1@1.0.0</dd>" in top
 
+
+@pytest.mark.parametrize("grade", [["PASS"], {"grade": "PASS"}, 1])
+def test_html_summary_refuses_a_non_string_grade(pair, tmp_path, grade):
+    """A stored report's summary grade that is not a string is a clear error, not a crash."""
+    _, manifest = pair
+    rendered = CliRunner().invoke(cli, ["render", str(manifest), "--format", "json"])
+    report = json.loads(rendered.output)
+    report["summaries"][0]["grade"] = grade
+    stored = tmp_path / "report.json"
+    stored.write_text(json.dumps(report))
+    result = CliRunner().invoke(cli, ["render", str(stored), "--format", "html"])
+    assert result.exit_code == 1
+    assert f"Report summary grade is {grade!r}; expected a string" in result.output
+    assert "sequence item" not in result.output
