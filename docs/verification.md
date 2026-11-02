@@ -60,8 +60,8 @@ The parent independent reviewer must exercise the delivered preview before merge
 Start with the [reporter manual](https://docs.livingprooflabs.com/livingproof-capability-report/).
 Live browser verification on 2026-10-27 confirmed source revision
 `fa1a4e708f3d1330667967fe420adcdf18cbb8ef`, command reference, four passing bounded
-scenarios, navigation, search for `manifest` (19 results), navigation to the grade
-anchor and reload, and dark theme. This records that deployed snapshot; it does
+scenarios, navigation, search for `manifest` (19 results), navigation to the `grade`
+command anchor (that command was removed in reporter 3.0.0) and reload, and dark theme. This records that deployed snapshot; it does
 not establish that every installed release has the same behavior.
 
 See [Pages operation](../.github/PAGES.md) for deployment boundaries and repeat

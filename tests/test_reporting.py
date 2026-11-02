@@ -149,3 +149,12 @@ def test_reject_bad_json_and_csv_formula(tmp_path):
     saved = stored(example(tmp_path))
     saved["decisions"][0]["reason"] = " =1+1"
     assert "' =1+1" in render(saved, "csv")
+
+
+def test_embedded_grade_history_is_kept_but_not_checked(tmp_path):
+    """Grade revisions went with grade (3.0.0): render shows the stored report only."""
+    saved = stored(example(tmp_path))
+    saved["previous_report"] = {"grade_revision": 7, "decisions": "not checked"}
+    saved["grade_revision"] = 2
+    assert decode(render(saved)) == saved
+    assert "PASS" in render(saved, "html")

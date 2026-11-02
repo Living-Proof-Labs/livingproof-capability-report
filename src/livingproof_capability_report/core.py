@@ -157,20 +157,6 @@ def render(report, format="json", links=None):
     bundle = validate_bundle(report["source_bundle"])
     if digest(bundle) != report["source_bundle_sha256"]:
         raise ValueError("Source bundle digest does not match report")
-    if "previous_report" in report:
-        previous = report["previous_report"]
-        if (
-            digest(previous) != report.get("previous_report_sha256")
-            or report.get("grade_revision") != previous.get("grade_revision", 1) + 1
-            or previous["source_bundle"] != bundle
-            or previous["evidence_state"] != report["evidence_state"]
-            or report["human_contributions"]["assessments"][
-                : len(previous["human_contributions"]["assessments"])
-            ]
-            != previous["human_contributions"]["assessments"]
-        ):
-            raise ValueError("Invalid grade revision history")
-        render(previous)
     decisions = report["decisions"]
     if (
         len(decisions) != len(bundle["results"])
