@@ -69,7 +69,9 @@ def _summary(run, index):
     where = f"assessment run {index}"
     for key in RUN_KEYS:
         _need(run, key, where)
-    _need(run, "grade", where, str)
+    grade = _need(run, "grade", where, str)
+    if grade not in core.GRADES:
+        raise ValueError(f"Bundle 1.1.0: {where} field 'grade' is not a known grade: {grade!r}")
     interval = _need(run, "interval", where, dict)
     for key in ("method", "level", "lower", "upper"):
         _need(interval, key, f"{where} interval")

@@ -305,13 +305,11 @@ def test_html_summary_escapes_every_value(pair):
     evil = "<script>alert('x')</script>&\""
     stored["summaries"][0]["run_id"] = evil
     stored["summaries"][0]["system"] = {"id": evil, "version": "1"}
-    stored["summaries"][0]["grade"] = evil
     stored["policy"] = evil
     top = _html_summary(render(stored, "html"))
     assert "<script>" not in top and "alert('x')" not in top
     safe = html_escape(evil)
     assert f"<dt>Run</dt><dd>{safe}</dd>" in top
-    assert f"<dt>Overall status</dt><dd>{safe}</dd>" in top
     assert f"<dt>Policy</dt><dd>{safe}</dd>" in top
     assert f"<dt>Robot</dt><dd>{safe}@1</dd>" in top
 
@@ -336,5 +334,71 @@ def test_html_summary_refuses_a_non_string_grade(pair, tmp_path, grade):
     stored.write_text(json.dumps(report))
     result = CliRunner().invoke(cli, ["render", str(stored), "--format", "html"])
     assert result.exit_code == 1
-    assert f"Report summary grade is {grade!r}; expected a string" in result.output
+    assert f"Report summary grade is {grade!r}; expected one of PASS, FAIL" in result.output
     assert "sequence item" not in result.output
+
+
+UNKNOWN_GRADES = ["MAYBE", None, "", "pass", ["PASS"], 1]
+FORMATS = ("json", "markdown", "html", "table", "csv")
+
+
+@pytest.mark.parametrize("grade", UNKNOWN_GRADES)
+def test_every_format_refuses_an_unknown_or_null_stored_grade(pair, tmp_path, grade):
+    """HTML matches Markdown: a summary grade the verifier never writes is refused everywhere."""
+    _, manifest = pair
+    report = json.loads(
+        CliRunner().invoke(cli, ["render", str(manifest), "--format", "json"]).output
+    )
+    report["summaries"][0]["grade"] = grade
+    stored = tmp_path / "report.json"
+    stored.write_text(json.dumps(report))
+    for fmt in FORMATS:
+        result = CliRunner().invoke(cli, ["render", str(stored), "--format", fmt])
+        assert result.exit_code == 1, (fmt, result.output)
+        assert f"Report summary grade is {grade!r}; expected one of" in result.output, fmt
+        assert "Traceback" not in result.output
+
+
+def test_every_format_refuses_a_missing_stored_grade(pair, tmp_path):
+    _, manifest = pair
+    report = json.loads(
+        CliRunner().invoke(cli, ["render", str(manifest), "--format", "json"]).output
+    )
+    del report["summaries"][0]["grade"]
+    stored = tmp_path / "report.json"
+    stored.write_text(json.dumps(report))
+    for fmt in FORMATS:
+        result = CliRunner().invoke(cli, ["render", str(stored), "--format", fmt])
+        assert result.exit_code == 1 and "Report summary grade is None" in result.output, fmt
+
+
+@pytest.mark.parametrize("grade", ["MAYBE", None])
+def test_every_format_refuses_an_unknown_or_null_bundle_grade(pair, grade):
+    _, manifest = pair
+    data = json.loads(manifest.read_text())
+    data["assessment"]["runs"][0]["grade"] = grade
+    manifest.write_text(json.dumps(data))
+    expected = (
+        "field 'grade' is not a known grade: 'MAYBE'" if grade else "field 'grade' must be str"
+    )
+    for fmt in FORMATS:
+        result = CliRunner().invoke(cli, ["render", str(manifest), "--format", fmt])
+        assert result.exit_code == 1, fmt
+        assert f"assessment run 0 {expected}" in result.output, fmt
+
+
+@pytest.mark.parametrize("grade", ["PASS", "FAIL", "INSUFFICIENT_EVIDENCE", "INCOMPATIBLE"])
+def test_every_format_renders_each_known_stored_grade_without_regrading(pair, tmp_path, grade):
+    """#35: the stored grade is shown as given, even when it disagrees with k of n."""
+    _, manifest = pair
+    report = json.loads(
+        CliRunner().invoke(cli, ["render", str(manifest), "--format", "json"]).output
+    )
+    report["summaries"][0]["grade"] = grade
+    stored = tmp_path / "report.json"
+    stored.write_text(json.dumps(report))
+    for fmt in FORMATS:
+        result = CliRunner().invoke(cli, ["render", str(stored), "--format", fmt])
+        assert result.exit_code == 0, (fmt, result.output)
+    html = CliRunner().invoke(cli, ["render", str(stored), "--format", "html"]).output
+    assert f"<dt>Overall status</dt><dd>{grade}</dd>" in html

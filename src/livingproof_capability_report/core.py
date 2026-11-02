@@ -16,6 +16,7 @@ from . import hallway
 from . import links as elinks
 
 PASS, FAIL, INSUFFICIENT, INCOMPATIBLE = ("PASS", "FAIL", "INSUFFICIENT_EVIDENCE", "INCOMPATIBLE")
+GRADES = (PASS, FAIL, INSUFFICIENT, INCOMPATIBLE)
 # Bundle 1.0.0 carries assessments but no decisions; the reporter no longer grades (#30).
 UNGRADED = "1.0.0"
 
@@ -150,10 +151,23 @@ def require_decisions(bundle):
         )
 
 
+def check_grade(grade):
+    """A stored summary grade must be one the verifier writes; anything else is refused."""
+    if not isinstance(grade, str) or grade not in GRADES:
+        raise ValueError(f"Report summary grade is {grade!r}; expected one of {', '.join(GRADES)}")
+    return grade
+
+
 def render(report, format="json", links=None):
-    """Render stored decisions, never invoke grading or apply a current policy."""
+    """Render stored decisions, never invoke grading or apply a current policy.
+
+    Every format refuses the same stored reports: an unknown, null or non-string summary
+    grade stops JSON, Markdown, HTML, CSV and table output alike.
+    """
     if report.get("report_version") != "1.0.0":
         raise ValueError("Unsupported report version")
+    for s in report.get("summaries") or []:
+        check_grade(s.get("grade") if isinstance(s, dict) else None)
     bundle = validate_bundle(report["source_bundle"])
     if digest(bundle) != report["source_bundle_sha256"]:
         raise ValueError("Source bundle digest does not match report")
@@ -288,9 +302,7 @@ def html_summary(report, bundle, escape):
 
     parts = []
     for s in report.get("summaries") or []:
-        grade = s.get("grade")
-        if grade is not None and not isinstance(grade, str):
-            raise ValueError(f"Report summary grade is {grade!r}; expected a string")
+        check_grade(s.get("grade"))
         spec = s.get("spec") if isinstance(s.get("spec"), dict) else {}
         observed = (
             f"{s['k']}/{s['n']} PASS" if s.get("k") is not None and s.get("n") is not None else None
