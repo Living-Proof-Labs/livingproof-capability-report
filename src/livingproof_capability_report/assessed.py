@@ -2,8 +2,8 @@
 
 Nothing here grades. Per-result statuses come from each result's ``decision`` and per-run
 k of N, interval and grade from the bundle's ``assessment`` (livingproof-run-assessment/0.1,
-robot-capability-specs). The report is the same report 1.0.0 document ``grade`` writes, so
-``render`` and ``comment`` print the same bytes; ``wilson95`` is kept.
+robot-capability-specs). The report keeps the report 1.0.0 document layout that reporter
+1.x wrote, so ``render`` and ``comment`` print the same bytes; ``wilson95`` is kept.
 
 A missing or malformed field is an error naming the field and the result. The one check
 made against the evidence is integrity: a stored PASS whose evidence is missing or changed

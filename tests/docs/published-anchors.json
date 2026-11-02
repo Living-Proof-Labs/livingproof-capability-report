@@ -19,23 +19,19 @@
     "commands.html": [
       "installed-command-reference",
       "livingproof-capability-report",
-      "grade",
-      "human-template",
       "render",
       "validate"
     ],
     "terminal-help.html": [
       "installed-terminal-help",
       "livingproof-capability-report",
-      "livingproof-capability-report-grade",
-      "livingproof-capability-report-human-template",
       "livingproof-capability-report-render",
       "livingproof-capability-report-validate"
     ],
     "scenarios.html": [
       "installed-feature-scenarios",
       "test_validate_portable_bundle",
-      "test_require_pass_retains_report",
+      "test_refuse_bundle_without_decisions",
       "test_render_stored_decisions",
       "test_reject_malformed_manifest"
     ],

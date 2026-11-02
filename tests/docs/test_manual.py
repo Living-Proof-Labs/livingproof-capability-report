@@ -58,7 +58,7 @@ def test_all_local_pages_assets_and_fragments():
 def test_installed_command_options_present():
     commands = json.loads((SITE / "commands.json").read_text())
     html = (SITE / "commands.html").read_text()
-    assert len(commands) >= 5
+    assert len(commands) >= 4
     sections = re.split(r'<h[23] id="([^"]+)">', html)
     by_name = dict(zip(sections[1::2], sections[2::2], strict=True))
     for command in commands:
@@ -173,9 +173,10 @@ from pathlib import Path
 import livingproof_capability_report as api
 assert Path(api.__file__).is_relative_to(Path(sys.argv[1]))
 loaded = api.load_bundle(sys.argv[2])
-saved = api.grade(loaded)
-assert len(saved['decisions']) == 8 and len(saved['groups']) == 4
-assert {d['status'] for d in saved['decisions']} == {'PASS', 'FAIL', 'INSUFFICIENT_EVIDENCE'}
+saved = api.report_from_bundle(loaded)
+assert len(saved['decisions']) == 20 and len(saved['groups']) == 1
+assert {d['status'] for d in saved['decisions']} == {'PASS', 'FAIL'}
+assert not hasattr(api, 'grade')
 assert '<html' in api.render(saved, 'html')
 print(json.dumps([{'name': n, 'signature': str(inspect.signature(getattr(api, n))),
                    'docstring': inspect.getdoc(getattr(api, n)) or ''} for n in api.__all__]))

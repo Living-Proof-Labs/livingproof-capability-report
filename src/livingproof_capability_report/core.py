@@ -1,4 +1,4 @@
-"""Versioned portable bundles and conservative, explicit grading policy."""
+"""Versioned portable bundles: validate, load and render stored decisions; never grade."""
 
 import copy
 import csv
@@ -8,32 +8,16 @@ import io
 import json
 import re
 import textwrap
-from collections import Counter
 from pathlib import Path, PurePosixPath
 
 from jsonschema import Draft202012Validator
 
 from . import hallway
 from . import links as elinks
-from .policy import POLICY_V2, decide, explain
 
 PASS, FAIL, INSUFFICIENT, INCOMPATIBLE = ("PASS", "FAIL", "INSUFFICIENT_EVIDENCE", "INCOMPATIBLE")
-POLICY = "all-required-v1@1.0.0"
-CONTRACTS = [
-    (
-        "https://github.com/Living-Proof-Labs/robot-capability-specs",
-        "v1.1.1",
-        "60b7572df9f5e5c5ab5757a0b4674da16de2b0df",
-        "1.0.0",
-    ),
-    (
-        "https://github.com/Living-Proof-Labs/robot-capability-specs",
-        "v1.2.0",
-        "f06c4a17a55d649ff78961c7391f90e34fab929d",
-        "2.0.0",
-    ),
-]
-MEMBERS = {"pause-rules": "deterministic", "mock-ai": "mock-agent", "human-fixture": "human"}
+# Bundle 1.0.0 carries assessments but no decisions; the reporter no longer grades (#30).
+UNGRADED = "1.0.0"
 
 
 def decode(raw):
@@ -79,7 +63,7 @@ def validate_bundle(bundle):
                 "Use the containing bundle's manifest. For the bundled example, run from "
                 "the repository root:\n"
                 "  livingproof-capability-report validate examples/bundle/manifest.json\n"
-                "Then use grade to save a report and render to view it; see "
+                "Then render it to view the verifier's stored decisions; see "
                 "livingproof-capability-report --help for the full workflow.\n"
                 "Do not add schema_version to the observation.\n"
                 f"Details: {message}"
@@ -150,145 +134,20 @@ def aggregate(results):
     return [{"context": decode(key), "result_ids": ids} for key, ids in sorted(groups.items())]
 
 
-def grade(loaded, policy=POLICY, human=None, previous=None, evidence_links=None):
-    """Return a new report; keep every original result and contributed assessment."""
-    bundle = validate_bundle(loaded["bundle"])
-    if bundle["schema_version"] != "1.0.0":
+def require_decisions(bundle):
+    """Refuse a bundle without the verifier's decisions: the reporter never grades.
+
+    ``bundle`` is a decoded manifest or what ``load_bundle`` returns.
+    """
+    if isinstance(bundle, dict) and isinstance(bundle.get("bundle"), dict):
+        bundle = bundle["bundle"]
+    version = bundle.get("schema_version") if isinstance(bundle, dict) else None
+    if version == UNGRADED:
         raise ValueError(
-            f"Bundle {bundle['schema_version']} carries the verifier's decisions; "
-            "render it (render MANIFEST), never regrade it"
+            "Bundle 1.0.0 has no decisions to render, and this reporter does not grade. "
+            "Assess the evidence with capability-verifier (v1.9.0 or later writes bundle 1.1.0 "
+            "with its decisions and run assessments), then render that bundle's manifest"
         )
-    contributions = copy.deepcopy(human or {"schema_version": "1.0.0", "assessments": []})
-    schema = decode(Path(__file__).with_name("human.schema.json").read_text())
-    Draft202012Validator(schema).validate(contributions)
-    if previous is not None:
-        render(previous)  # Validate stored input, without applying any current grading policy.
-        if (
-            previous["source_bundle"] != bundle
-            or previous["evidence_state"] != loaded["evidence_state"]
-        ):
-            raise ValueError("Grade revision must retain the original bundle and evidence state")
-        contributions["assessments"] = (
-            copy.deepcopy(previous["human_contributions"]["assessments"])
-            + contributions["assessments"]
-        )
-    known = {r["id"]: r for r in bundle["results"]}
-    for contribution in contributions["assessments"]:
-        result = known.get(contribution["result_id"])
-        if result is None or contribution["result_sha256"] != digest(result):
-            raise ValueError("Human contribution does not match the original result digest")
-        a = contribution["assessment"]
-        if hallway.is_hallway(result):
-            if a["kind"] not in {"human", "agent"} or a["evaluator"] in hallway.EVALUATORS:
-                raise ValueError("Contribution must be a human or agent assessment")
-        elif a["evaluator"] not in {"human-fixture", "human-review"} or a["kind"] != "human":
-            raise ValueError("Contribution must be a human assessment")
-        if not set(a["evidence_ids"]) <= {e["id"] for e in result["evidence"]}:
-            raise ValueError("Human contribution refers to undeclared evidence")
-    decisions = []
-    for result in bundle["results"]:
-        additions = [
-            c["assessment"] for c in contributions["assessments"] if c["result_id"] == result["id"]
-        ]
-        assessments = result["assessments"] + additions
-        if len({a["id"] for a in assessments}) != len(assessments):
-            raise ValueError(
-                "Duplicate assessment identifier across original and human contributions"
-            )
-        for a in assessments:
-            if a["evaluator"] == "human-review" and any(
-                not isinstance(a["provenance"].get(key), str) or not a["provenance"][key].strip()
-                for key in ("reviewer", "recorded_at")
-            ):
-                raise ValueError("Human review requires reviewer and recorded_at provenance")
-        states = loaded["evidence_state"].get(result["id"], {})
-        supported = (
-            policy in {POLICY, POLICY_V2}
-            and result["spec"]["capability"] == "pause"
-            and tuple(result["spec"][key] for key in ("repository", "tag", "commit", "revision"))
-            in CONTRACTS
-        )
-        members = dict(MEMBERS)
-        if policy == POLICY_V2:
-            members["human-review"] = "human"
-        supported = supported and all(
-            a["evaluator"] in members
-            and a["kind"] == members[a["evaluator"]]
-            and a["version"]
-            in ({"1.0.0", "1.1.0"} if a["evaluator"] == "pause-rules" else {"1.0.0"})
-            for a in assessments
-        )
-        complete = bool(result["evidence"]) and all(
-            states.get(e["id"]) == "verified" for e in result["evidence"]
-        )
-        membership = Counter(a["evaluator"] for a in assessments)
-        compatibility = result["provenance"].get("compatibility")
-        if "compatibility" in result["provenance"] and (
-            not isinstance(compatibility, dict)
-            or compatibility.get("status") != INCOMPATIBLE
-            or compatibility.get("scope") != "execution"
-            or not isinstance(compatibility.get("reason"), str)
-            or not compatibility["reason"].strip()
-        ):
-            raise ValueError("Invalid execution compatibility declaration")
-        found = None
-        if compatibility is not None:
-            status, reason = INCOMPATIBLE, compatibility["reason"]
-        elif hallway.is_hallway(result):
-            if policy != POLICY:
-                status, reason = INCOMPATIBLE, "walk-hallway is graded with all-required-v1 only"
-            elif not hallway.contract_supported(result):
-                status, reason = INCOMPATIBLE, "Unsupported walk-hallway contract"
-            elif not hallway.members_supported(assessments):
-                status, reason = (
-                    INCOMPATIBLE,
-                    "Unsupported hallway evaluator, version or assessor kind",
-                )
-            else:
-                status, reason, found, types = hallway.decide(assessments, complete)
-        elif not supported:
-            status, reason = INCOMPATIBLE, "Unsupported contract, evaluator or policy version"
-        elif policy == POLICY_V2:
-            status, reason = decide(assessments, complete)
-        elif any(a["status"] == FAIL for a in assessments):
-            status, reason = FAIL, "A retained assessment failed; failures are never averaged away"
-        elif not complete:
-            status, reason = INSUFFICIENT, "Evidence missing or digest mismatch"
-        elif (
-            membership != Counter(MEMBERS.keys())
-            or any(a["status"] != PASS or not a["evidence_ids"] for a in assessments)
-            or not any(a["evaluator"] == "pause-rules" and a["mandatory"] for a in assessments)
-        ):
-            status, reason = INSUFFICIENT, "Missing, duplicate or insufficient required assessment"
-        else:
-            status, reason = PASS, "All required assessments pass with verified evidence"
-        decision = {"result_id": result["id"], "status": status, "reason": reason}
-        if found is not None:
-            decision.update(failures=found, assessor_types=types)
-        if policy == POLICY_V2:
-            decision.update(explain(result, assessments, states))
-        decisions.append(decision)
-    report = {
-        "report_version": "1.0.0",
-        "policy": policy,
-        "source_bundle": bundle,
-        "source_bundle_sha256": digest(bundle),
-        "human_contributions": contributions,
-        "evidence_state": copy.deepcopy(loaded["evidence_state"]),
-        "groups": aggregate(bundle["results"]),
-        "decisions": decisions,
-    }
-    runs = hallway.summaries(bundle, decisions)
-    if runs:
-        report["summaries"] = runs
-    if evidence_links:
-        report["evidence_links"] = elinks.merge(evidence_links)
-    if policy == POLICY_V2 or previous is not None:
-        report["grade_revision"] = 1 if previous is None else previous.get("grade_revision", 1) + 1
-    if previous is not None:
-        report["previous_report_sha256"] = digest(previous)
-        report["previous_report"] = copy.deepcopy(previous)
-    return report
 
 
 def render(report, format="json", links=None):

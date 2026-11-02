@@ -1,0 +1,507 @@
+{
+  "report_version": "1.0.0",
+  "policy": "all-required-v1@1.0.0",
+  "human_contributions": {
+    "schema_version": "1.0.0",
+    "assessments": []
+  },
+  "evidence_state": {
+    "stock-seed-01": {
+      "stock-seed-01": "verified"
+    },
+    "stock-seed-02": {
+      "stock-seed-02": "verified"
+    },
+    "stock-seed-03": {
+      "stock-seed-03": "verified"
+    },
+    "stock-seed-04": {
+      "stock-seed-04": "verified"
+    },
+    "stock-seed-05": {
+      "stock-seed-05": "verified"
+    },
+    "stock-seed-06": {
+      "stock-seed-06": "verified"
+    },
+    "stock-seed-07": {
+      "stock-seed-07": "verified"
+    },
+    "stock-seed-08": {
+      "stock-seed-08": "verified"
+    },
+    "stock-seed-09": {
+      "stock-seed-09": "verified"
+    },
+    "stock-seed-10": {
+      "stock-seed-10": "verified"
+    },
+    "stock-seed-11": {
+      "stock-seed-11": "verified"
+    },
+    "stock-seed-12": {
+      "stock-seed-12": "verified"
+    },
+    "stock-seed-13": {
+      "stock-seed-13": "verified"
+    },
+    "stock-seed-14": {
+      "stock-seed-14": "verified"
+    },
+    "stock-seed-15": {
+      "stock-seed-15": "verified"
+    },
+    "stock-seed-16": {
+      "stock-seed-16": "verified"
+    },
+    "stock-seed-17": {
+      "stock-seed-17": "verified"
+    },
+    "stock-seed-18": {
+      "stock-seed-18": "verified"
+    },
+    "stock-seed-19": {
+      "stock-seed-19": "verified"
+    },
+    "stock-seed-20": {
+      "stock-seed-20": "verified"
+    }
+  },
+  "groups": [
+    {
+      "context": {
+        "environment": {
+          "id": "hallway-open",
+          "version": "0.1.0"
+        },
+        "spec": {
+          "capability": "walk-hallway",
+          "commit": "b4ba31eb2c7eaca2721d68d5d375260e2a114449",
+          "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+          "revision": "0.1.0",
+          "tag": "v1.6.0"
+        },
+        "system": {
+          "id": "unitree-g1/stock",
+          "version": "1.1.0"
+        }
+      },
+      "result_ids": [
+        "stock-seed-01",
+        "stock-seed-02",
+        "stock-seed-03",
+        "stock-seed-04",
+        "stock-seed-05",
+        "stock-seed-06",
+        "stock-seed-07",
+        "stock-seed-08",
+        "stock-seed-09",
+        "stock-seed-10",
+        "stock-seed-11",
+        "stock-seed-12",
+        "stock-seed-13",
+        "stock-seed-14",
+        "stock-seed-15",
+        "stock-seed-16",
+        "stock-seed-17",
+        "stock-seed-18",
+        "stock-seed-19",
+        "stock-seed-20"
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "result_id": "stock-seed-01",
+      "status": "PASS",
+      "reason": "All four hallway evaluators and every retained assessment pass",
+      "failures": [],
+      "assessor_types": [
+        "deterministic"
+      ]
+    },
+    {
+      "result_id": "stock-seed-02",
+      "status": "PASS",
+      "reason": "All four hallway evaluators and every retained assessment pass",
+      "failures": [],
+      "assessor_types": [
+        "deterministic"
+      ]
+    },
+    {
+      "result_id": "stock-seed-03",
+      "status": "PASS",
+      "reason": "All four hallway evaluators and every retained assessment pass",
+      "failures": [],
+      "assessor_types": [
+        "deterministic"
+      ]
+    },
+    {
+      "result_id": "stock-seed-04",
+      "status": "FAIL",
+      "reason": "Failed: hallway-lateral-limit FAIL",
+      "failures": [
+        {
+          "check": "hallway-lateral-limit",
+          "seed": 4,
+          "observed": 0.62,
+          "limit": 0.49,
+          "unit": "m",
+          "t": 10.26
+        }
+      ],
+      "assessor_types": [
+        "deterministic"
+      ]
+    },
+    {
+      "result_id": "stock-seed-05",
+      "status": "FAIL",
+      "reason": "Failed: hallway-wall-contact FAIL",
+      "failures": [
+        {
+          "check": "hallway-wall-contact",
+          "seed": 5,
+          "observed": 0.03,
+          "limit": 0.0,
+          "unit": "m",
+          "t": 4.5,
+          "wall": "wall-left"
+        }
+      ],
+      "assessor_types": [
+        "deterministic"
+      ]
+    },
+    {
+      "result_id": "stock-seed-06",
+      "status": "PASS",
+      "reason": "All four hallway evaluators and every retained assessment pass",
+      "failures": [],
+      "assessor_types": [
+        "deterministic"
+      ]
+    },
+    {
+      "result_id": "stock-seed-07",
+      "status": "FAIL",
+      "reason": "Failed: hallway-lateral-limit FAIL; hallway-wall-contact FAIL",
+      "failures": [
+        {
+          "check": "hallway-lateral-limit",
+          "seed": 7,
+          "observed": 0.62,
+          "limit": 0.49,
+          "unit": "m",
+          "t": 10.26
+        },
+        {
+          "check": "hallway-wall-contact",
+          "seed": 7,
+          "observed": 0.03,
+          "limit": 0.0,
+          "unit": "m",
+          "t": 4.5,
+          "wall": "wall-left"
+        }
+      ],
+      "assessor_types": [
+        "deterministic"
+      ]
+    },
+    {
+      "result_id": "stock-seed-08",
+      "status": "PASS",
+      "reason": "All four hallway evaluators and every retained assessment pass",
+      "failures": [],
+      "assessor_types": [
+        "deterministic"
+      ]
+    },
+    {
+      "result_id": "stock-seed-09",
+      "status": "FAIL",
+      "reason": "Failed: hallway-lateral-limit FAIL",
+      "failures": [
+        {
+          "check": "hallway-lateral-limit",
+          "seed": 9,
+          "observed": 0.62,
+          "limit": 0.49,
+          "unit": "m",
+          "t": 10.26
+        }
+      ],
+      "assessor_types": [
+        "deterministic"
+      ]
+    },
+    {
+      "result_id": "stock-seed-10",
+      "status": "PASS",
+      "reason": "All four hallway evaluators and every retained assessment pass",
+      "failures": [],
+      "assessor_types": [
+        "deterministic"
+      ]
+    },
+    {
+      "result_id": "stock-seed-11",
+      "status": "PASS",
+      "reason": "All four hallway evaluators and every retained assessment pass",
+      "failures": [],
+      "assessor_types": [
+        "deterministic"
+      ]
+    },
+    {
+      "result_id": "stock-seed-12",
+      "status": "FAIL",
+      "reason": "Failed: hallway-wall-contact FAIL",
+      "failures": [
+        {
+          "check": "hallway-wall-contact",
+          "seed": 12,
+          "observed": 0.03,
+          "limit": 0.0,
+          "unit": "m",
+          "t": 4.5,
+          "wall": "wall-left"
+        }
+      ],
+      "assessor_types": [
+        "deterministic"
+      ]
+    },
+    {
+      "result_id": "stock-seed-13",
+      "status": "PASS",
+      "reason": "All four hallway evaluators and every retained assessment pass",
+      "failures": [],
+      "assessor_types": [
+        "deterministic"
+      ]
+    },
+    {
+      "result_id": "stock-seed-14",
+      "status": "FAIL",
+      "reason": "Failed: hallway-fall FAIL",
+      "failures": [
+        {
+          "check": "hallway-fall",
+          "seed": 14,
+          "observed": 0.41,
+          "limit": 0.5,
+          "unit": "m",
+          "t": 6.2
+        }
+      ],
+      "assessor_types": [
+        "deterministic"
+      ]
+    },
+    {
+      "result_id": "stock-seed-15",
+      "status": "FAIL",
+      "reason": "Failed: hallway-exit-reached FAIL",
+      "failures": [
+        {
+          "check": "hallway-exit-reached",
+          "seed": 15,
+          "observed": null,
+          "limit": 27.0,
+          "unit": "s",
+          "t": 27.0
+        }
+      ],
+      "assessor_types": [
+        "deterministic"
+      ]
+    },
+    {
+      "result_id": "stock-seed-16",
+      "status": "PASS",
+      "reason": "All four hallway evaluators and every retained assessment pass",
+      "failures": [],
+      "assessor_types": [
+        "deterministic"
+      ]
+    },
+    {
+      "result_id": "stock-seed-17",
+      "status": "PASS",
+      "reason": "All four hallway evaluators and every retained assessment pass",
+      "failures": [],
+      "assessor_types": [
+        "deterministic"
+      ]
+    },
+    {
+      "result_id": "stock-seed-18",
+      "status": "FAIL",
+      "reason": "Failed: hallway-lateral-limit FAIL",
+      "failures": [
+        {
+          "check": "hallway-lateral-limit",
+          "seed": 18,
+          "observed": 0.62,
+          "limit": 0.49,
+          "unit": "m",
+          "t": 10.26
+        }
+      ],
+      "assessor_types": [
+        "deterministic"
+      ]
+    },
+    {
+      "result_id": "stock-seed-19",
+      "status": "PASS",
+      "reason": "All four hallway evaluators and every retained assessment pass",
+      "failures": [],
+      "assessor_types": [
+        "deterministic"
+      ]
+    },
+    {
+      "result_id": "stock-seed-20",
+      "status": "PASS",
+      "reason": "All four hallway evaluators and every retained assessment pass",
+      "failures": [],
+      "assessor_types": [
+        "deterministic"
+      ]
+    }
+  ],
+  "summaries": [
+    {
+      "capability": "walk-hallway",
+      "spec": {
+        "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+        "tag": "v1.6.0",
+        "commit": "b4ba31eb2c7eaca2721d68d5d375260e2a114449",
+        "capability": "walk-hallway",
+        "revision": "0.1.0"
+      },
+      "system": {
+        "id": "unitree-g1/stock",
+        "version": "1.1.0"
+      },
+      "environment": {
+        "id": "hallway-open",
+        "version": "0.1.0"
+      },
+      "run_id": "run-1",
+      "k": 12,
+      "n": 20,
+      "required_passes": 18,
+      "wilson95": [
+        0.3866,
+        0.7812
+      ],
+      "grade": "FAIL",
+      "result_ids": [
+        "stock-seed-01",
+        "stock-seed-02",
+        "stock-seed-03",
+        "stock-seed-04",
+        "stock-seed-05",
+        "stock-seed-06",
+        "stock-seed-07",
+        "stock-seed-08",
+        "stock-seed-09",
+        "stock-seed-10",
+        "stock-seed-11",
+        "stock-seed-12",
+        "stock-seed-13",
+        "stock-seed-14",
+        "stock-seed-15",
+        "stock-seed-16",
+        "stock-seed-17",
+        "stock-seed-18",
+        "stock-seed-19",
+        "stock-seed-20"
+      ],
+      "failures": [
+        {
+          "check": "hallway-lateral-limit",
+          "seed": 4,
+          "observed": 0.62,
+          "limit": 0.49,
+          "unit": "m",
+          "t": 10.26
+        },
+        {
+          "check": "hallway-wall-contact",
+          "seed": 5,
+          "observed": 0.03,
+          "limit": 0.0,
+          "unit": "m",
+          "t": 4.5,
+          "wall": "wall-left"
+        },
+        {
+          "check": "hallway-lateral-limit",
+          "seed": 7,
+          "observed": 0.62,
+          "limit": 0.49,
+          "unit": "m",
+          "t": 10.26
+        },
+        {
+          "check": "hallway-wall-contact",
+          "seed": 7,
+          "observed": 0.03,
+          "limit": 0.0,
+          "unit": "m",
+          "t": 4.5,
+          "wall": "wall-left"
+        },
+        {
+          "check": "hallway-lateral-limit",
+          "seed": 9,
+          "observed": 0.62,
+          "limit": 0.49,
+          "unit": "m",
+          "t": 10.26
+        },
+        {
+          "check": "hallway-wall-contact",
+          "seed": 12,
+          "observed": 0.03,
+          "limit": 0.0,
+          "unit": "m",
+          "t": 4.5,
+          "wall": "wall-left"
+        },
+        {
+          "check": "hallway-fall",
+          "seed": 14,
+          "observed": 0.41,
+          "limit": 0.5,
+          "unit": "m",
+          "t": 6.2
+        },
+        {
+          "check": "hallway-exit-reached",
+          "seed": 15,
+          "observed": null,
+          "limit": 27.0,
+          "unit": "s",
+          "t": 27.0
+        },
+        {
+          "check": "hallway-lateral-limit",
+          "seed": 18,
+          "observed": 0.62,
+          "limit": 0.49,
+          "unit": "m",
+          "t": 10.26
+        }
+      ],
+      "prototype": null
+    }
+  ]
+}
