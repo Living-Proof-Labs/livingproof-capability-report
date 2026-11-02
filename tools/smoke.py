@@ -28,12 +28,12 @@ subprocess.run(["docker", "run", *network, *trust, *probe, "--rm", "-v", f"{bund
                 "validate", "/input/manifest.json"], check=True)
 # Job containers may override ENTRYPOINT and invoke a shell; test separately.
 exercise = """set -eu
-livingproof-capability-report grade /input/manifest.json -o /tmp/report.json
+livingproof-capability-report render /input/manifest.json --format json -o /tmp/report.json
 livingproof-capability-report render /tmp/report.json > /tmp/table.txt
 grep -q "Separate contexts" /tmp/table.txt
 livingproof-capability-report render /tmp/report.json --format html -o /tmp/report.html
 livingproof-capability-report render /tmp/report.json --format csv -o /tmp/report.csv
-python -c 'import json; r=json.load(open("/tmp/report.json")); s={d["result_id"]:d["status"] for d in r["decisions"]}; assert s["v1.1.1-slow"]=="PASS"; assert s["v1.2.0-slow"]=="FAIL"; assert s["v1.2.0-insufficient"]=="INSUFFICIENT_EVIDENCE"'
+python -c 'import json; r=json.load(open("/tmp/report.json")); s=[d["status"] for d in r["decisions"]]; assert (s.count("PASS"), s.count("FAIL"), len(s)) == (12, 8, 20); assert r["summaries"][0]["grade"]=="FAIL"'
 """
 subprocess.run(["docker", "run", *network, *trust, *probe, "--rm", "--entrypoint", "/bin/sh", "-v",
                 f"{bundle}:/input:ro", image, "-c", exercise + "python /probe.py /results/image.json installed-image\n"], check=True)
@@ -61,11 +61,11 @@ apt-get update -qq
 apt-get install -y /packages/livingproof-capability-report_*_all.deb /packages/python3-livingproof-common_*_all.deb
 cd /tmp
 livingproof-capability-report validate /input/manifest.json
-livingproof-capability-report grade /input/manifest.json -o /tmp/report.json
+livingproof-capability-report render /input/manifest.json --format json -o /tmp/report.json
 livingproof-capability-report render /tmp/report.json > /tmp/table.txt
 grep -q "Separate contexts" /tmp/table.txt
 livingproof-capability-report render /tmp/report.json --format html -o /tmp/report.html
-/usr/bin/python3 -c 'from livingproof_capability_report import grade; print(grade.__module__)'
+/usr/bin/python3 -c 'from livingproof_capability_report import report_from_bundle; print(report_from_bundle.__module__)'
 test ! -d /opt/livingproof-capability-report
 /usr/bin/python3 -c 'import click, jsonschema; print(click.__file__, jsonschema.__file__)'
 dpkg-query -W -f='${Architecture} ${Version}\\n' livingproof-capability-report python3 python3-click python3-jsonschema

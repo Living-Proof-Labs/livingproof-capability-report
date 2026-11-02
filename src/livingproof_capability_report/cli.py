@@ -5,7 +5,7 @@ from pathlib import Path
 import click
 from jsonschema import ValidationError
 
-from .core import decode, grade, load_bundle, render
+from .core import decode, load_bundle, render, require_decisions
 
 
 def errors(function):
@@ -42,22 +42,22 @@ def show_version(ctx, param, value):
     help="Show release or development identity, package version and provenance source.",
 )
 def report():
-    """Validate a bundle, grade its evidence, then render the saved report.
+    """Validate a bundle, then render the capability verifier's stored decisions.
 
-    Start with a bundle manifest: it contains version information, evidence
-    paths and assessment references. Individual observation files are evidence
-    referenced by that manifest, not standalone reporter input.
+    Start with a bundle 1.1.0 manifest written by capability-verifier: it contains version
+    information, evidence paths, assessments, and the verifier's per-result decisions and
+    run assessments. This reporter never grades; a bundle 1.0.0 (no decisions) is refused.
 
     Run this example from the repository root or extracted source archive:
 
     \b
     livingproof-capability-report validate examples/bundle/manifest.json
-    livingproof-capability-report grade examples/bundle/manifest.json -o report.json
+    livingproof-capability-report render examples/bundle/manifest.json --format json -o report.json
     livingproof-capability-report render report.json
 
-    For your own bundle, substitute its manifest path. Validate checks structure
-    and evidence integrity; grade saves decisions; render displays them without
-    regrading. Output files must be new; choose another name when rerunning.
+    For your own bundle, substitute its manifest path. Validate checks structure and evidence
+    integrity; render shows the stored decisions as they are. Output files must be new;
+    choose another name when rerunning.
     """
 
 
@@ -74,10 +74,10 @@ def validate_command(manifest):
 
     \b
     livingproof-capability-report validate examples/bundle/manifest.json
-    livingproof-capability-report grade examples/bundle/manifest.json -o report.json
+    livingproof-capability-report render examples/bundle/manifest.json --format json -o report.json
     livingproof-capability-report render report.json
 
-    Validation checks integrity; grade saves decisions; render displays them.
+    Validation checks integrity; render displays the verifier's stored decisions.
     """
     loaded = load_bundle(manifest)
     click.echo("Valid bundle structure")
@@ -90,54 +90,6 @@ def validate_command(manifest):
         for state in states.values()
     ):
         raise click.ClickException("Evidence is incomplete or changed")
-
-
-@report.command("grade")
-@click.argument("manifest", type=click.Path(exists=True, dir_okay=False, path_type=Path))
-@click.option("--human", type=click.Path(exists=True, dir_okay=False, path_type=Path))
-@click.option(
-    "--previous",
-    type=click.Path(exists=True, dir_okay=False, path_type=Path),
-    help="Retain a completed report and append a new grade revision.",
-)
-@click.option(
-    "--require-pass", is_flag=True, help="Write report, then exit nonzero unless all pass."
-)
-@click.option("--policy", default="all-required-v1@1.0.0", show_default=True)
-@click.option(
-    "--evidence-links",
-    "evidence_links",
-    multiple=True,
-    type=click.Path(exists=True, dir_okay=False, path_type=Path),
-    help="JSON file of CI run, artifact and per-trial media links; repeatable, merged in order.",
-)
-@click.option("--output", "-o", required=True, type=click.Path(path_type=Path))
-@errors
-def grade_command(manifest, human, previous, require_pass, policy, evidence_links, output):
-    """Grade a bundle MANIFEST into a new JSON report (no overwriting).
-
-    Use the bundle manifest, not an individual observation. From the repository
-    root or extracted source archive, validate first, then save and view a report:
-
-    \b
-    livingproof-capability-report validate examples/bundle/manifest.json
-    livingproof-capability-report grade examples/bundle/manifest.json -o report.json
-    livingproof-capability-report render report.json
-
-    Choose a new output filename when rerunning.
-    """
-    result = grade(
-        load_bundle(manifest),
-        policy,
-        decode(human.read_text()) if human else None,
-        decode(previous.read_text()) if previous else None,
-        [decode(p.read_text(encoding="utf-8")) for p in evidence_links] or None,
-    )
-    with output.open("x", encoding="utf-8") as stream:
-        stream.write(render(result))
-    click.echo(str(output))
-    if require_pass and any(d["status"] != "PASS" for d in result["decisions"]):
-        raise click.ClickException("Report retained; not all coordinates passed")
 
 
 @report.command("render")
@@ -168,31 +120,26 @@ def grade_command(manifest, human, previous, require_pass, policy, evidence_link
 def render_command(
     report_file, format, output, report_url, clips_url, lock_diff_url, evidence_links
 ):
-    """Render saved decisions; never regrade or overwrite existing files.
+    """Render stored decisions; never grade or overwrite existing files.
 
-    REPORT_FILE is the JSON report created by grade, not the bundle manifest or
-    an observation. Create it first with the bundled example from the repository
-    root or extracted source archive:
+    REPORT_FILE is a bundle 1.1.0 manifest from capability-verifier, or a JSON report saved
+    from one with ``--format json``. The verifier's decisions and run assessments are
+    rendered as they are; nothing is graded. A bundle 1.0.0 has no decisions and is refused:
+    assess it with capability-verifier first. From the repository root or extracted source
+    archive:
 
     \b
-    livingproof-capability-report validate examples/bundle/manifest.json
-    livingproof-capability-report grade examples/bundle/manifest.json -o report.json
+    livingproof-capability-report render examples/bundle/manifest.json --format json -o report.json
     livingproof-capability-report render report.json
     livingproof-capability-report render report.json --format html -o report.html
-
-    REPORT_FILE may instead be a bundle 1.1.0 manifest from capability-verifier: its
-    stored decisions and run assessments are rendered as they are, nothing is graded, and
-    ``--format json`` writes the report ``grade`` would have written:
-
-    \b
-    livingproof-capability-report render bundle/manifest.json --format json -o report.json
-    livingproof-capability-report render bundle/manifest.json --format markdown -o report.md
+    livingproof-capability-report render examples/bundle/manifest.json --format markdown -o report.md
 
     Default stdout is a terminal table. Choose new output filenames when rerunning.
     """
     from . import assessed
 
     stored = decode(report_file.read_text(encoding="utf-8"))
+    require_decisions(stored)
     if assessed.is_assessed(stored):
         stored = assessed.report_from_bundle(
             load_bundle(report_file),
@@ -254,50 +201,3 @@ def comment_command(reports, repo, pr, dry_run, comments):
     click.echo(f"{'would ' if dry_run else ''}{method} {path} ({len(text)} chars)")
     if dry_run:
         click.echo(text, nl=False)
-
-
-@report.command("human-template")
-@click.argument("manifest", type=click.Path(exists=True, dir_okay=False, path_type=Path))
-@click.option("--result", "result_id", required=True)
-@click.option("--output", "-o", required=True, type=click.Path(path_type=Path))
-@click.option("--assessment-id", default="human-review", show_default=True)
-@click.option("--reviewer", help="Self-declared reviewer identity; enables human-review evaluator.")
-@click.option("--recorded-at", help="Review timestamp, required with --reviewer.")
-@errors
-def human_template(manifest, result_id, output, assessment_id, reviewer, recorded_at):
-    """Create an insufficient assessment for a person to review and complete."""
-    import json
-    from .core import digest
-
-    bundle = load_bundle(manifest)["bundle"]
-    selected = next((r for r in bundle["results"] if r["id"] == result_id), None)
-    if selected is None:
-        raise ValueError("Unknown result identifier")
-    if bool(reviewer) != bool(recorded_at):
-        raise ValueError("Supply both --reviewer and --recorded-at")
-    contribution = {
-        "schema_version": "1.0.0",
-        "assessments": [
-            {
-                "result_id": result_id,
-                "result_sha256": digest(selected),
-                "assessment": {
-                    "id": assessment_id,
-                    "evaluator": "human-review" if reviewer else "human-fixture",
-                    "kind": "human",
-                    "version": "1.0.0",
-                    "mandatory": False,
-                    "status": "INSUFFICIENT_EVIDENCE",
-                    "rationale": "Review the referenced evidence and record your reasoning here",
-                    "evidence_ids": [e["id"] for e in selected["evidence"]],
-                    "provenance": {
-                        "reviewer": reviewer or "Replace with reviewer identity",
-                        "recorded_at": recorded_at or "Replace with review date",
-                        "source": "human file contribution; identity is self-declared",
-                    },
-                },
-            }
-        ],
-    }
-    with output.open("x", encoding="utf-8") as stream:
-        stream.write(json.dumps(contribution, indent=2) + "\n")

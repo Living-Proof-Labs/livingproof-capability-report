@@ -1,1282 +1,3723 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "producer": {
     "id": "capability-verifier",
-    "version": "1.1.0",
-    "commit": "c590b05e647ae734f9cfa1b59d7e70ca66169eaa"
+    "version": "1.3.2",
+    "commit": "0000000000000000000000000000000000000000"
   },
   "results": [
     {
-      "id": "v1.1.1-pass",
+      "id": "stock-seed-01",
       "spec": {
         "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
-        "tag": "v1.1.1",
-        "commit": "60b7572df9f5e5c5ab5757a0b4674da16de2b0df",
-        "revision": "1.0.0",
-        "capability": "pause"
+        "tag": "v1.6.0",
+        "commit": "b4ba31eb2c7eaca2721d68d5d375260e2a114449",
+        "capability": "walk-hallway",
+        "revision": "0.1.0"
       },
       "system": {
-        "id": "pause-fixtures",
-        "version": "1.0.0"
+        "id": "unitree-g1/stock",
+        "version": "1.1.0"
       },
       "environment": {
-        "id": "deterministic-fixture-no-robot",
-        "version": "1.0.0"
+        "id": "hallway-open",
+        "version": "0.1.0"
       },
       "evidence": [
         {
-          "id": "observation",
-          "path": "evidence/pass.json",
-          "sha256": "62f20434490defba9703b7cd0f09b060c1db671ce30e4289ca20dafb0ee78da0"
+          "id": "stock-seed-01",
+          "path": "evidence/stock-seed-01.json",
+          "sha256": "a4bbadc1c78966d28872dbe60ff40cb9c996f884e228ed4a08eb7d6c3a24f4b8"
         }
       ],
       "assessments": [
         {
-          "evaluator": "pause-rules",
-          "version": "1.0.0",
-          "status": "PASS",
-          "rationale": "Pause state and 500 ms limit assessed",
-          "mandatory": true,
-          "id": "pause-rules",
+          "id": "stock-seed-01/hallway-exit-reached",
+          "evaluator": "hallway-exit-reached",
           "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-exit-reached PASS",
+          "mandatory": true,
           "evidence_ids": [
-            "observation"
+            "stock-seed-01"
           ],
           "provenance": {
-            "source": "recorded fixture; no live review",
-            "mock": false
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-exit-reached",
+              "version": "1.0.0"
+            },
+            "details": {}
           }
         },
         {
-          "evaluator": "mock-ai",
+          "id": "stock-seed-01/hallway-lateral-limit",
+          "evaluator": "hallway-lateral-limit",
+          "kind": "deterministic",
           "version": "1.0.0",
           "status": "PASS",
-          "rationale": "MOCK AI; no model was called: Scripted favorable rubric example",
-          "mandatory": false,
-          "id": "mock-ai",
-          "kind": "mock-agent",
+          "rationale": "hallway-lateral-limit PASS",
+          "mandatory": true,
           "evidence_ids": [
-            "observation"
+            "stock-seed-01"
           ],
           "provenance": {
-            "source": "recorded fixture; no live review",
-            "mock": true
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-lateral-limit",
+              "version": "1.0.0"
+            },
+            "details": {}
           }
         },
         {
-          "evaluator": "human-fixture",
+          "id": "stock-seed-01/hallway-wall-contact",
+          "evaluator": "hallway-wall-contact",
+          "kind": "deterministic",
           "version": "1.0.0",
           "status": "PASS",
-          "rationale": "HUMAN FIXTURE; no live review: Recorded favorable fixture review",
-          "mandatory": false,
-          "id": "human-fixture",
-          "kind": "human",
+          "rationale": "hallway-wall-contact PASS",
+          "mandatory": true,
           "evidence_ids": [
-            "observation"
+            "stock-seed-01"
           ],
           "provenance": {
-            "source": "recorded fixture; no live review",
-            "mock": false
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-wall-contact",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-01/hallway-fall",
+          "evaluator": "hallway-fall",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-fall PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-01"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-fall",
+              "version": "1.0.0"
+            },
+            "details": {}
           }
         }
       ],
       "provenance": {
-        "spec": {
-          "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
-          "tag": "v1.1.1",
-          "commit": "60b7572df9f5e5c5ab5757a0b4674da16de2b0df",
-          "revision": "1.0.0",
-          "capability": "pause"
+        "run_id": "run-1",
+        "plan": {
+          "trials": 20,
+          "seeds": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ],
+          "command_speed": 0.5,
+          "required_passes": 18
         },
-        "system": {
-          "id": "pause-fixtures",
-          "version": "1.0.0",
-          "fixture": "pass.json"
-        },
-        "simulator": null,
-        "runner": {
-          "id": "fixture-runner",
-          "version": "1.0.0"
-        },
-        "policy": {
-          "id": "all-required-v1",
-          "version": "1.0.0",
-          "members": [
-            "human-fixture",
-            "mock-ai",
-            "pause-rules"
-          ]
-        },
-        "evidence_sha256": "62f20434490defba9703b7cd0f09b060c1db671ce30e4289ca20dafb0ee78da0"
+        "lock": {
+          "path": "verification.lock.json",
+          "sha256": "abcdef1000000000000000000000000000000000000000000000000000000000"
+        }
       },
       "original_result": {
+        "seed": 1
+      },
+      "decision": {
         "status": "PASS",
-        "assessments": [
-          {
-            "evaluator": "pause-rules",
-            "version": "1.0.0",
-            "status": "PASS",
-            "rationale": "Pause state and 500 ms limit assessed",
-            "mandatory": true
-          },
-          {
-            "evaluator": "mock-ai",
-            "version": "1.0.0",
-            "status": "PASS",
-            "rationale": "MOCK AI; no model was called: Scripted favorable rubric example",
-            "mandatory": false
-          },
-          {
-            "evaluator": "human-fixture",
-            "version": "1.0.0",
-            "status": "PASS",
-            "rationale": "HUMAN FIXTURE; no live review: Recorded favorable fixture review",
-            "mandatory": false
-          }
+        "reason": "All four hallway evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
         ],
-        "provenance": {
-          "spec": {
-            "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
-            "tag": "v1.1.1",
-            "commit": "60b7572df9f5e5c5ab5757a0b4674da16de2b0df",
-            "revision": "1.0.0",
-            "capability": "pause"
-          },
-          "system": {
-            "id": "pause-fixtures",
-            "version": "1.0.0",
-            "fixture": "pass.json"
-          },
-          "simulator": null,
-          "runner": {
-            "id": "fixture-runner",
-            "version": "1.0.0"
-          },
-          "policy": {
-            "id": "all-required-v1",
-            "version": "1.0.0",
-            "members": [
-              "human-fixture",
-              "mock-ai",
-              "pause-rules"
-            ]
-          },
-          "evidence_sha256": "62f20434490defba9703b7cd0f09b060c1db671ce30e4289ca20dafb0ee78da0"
+        "policy": {
+          "id": "all-required-v1",
+          "version": "1.0.0"
         }
       }
     },
     {
-      "id": "v1.1.1-fail",
+      "id": "stock-seed-02",
       "spec": {
         "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
-        "tag": "v1.1.1",
-        "commit": "60b7572df9f5e5c5ab5757a0b4674da16de2b0df",
-        "revision": "1.0.0",
-        "capability": "pause"
+        "tag": "v1.6.0",
+        "commit": "b4ba31eb2c7eaca2721d68d5d375260e2a114449",
+        "capability": "walk-hallway",
+        "revision": "0.1.0"
       },
       "system": {
-        "id": "pause-fixtures",
-        "version": "1.0.0"
+        "id": "unitree-g1/stock",
+        "version": "1.1.0"
       },
       "environment": {
-        "id": "deterministic-fixture-no-robot",
-        "version": "1.0.0"
+        "id": "hallway-open",
+        "version": "0.1.0"
       },
       "evidence": [
         {
-          "id": "observation",
-          "path": "evidence/fail.json",
-          "sha256": "4f273287f0dc31e8eece66d549d1f2e5f6ee7b131996dc2439f9549181db4fe4"
+          "id": "stock-seed-02",
+          "path": "evidence/stock-seed-02.json",
+          "sha256": "b105c577dc452768164a3c64a0b90c79f4d75d6f5d8a8c9bd7e7078759cc2d5f"
         }
       ],
       "assessments": [
         {
-          "evaluator": "pause-rules",
+          "id": "stock-seed-02/hallway-exit-reached",
+          "evaluator": "hallway-exit-reached",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-exit-reached PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-02"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-exit-reached",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-02/hallway-lateral-limit",
+          "evaluator": "hallway-lateral-limit",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-lateral-limit PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-02"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-lateral-limit",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-02/hallway-wall-contact",
+          "evaluator": "hallway-wall-contact",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-wall-contact PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-02"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-wall-contact",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-02/hallway-fall",
+          "evaluator": "hallway-fall",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-fall PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-02"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-fall",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        }
+      ],
+      "provenance": {
+        "run_id": "run-1",
+        "plan": {
+          "trials": 20,
+          "seeds": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ],
+          "command_speed": 0.5,
+          "required_passes": 18
+        },
+        "lock": {
+          "path": "verification.lock.json",
+          "sha256": "abcdef1000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "original_result": {
+        "seed": 2
+      },
+      "decision": {
+        "status": "PASS",
+        "reason": "All four hallway evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
+        ],
+        "policy": {
+          "id": "all-required-v1",
+          "version": "1.0.0"
+        }
+      }
+    },
+    {
+      "id": "stock-seed-03",
+      "spec": {
+        "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+        "tag": "v1.6.0",
+        "commit": "b4ba31eb2c7eaca2721d68d5d375260e2a114449",
+        "capability": "walk-hallway",
+        "revision": "0.1.0"
+      },
+      "system": {
+        "id": "unitree-g1/stock",
+        "version": "1.1.0"
+      },
+      "environment": {
+        "id": "hallway-open",
+        "version": "0.1.0"
+      },
+      "evidence": [
+        {
+          "id": "stock-seed-03",
+          "path": "evidence/stock-seed-03.json",
+          "sha256": "1391dc1f10fa334311ba2858ebfd567adf169bf3efeadd832eeda2c65a3034a1"
+        }
+      ],
+      "assessments": [
+        {
+          "id": "stock-seed-03/hallway-exit-reached",
+          "evaluator": "hallway-exit-reached",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-exit-reached PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-03"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-exit-reached",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-03/hallway-lateral-limit",
+          "evaluator": "hallway-lateral-limit",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-lateral-limit PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-03"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-lateral-limit",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-03/hallway-wall-contact",
+          "evaluator": "hallway-wall-contact",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-wall-contact PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-03"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-wall-contact",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-03/hallway-fall",
+          "evaluator": "hallway-fall",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-fall PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-03"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-fall",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        }
+      ],
+      "provenance": {
+        "run_id": "run-1",
+        "plan": {
+          "trials": 20,
+          "seeds": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ],
+          "command_speed": 0.5,
+          "required_passes": 18
+        },
+        "lock": {
+          "path": "verification.lock.json",
+          "sha256": "abcdef1000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "original_result": {
+        "seed": 3
+      },
+      "decision": {
+        "status": "PASS",
+        "reason": "All four hallway evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
+        ],
+        "policy": {
+          "id": "all-required-v1",
+          "version": "1.0.0"
+        }
+      }
+    },
+    {
+      "id": "stock-seed-04",
+      "spec": {
+        "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+        "tag": "v1.6.0",
+        "commit": "b4ba31eb2c7eaca2721d68d5d375260e2a114449",
+        "capability": "walk-hallway",
+        "revision": "0.1.0"
+      },
+      "system": {
+        "id": "unitree-g1/stock",
+        "version": "1.1.0"
+      },
+      "environment": {
+        "id": "hallway-open",
+        "version": "0.1.0"
+      },
+      "evidence": [
+        {
+          "id": "stock-seed-04",
+          "path": "evidence/stock-seed-04.json",
+          "sha256": "e60d9eac34ae169a916fe8bcfe8e121e2b43ee3e0a3b98c3df3d163556ee1b23"
+        }
+      ],
+      "assessments": [
+        {
+          "id": "stock-seed-04/hallway-exit-reached",
+          "evaluator": "hallway-exit-reached",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-exit-reached PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-04"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-exit-reached",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-04/hallway-lateral-limit",
+          "evaluator": "hallway-lateral-limit",
+          "kind": "deterministic",
           "version": "1.0.0",
           "status": "FAIL",
-          "rationale": "Mandatory motion inhibition failed",
+          "rationale": "hallway-lateral-limit FAIL",
           "mandatory": true,
-          "id": "pause-rules",
+          "evidence_ids": [
+            "stock-seed-04"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-lateral-limit",
+              "version": "1.0.0"
+            },
+            "details": {
+              "failures": [
+                {
+                  "check": "hallway-lateral-limit",
+                  "seed": 4,
+                  "observed": 0.62,
+                  "limit": 0.49,
+                  "unit": "m",
+                  "t": 10.26
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "stock-seed-04/hallway-wall-contact",
+          "evaluator": "hallway-wall-contact",
           "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-wall-contact PASS",
+          "mandatory": true,
           "evidence_ids": [
-            "observation"
+            "stock-seed-04"
           ],
           "provenance": {
-            "source": "recorded fixture; no live review",
-            "mock": false
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-wall-contact",
+              "version": "1.0.0"
+            },
+            "details": {}
           }
         },
         {
-          "evaluator": "mock-ai",
+          "id": "stock-seed-04/hallway-fall",
+          "evaluator": "hallway-fall",
+          "kind": "deterministic",
           "version": "1.0.0",
           "status": "PASS",
-          "rationale": "MOCK AI; no model was called: Scripted favorable rubric example",
-          "mandatory": false,
-          "id": "mock-ai",
-          "kind": "mock-agent",
+          "rationale": "hallway-fall PASS",
+          "mandatory": true,
           "evidence_ids": [
-            "observation"
+            "stock-seed-04"
           ],
           "provenance": {
-            "source": "recorded fixture; no live review",
-            "mock": true
-          }
-        },
-        {
-          "evaluator": "human-fixture",
-          "version": "1.0.0",
-          "status": "PASS",
-          "rationale": "HUMAN FIXTURE; no live review: Recorded favorable fixture review",
-          "mandatory": false,
-          "id": "human-fixture",
-          "kind": "human",
-          "evidence_ids": [
-            "observation"
-          ],
-          "provenance": {
-            "source": "recorded fixture; no live review",
-            "mock": false
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-fall",
+              "version": "1.0.0"
+            },
+            "details": {}
           }
         }
       ],
       "provenance": {
-        "spec": {
-          "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
-          "tag": "v1.1.1",
-          "commit": "60b7572df9f5e5c5ab5757a0b4674da16de2b0df",
-          "revision": "1.0.0",
-          "capability": "pause"
+        "run_id": "run-1",
+        "plan": {
+          "trials": 20,
+          "seeds": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ],
+          "command_speed": 0.5,
+          "required_passes": 18
         },
-        "system": {
-          "id": "pause-fixtures",
-          "version": "1.0.0",
-          "fixture": "fail.json"
-        },
-        "simulator": null,
-        "runner": {
-          "id": "fixture-runner",
-          "version": "1.0.0"
-        },
-        "policy": {
-          "id": "all-required-v1",
-          "version": "1.0.0",
-          "members": [
-            "human-fixture",
-            "mock-ai",
-            "pause-rules"
-          ]
-        },
-        "evidence_sha256": "4f273287f0dc31e8eece66d549d1f2e5f6ee7b131996dc2439f9549181db4fe4"
+        "lock": {
+          "path": "verification.lock.json",
+          "sha256": "abcdef1000000000000000000000000000000000000000000000000000000000"
+        }
       },
       "original_result": {
+        "seed": 4
+      },
+      "decision": {
         "status": "FAIL",
-        "assessments": [
+        "reason": "Failed: hallway-lateral-limit FAIL",
+        "failures": [
           {
-            "evaluator": "pause-rules",
-            "version": "1.0.0",
-            "status": "FAIL",
-            "rationale": "Mandatory motion inhibition failed",
-            "mandatory": true
-          },
-          {
-            "evaluator": "mock-ai",
-            "version": "1.0.0",
-            "status": "PASS",
-            "rationale": "MOCK AI; no model was called: Scripted favorable rubric example",
-            "mandatory": false
-          },
-          {
-            "evaluator": "human-fixture",
-            "version": "1.0.0",
-            "status": "PASS",
-            "rationale": "HUMAN FIXTURE; no live review: Recorded favorable fixture review",
-            "mandatory": false
+            "check": "hallway-lateral-limit",
+            "seed": 4,
+            "observed": 0.62,
+            "limit": 0.49,
+            "unit": "m",
+            "t": 10.26
           }
         ],
-        "provenance": {
-          "spec": {
-            "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
-            "tag": "v1.1.1",
-            "commit": "60b7572df9f5e5c5ab5757a0b4674da16de2b0df",
-            "revision": "1.0.0",
-            "capability": "pause"
-          },
-          "system": {
-            "id": "pause-fixtures",
-            "version": "1.0.0",
-            "fixture": "fail.json"
-          },
-          "simulator": null,
-          "runner": {
-            "id": "fixture-runner",
-            "version": "1.0.0"
-          },
-          "policy": {
-            "id": "all-required-v1",
-            "version": "1.0.0",
-            "members": [
-              "human-fixture",
-              "mock-ai",
-              "pause-rules"
-            ]
-          },
-          "evidence_sha256": "4f273287f0dc31e8eece66d549d1f2e5f6ee7b131996dc2439f9549181db4fe4"
-        }
-      }
-    },
-    {
-      "id": "v1.1.1-insufficient",
-      "spec": {
-        "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
-        "tag": "v1.1.1",
-        "commit": "60b7572df9f5e5c5ab5757a0b4674da16de2b0df",
-        "revision": "1.0.0",
-        "capability": "pause"
-      },
-      "system": {
-        "id": "pause-fixtures",
-        "version": "1.0.0"
-      },
-      "environment": {
-        "id": "deterministic-fixture-no-robot",
-        "version": "1.0.0"
-      },
-      "evidence": [
-        {
-          "id": "observation",
-          "path": "evidence/insufficient.json",
-          "sha256": "3fea4454a47f7e64d6892810c453c742352474660f35bde3c45b8d99cd09fad8"
-        }
-      ],
-      "assessments": [
-        {
-          "evaluator": "pause-rules",
-          "version": "1.0.0",
-          "status": "INSUFFICIENT_EVIDENCE",
-          "rationale": "Missing or malformed observations",
-          "mandatory": true,
-          "id": "pause-rules",
-          "kind": "deterministic",
-          "evidence_ids": [
-            "observation"
-          ],
-          "provenance": {
-            "source": "recorded fixture; no live review",
-            "mock": false
-          }
-        },
-        {
-          "evaluator": "mock-ai",
-          "version": "1.0.0",
-          "status": "PASS",
-          "rationale": "MOCK AI; no model was called: Scripted favorable rubric example",
-          "mandatory": false,
-          "id": "mock-ai",
-          "kind": "mock-agent",
-          "evidence_ids": [
-            "observation"
-          ],
-          "provenance": {
-            "source": "recorded fixture; no live review",
-            "mock": true
-          }
-        },
-        {
-          "evaluator": "human-fixture",
-          "version": "1.0.0",
-          "status": "PASS",
-          "rationale": "HUMAN FIXTURE; no live review: Recorded favorable fixture review",
-          "mandatory": false,
-          "id": "human-fixture",
-          "kind": "human",
-          "evidence_ids": [
-            "observation"
-          ],
-          "provenance": {
-            "source": "recorded fixture; no live review",
-            "mock": false
-          }
-        }
-      ],
-      "provenance": {
-        "spec": {
-          "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
-          "tag": "v1.1.1",
-          "commit": "60b7572df9f5e5c5ab5757a0b4674da16de2b0df",
-          "revision": "1.0.0",
-          "capability": "pause"
-        },
-        "system": {
-          "id": "pause-fixtures",
-          "version": "1.0.0",
-          "fixture": "insufficient.json"
-        },
-        "simulator": null,
-        "runner": {
-          "id": "fixture-runner",
-          "version": "1.0.0"
-        },
+        "assessor_types": [
+          "deterministic"
+        ],
         "policy": {
           "id": "all-required-v1",
-          "version": "1.0.0",
-          "members": [
-            "human-fixture",
-            "mock-ai",
-            "pause-rules"
-          ]
-        },
-        "evidence_sha256": "3fea4454a47f7e64d6892810c453c742352474660f35bde3c45b8d99cd09fad8"
-      },
-      "original_result": {
-        "status": "INSUFFICIENT_EVIDENCE",
-        "assessments": [
-          {
-            "evaluator": "pause-rules",
-            "version": "1.0.0",
-            "status": "INSUFFICIENT_EVIDENCE",
-            "rationale": "Missing or malformed observations",
-            "mandatory": true
-          },
-          {
-            "evaluator": "mock-ai",
-            "version": "1.0.0",
-            "status": "PASS",
-            "rationale": "MOCK AI; no model was called: Scripted favorable rubric example",
-            "mandatory": false
-          },
-          {
-            "evaluator": "human-fixture",
-            "version": "1.0.0",
-            "status": "PASS",
-            "rationale": "HUMAN FIXTURE; no live review: Recorded favorable fixture review",
-            "mandatory": false
-          }
-        ],
-        "provenance": {
-          "spec": {
-            "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
-            "tag": "v1.1.1",
-            "commit": "60b7572df9f5e5c5ab5757a0b4674da16de2b0df",
-            "revision": "1.0.0",
-            "capability": "pause"
-          },
-          "system": {
-            "id": "pause-fixtures",
-            "version": "1.0.0",
-            "fixture": "insufficient.json"
-          },
-          "simulator": null,
-          "runner": {
-            "id": "fixture-runner",
-            "version": "1.0.0"
-          },
-          "policy": {
-            "id": "all-required-v1",
-            "version": "1.0.0",
-            "members": [
-              "human-fixture",
-              "mock-ai",
-              "pause-rules"
-            ]
-          },
-          "evidence_sha256": "3fea4454a47f7e64d6892810c453c742352474660f35bde3c45b8d99cd09fad8"
-        }
-      }
-    },
-    {
-      "id": "v1.1.1-slow",
-      "spec": {
-        "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
-        "tag": "v1.1.1",
-        "commit": "60b7572df9f5e5c5ab5757a0b4674da16de2b0df",
-        "revision": "1.0.0",
-        "capability": "pause"
-      },
-      "system": {
-        "id": "pause-fixtures",
-        "version": "2.0.0"
-      },
-      "environment": {
-        "id": "deterministic-fixture-no-robot",
-        "version": "1.0.0"
-      },
-      "evidence": [
-        {
-          "id": "observation",
-          "path": "evidence/slow.json",
-          "sha256": "c75ad29c3a0d4bdf9e27c9a83c64395c455a7c2cee0b1004981849baf97bf24c"
-        }
-      ],
-      "assessments": [
-        {
-          "evaluator": "pause-rules",
-          "version": "1.0.0",
-          "status": "PASS",
-          "rationale": "Pause state and 500 ms limit assessed",
-          "mandatory": true,
-          "id": "pause-rules",
-          "kind": "deterministic",
-          "evidence_ids": [
-            "observation"
-          ],
-          "provenance": {
-            "source": "recorded fixture; no live review",
-            "mock": false
-          }
-        },
-        {
-          "evaluator": "mock-ai",
-          "version": "1.0.0",
-          "status": "PASS",
-          "rationale": "MOCK AI; no model was called: Scripted state agreement; timing assessed by deterministic rules",
-          "mandatory": false,
-          "id": "mock-ai",
-          "kind": "mock-agent",
-          "evidence_ids": [
-            "observation"
-          ],
-          "provenance": {
-            "source": "recorded fixture; no live review",
-            "mock": true
-          }
-        },
-        {
-          "evaluator": "human-fixture",
-          "version": "1.0.0",
-          "status": "PASS",
-          "rationale": "HUMAN FIXTURE; no live review: Recorded state agreement, not a timing override",
-          "mandatory": false,
-          "id": "human-fixture",
-          "kind": "human",
-          "evidence_ids": [
-            "observation"
-          ],
-          "provenance": {
-            "source": "recorded fixture; no live review",
-            "mock": false
-          }
-        }
-      ],
-      "provenance": {
-        "spec": {
-          "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
-          "tag": "v1.1.1",
-          "commit": "60b7572df9f5e5c5ab5757a0b4674da16de2b0df",
-          "revision": "1.0.0",
-          "capability": "pause"
-        },
-        "system": {
-          "id": "pause-fixtures",
-          "version": "2.0.0",
-          "fixture": "slow.json"
-        },
-        "simulator": null,
-        "runner": {
-          "id": "fixture-runner",
           "version": "1.0.0"
-        },
-        "policy": {
-          "id": "all-required-v1",
-          "version": "1.0.0",
-          "members": [
-            "human-fixture",
-            "mock-ai",
-            "pause-rules"
-          ]
-        },
-        "evidence_sha256": "c75ad29c3a0d4bdf9e27c9a83c64395c455a7c2cee0b1004981849baf97bf24c"
-      },
-      "original_result": {
-        "status": "PASS",
-        "assessments": [
-          {
-            "evaluator": "pause-rules",
-            "version": "1.0.0",
-            "status": "PASS",
-            "rationale": "Pause state and 500 ms limit assessed",
-            "mandatory": true
-          },
-          {
-            "evaluator": "mock-ai",
-            "version": "1.0.0",
-            "status": "PASS",
-            "rationale": "MOCK AI; no model was called: Scripted state agreement; timing assessed by deterministic rules",
-            "mandatory": false
-          },
-          {
-            "evaluator": "human-fixture",
-            "version": "1.0.0",
-            "status": "PASS",
-            "rationale": "HUMAN FIXTURE; no live review: Recorded state agreement, not a timing override",
-            "mandatory": false
-          }
-        ],
-        "provenance": {
-          "spec": {
-            "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
-            "tag": "v1.1.1",
-            "commit": "60b7572df9f5e5c5ab5757a0b4674da16de2b0df",
-            "revision": "1.0.0",
-            "capability": "pause"
-          },
-          "system": {
-            "id": "pause-fixtures",
-            "version": "2.0.0",
-            "fixture": "slow.json"
-          },
-          "simulator": null,
-          "runner": {
-            "id": "fixture-runner",
-            "version": "1.0.0"
-          },
-          "policy": {
-            "id": "all-required-v1",
-            "version": "1.0.0",
-            "members": [
-              "human-fixture",
-              "mock-ai",
-              "pause-rules"
-            ]
-          },
-          "evidence_sha256": "c75ad29c3a0d4bdf9e27c9a83c64395c455a7c2cee0b1004981849baf97bf24c"
         }
       }
     },
     {
-      "id": "v1.2.0-pass",
+      "id": "stock-seed-05",
       "spec": {
         "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
-        "tag": "v1.2.0",
-        "commit": "f06c4a17a55d649ff78961c7391f90e34fab929d",
-        "revision": "2.0.0",
-        "capability": "pause"
+        "tag": "v1.6.0",
+        "commit": "b4ba31eb2c7eaca2721d68d5d375260e2a114449",
+        "capability": "walk-hallway",
+        "revision": "0.1.0"
       },
       "system": {
-        "id": "pause-fixtures",
-        "version": "1.0.0"
+        "id": "unitree-g1/stock",
+        "version": "1.1.0"
       },
       "environment": {
-        "id": "deterministic-fixture-no-robot",
-        "version": "1.0.0"
+        "id": "hallway-open",
+        "version": "0.1.0"
       },
       "evidence": [
         {
-          "id": "observation",
-          "path": "evidence/pass.json",
-          "sha256": "62f20434490defba9703b7cd0f09b060c1db671ce30e4289ca20dafb0ee78da0"
+          "id": "stock-seed-05",
+          "path": "evidence/stock-seed-05.json",
+          "sha256": "f282ceca71d4f77133be6c847226960f8fafcd541a0c7f5cd929cfe820eaba25"
         }
       ],
       "assessments": [
         {
-          "evaluator": "pause-rules",
-          "version": "1.1.0",
-          "status": "PASS",
-          "rationale": "Pause state and 500 ms limit assessed; strict revision uses 250 ms inclusive limit",
-          "mandatory": true,
-          "id": "pause-rules",
+          "id": "stock-seed-05/hallway-exit-reached",
+          "evaluator": "hallway-exit-reached",
           "kind": "deterministic",
-          "evidence_ids": [
-            "observation"
-          ],
-          "provenance": {
-            "source": "recorded fixture; no live review",
-            "mock": false
-          }
-        },
-        {
-          "evaluator": "mock-ai",
           "version": "1.0.0",
           "status": "PASS",
-          "rationale": "MOCK AI; no model was called: Scripted favorable rubric example",
-          "mandatory": false,
-          "id": "mock-ai",
-          "kind": "mock-agent",
+          "rationale": "hallway-exit-reached PASS",
+          "mandatory": true,
           "evidence_ids": [
-            "observation"
+            "stock-seed-05"
           ],
           "provenance": {
-            "source": "recorded fixture; no live review",
-            "mock": true
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-exit-reached",
+              "version": "1.0.0"
+            },
+            "details": {}
           }
         },
         {
-          "evaluator": "human-fixture",
+          "id": "stock-seed-05/hallway-lateral-limit",
+          "evaluator": "hallway-lateral-limit",
+          "kind": "deterministic",
           "version": "1.0.0",
           "status": "PASS",
-          "rationale": "HUMAN FIXTURE; no live review: Recorded favorable fixture review",
-          "mandatory": false,
-          "id": "human-fixture",
-          "kind": "human",
+          "rationale": "hallway-lateral-limit PASS",
+          "mandatory": true,
           "evidence_ids": [
-            "observation"
+            "stock-seed-05"
           ],
           "provenance": {
-            "source": "recorded fixture; no live review",
-            "mock": false
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-lateral-limit",
+              "version": "1.0.0"
+            },
+            "details": {}
           }
-        }
-      ],
-      "provenance": {
-        "spec": {
-          "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
-          "tag": "v1.2.0",
-          "commit": "f06c4a17a55d649ff78961c7391f90e34fab929d",
-          "revision": "2.0.0",
-          "capability": "pause"
         },
-        "system": {
-          "id": "pause-fixtures",
-          "version": "1.0.0",
-          "fixture": "pass.json"
-        },
-        "simulator": null,
-        "runner": {
-          "id": "fixture-runner",
-          "version": "1.0.0"
-        },
-        "policy": {
-          "id": "all-required-v1",
-          "version": "1.0.0",
-          "members": [
-            "human-fixture",
-            "mock-ai",
-            "pause-rules"
-          ]
-        },
-        "evidence_sha256": "62f20434490defba9703b7cd0f09b060c1db671ce30e4289ca20dafb0ee78da0"
-      },
-      "original_result": {
-        "status": "PASS",
-        "assessments": [
-          {
-            "evaluator": "pause-rules",
-            "version": "1.1.0",
-            "status": "PASS",
-            "rationale": "Pause state and 500 ms limit assessed; strict revision uses 250 ms inclusive limit",
-            "mandatory": true
-          },
-          {
-            "evaluator": "mock-ai",
-            "version": "1.0.0",
-            "status": "PASS",
-            "rationale": "MOCK AI; no model was called: Scripted favorable rubric example",
-            "mandatory": false
-          },
-          {
-            "evaluator": "human-fixture",
-            "version": "1.0.0",
-            "status": "PASS",
-            "rationale": "HUMAN FIXTURE; no live review: Recorded favorable fixture review",
-            "mandatory": false
-          }
-        ],
-        "provenance": {
-          "spec": {
-            "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
-            "tag": "v1.2.0",
-            "commit": "f06c4a17a55d649ff78961c7391f90e34fab929d",
-            "revision": "2.0.0",
-            "capability": "pause"
-          },
-          "system": {
-            "id": "pause-fixtures",
-            "version": "1.0.0",
-            "fixture": "pass.json"
-          },
-          "simulator": null,
-          "runner": {
-            "id": "fixture-runner",
-            "version": "1.0.0"
-          },
-          "policy": {
-            "id": "all-required-v1",
-            "version": "1.0.0",
-            "members": [
-              "human-fixture",
-              "mock-ai",
-              "pause-rules"
-            ]
-          },
-          "evidence_sha256": "62f20434490defba9703b7cd0f09b060c1db671ce30e4289ca20dafb0ee78da0"
-        }
-      }
-    },
-    {
-      "id": "v1.2.0-fail",
-      "spec": {
-        "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
-        "tag": "v1.2.0",
-        "commit": "f06c4a17a55d649ff78961c7391f90e34fab929d",
-        "revision": "2.0.0",
-        "capability": "pause"
-      },
-      "system": {
-        "id": "pause-fixtures",
-        "version": "1.0.0"
-      },
-      "environment": {
-        "id": "deterministic-fixture-no-robot",
-        "version": "1.0.0"
-      },
-      "evidence": [
         {
-          "id": "observation",
-          "path": "evidence/fail.json",
-          "sha256": "4f273287f0dc31e8eece66d549d1f2e5f6ee7b131996dc2439f9549181db4fe4"
-        }
-      ],
-      "assessments": [
-        {
-          "evaluator": "pause-rules",
-          "version": "1.1.0",
+          "id": "stock-seed-05/hallway-wall-contact",
+          "evaluator": "hallway-wall-contact",
+          "kind": "deterministic",
+          "version": "1.0.0",
           "status": "FAIL",
-          "rationale": "Mandatory motion inhibition failed; strict revision uses 250 ms inclusive limit",
+          "rationale": "hallway-wall-contact FAIL",
           "mandatory": true,
-          "id": "pause-rules",
+          "evidence_ids": [
+            "stock-seed-05"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-wall-contact",
+              "version": "1.0.0"
+            },
+            "details": {
+              "failures": [
+                {
+                  "check": "hallway-wall-contact",
+                  "seed": 5,
+                  "observed": 0.03,
+                  "limit": 0.0,
+                  "unit": "m",
+                  "t": 4.5,
+                  "wall": "wall-left"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "stock-seed-05/hallway-fall",
+          "evaluator": "hallway-fall",
           "kind": "deterministic",
-          "evidence_ids": [
-            "observation"
-          ],
-          "provenance": {
-            "source": "recorded fixture; no live review",
-            "mock": false
-          }
-        },
-        {
-          "evaluator": "mock-ai",
           "version": "1.0.0",
           "status": "PASS",
-          "rationale": "MOCK AI; no model was called: Scripted favorable rubric example",
-          "mandatory": false,
-          "id": "mock-ai",
-          "kind": "mock-agent",
+          "rationale": "hallway-fall PASS",
+          "mandatory": true,
           "evidence_ids": [
-            "observation"
+            "stock-seed-05"
           ],
           "provenance": {
-            "source": "recorded fixture; no live review",
-            "mock": true
-          }
-        },
-        {
-          "evaluator": "human-fixture",
-          "version": "1.0.0",
-          "status": "PASS",
-          "rationale": "HUMAN FIXTURE; no live review: Recorded favorable fixture review",
-          "mandatory": false,
-          "id": "human-fixture",
-          "kind": "human",
-          "evidence_ids": [
-            "observation"
-          ],
-          "provenance": {
-            "source": "recorded fixture; no live review",
-            "mock": false
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-fall",
+              "version": "1.0.0"
+            },
+            "details": {}
           }
         }
       ],
       "provenance": {
-        "spec": {
-          "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
-          "tag": "v1.2.0",
-          "commit": "f06c4a17a55d649ff78961c7391f90e34fab929d",
-          "revision": "2.0.0",
-          "capability": "pause"
+        "run_id": "run-1",
+        "plan": {
+          "trials": 20,
+          "seeds": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ],
+          "command_speed": 0.5,
+          "required_passes": 18
         },
-        "system": {
-          "id": "pause-fixtures",
-          "version": "1.0.0",
-          "fixture": "fail.json"
-        },
-        "simulator": null,
-        "runner": {
-          "id": "fixture-runner",
-          "version": "1.0.0"
-        },
-        "policy": {
-          "id": "all-required-v1",
-          "version": "1.0.0",
-          "members": [
-            "human-fixture",
-            "mock-ai",
-            "pause-rules"
-          ]
-        },
-        "evidence_sha256": "4f273287f0dc31e8eece66d549d1f2e5f6ee7b131996dc2439f9549181db4fe4"
+        "lock": {
+          "path": "verification.lock.json",
+          "sha256": "abcdef1000000000000000000000000000000000000000000000000000000000"
+        }
       },
       "original_result": {
+        "seed": 5
+      },
+      "decision": {
         "status": "FAIL",
-        "assessments": [
+        "reason": "Failed: hallway-wall-contact FAIL",
+        "failures": [
           {
-            "evaluator": "pause-rules",
-            "version": "1.1.0",
-            "status": "FAIL",
-            "rationale": "Mandatory motion inhibition failed; strict revision uses 250 ms inclusive limit",
-            "mandatory": true
-          },
-          {
-            "evaluator": "mock-ai",
-            "version": "1.0.0",
-            "status": "PASS",
-            "rationale": "MOCK AI; no model was called: Scripted favorable rubric example",
-            "mandatory": false
-          },
-          {
-            "evaluator": "human-fixture",
-            "version": "1.0.0",
-            "status": "PASS",
-            "rationale": "HUMAN FIXTURE; no live review: Recorded favorable fixture review",
-            "mandatory": false
+            "check": "hallway-wall-contact",
+            "seed": 5,
+            "observed": 0.03,
+            "limit": 0.0,
+            "unit": "m",
+            "t": 4.5,
+            "wall": "wall-left"
           }
         ],
-        "provenance": {
-          "spec": {
-            "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
-            "tag": "v1.2.0",
-            "commit": "f06c4a17a55d649ff78961c7391f90e34fab929d",
-            "revision": "2.0.0",
-            "capability": "pause"
-          },
-          "system": {
-            "id": "pause-fixtures",
-            "version": "1.0.0",
-            "fixture": "fail.json"
-          },
-          "simulator": null,
-          "runner": {
-            "id": "fixture-runner",
-            "version": "1.0.0"
-          },
-          "policy": {
-            "id": "all-required-v1",
-            "version": "1.0.0",
-            "members": [
-              "human-fixture",
-              "mock-ai",
-              "pause-rules"
-            ]
-          },
-          "evidence_sha256": "4f273287f0dc31e8eece66d549d1f2e5f6ee7b131996dc2439f9549181db4fe4"
+        "assessor_types": [
+          "deterministic"
+        ],
+        "policy": {
+          "id": "all-required-v1",
+          "version": "1.0.0"
         }
       }
     },
     {
-      "id": "v1.2.0-insufficient",
+      "id": "stock-seed-06",
       "spec": {
         "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
-        "tag": "v1.2.0",
-        "commit": "f06c4a17a55d649ff78961c7391f90e34fab929d",
-        "revision": "2.0.0",
-        "capability": "pause"
+        "tag": "v1.6.0",
+        "commit": "b4ba31eb2c7eaca2721d68d5d375260e2a114449",
+        "capability": "walk-hallway",
+        "revision": "0.1.0"
       },
       "system": {
-        "id": "pause-fixtures",
-        "version": "1.0.0"
+        "id": "unitree-g1/stock",
+        "version": "1.1.0"
       },
       "environment": {
-        "id": "deterministic-fixture-no-robot",
-        "version": "1.0.0"
+        "id": "hallway-open",
+        "version": "0.1.0"
       },
       "evidence": [
         {
-          "id": "observation",
-          "path": "evidence/insufficient.json",
-          "sha256": "3fea4454a47f7e64d6892810c453c742352474660f35bde3c45b8d99cd09fad8"
+          "id": "stock-seed-06",
+          "path": "evidence/stock-seed-06.json",
+          "sha256": "a99b69435afcb3fb7ae0d79bf3fac65d37f76a47be47d5dcd486e93cf07d04a0"
         }
       ],
       "assessments": [
         {
-          "evaluator": "pause-rules",
-          "version": "1.1.0",
-          "status": "INSUFFICIENT_EVIDENCE",
-          "rationale": "Missing or malformed observations; strict revision uses 250 ms inclusive limit",
-          "mandatory": true,
-          "id": "pause-rules",
+          "id": "stock-seed-06/hallway-exit-reached",
+          "evaluator": "hallway-exit-reached",
           "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-exit-reached PASS",
+          "mandatory": true,
           "evidence_ids": [
-            "observation"
+            "stock-seed-06"
           ],
           "provenance": {
-            "source": "recorded fixture; no live review",
-            "mock": false
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-exit-reached",
+              "version": "1.0.0"
+            },
+            "details": {}
           }
         },
         {
-          "evaluator": "mock-ai",
+          "id": "stock-seed-06/hallway-lateral-limit",
+          "evaluator": "hallway-lateral-limit",
+          "kind": "deterministic",
           "version": "1.0.0",
           "status": "PASS",
-          "rationale": "MOCK AI; no model was called: Scripted favorable rubric example",
-          "mandatory": false,
-          "id": "mock-ai",
-          "kind": "mock-agent",
+          "rationale": "hallway-lateral-limit PASS",
+          "mandatory": true,
           "evidence_ids": [
-            "observation"
+            "stock-seed-06"
           ],
           "provenance": {
-            "source": "recorded fixture; no live review",
-            "mock": true
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-lateral-limit",
+              "version": "1.0.0"
+            },
+            "details": {}
           }
         },
         {
-          "evaluator": "human-fixture",
+          "id": "stock-seed-06/hallway-wall-contact",
+          "evaluator": "hallway-wall-contact",
+          "kind": "deterministic",
           "version": "1.0.0",
           "status": "PASS",
-          "rationale": "HUMAN FIXTURE; no live review: Recorded favorable fixture review",
-          "mandatory": false,
-          "id": "human-fixture",
-          "kind": "human",
+          "rationale": "hallway-wall-contact PASS",
+          "mandatory": true,
           "evidence_ids": [
-            "observation"
+            "stock-seed-06"
           ],
           "provenance": {
-            "source": "recorded fixture; no live review",
-            "mock": false
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-wall-contact",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-06/hallway-fall",
+          "evaluator": "hallway-fall",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-fall PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-06"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-fall",
+              "version": "1.0.0"
+            },
+            "details": {}
           }
         }
       ],
       "provenance": {
-        "spec": {
-          "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
-          "tag": "v1.2.0",
-          "commit": "f06c4a17a55d649ff78961c7391f90e34fab929d",
-          "revision": "2.0.0",
-          "capability": "pause"
+        "run_id": "run-1",
+        "plan": {
+          "trials": 20,
+          "seeds": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ],
+          "command_speed": 0.5,
+          "required_passes": 18
         },
-        "system": {
-          "id": "pause-fixtures",
-          "version": "1.0.0",
-          "fixture": "insufficient.json"
-        },
-        "simulator": null,
-        "runner": {
-          "id": "fixture-runner",
-          "version": "1.0.0"
-        },
-        "policy": {
-          "id": "all-required-v1",
-          "version": "1.0.0",
-          "members": [
-            "human-fixture",
-            "mock-ai",
-            "pause-rules"
-          ]
-        },
-        "evidence_sha256": "3fea4454a47f7e64d6892810c453c742352474660f35bde3c45b8d99cd09fad8"
+        "lock": {
+          "path": "verification.lock.json",
+          "sha256": "abcdef1000000000000000000000000000000000000000000000000000000000"
+        }
       },
       "original_result": {
-        "status": "INSUFFICIENT_EVIDENCE",
-        "assessments": [
-          {
-            "evaluator": "pause-rules",
-            "version": "1.1.0",
-            "status": "INSUFFICIENT_EVIDENCE",
-            "rationale": "Missing or malformed observations; strict revision uses 250 ms inclusive limit",
-            "mandatory": true
-          },
-          {
-            "evaluator": "mock-ai",
-            "version": "1.0.0",
-            "status": "PASS",
-            "rationale": "MOCK AI; no model was called: Scripted favorable rubric example",
-            "mandatory": false
-          },
-          {
-            "evaluator": "human-fixture",
-            "version": "1.0.0",
-            "status": "PASS",
-            "rationale": "HUMAN FIXTURE; no live review: Recorded favorable fixture review",
-            "mandatory": false
-          }
+        "seed": 6
+      },
+      "decision": {
+        "status": "PASS",
+        "reason": "All four hallway evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
         ],
-        "provenance": {
-          "spec": {
-            "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
-            "tag": "v1.2.0",
-            "commit": "f06c4a17a55d649ff78961c7391f90e34fab929d",
-            "revision": "2.0.0",
-            "capability": "pause"
-          },
-          "system": {
-            "id": "pause-fixtures",
-            "version": "1.0.0",
-            "fixture": "insufficient.json"
-          },
-          "simulator": null,
-          "runner": {
-            "id": "fixture-runner",
-            "version": "1.0.0"
-          },
-          "policy": {
-            "id": "all-required-v1",
-            "version": "1.0.0",
-            "members": [
-              "human-fixture",
-              "mock-ai",
-              "pause-rules"
-            ]
-          },
-          "evidence_sha256": "3fea4454a47f7e64d6892810c453c742352474660f35bde3c45b8d99cd09fad8"
+        "policy": {
+          "id": "all-required-v1",
+          "version": "1.0.0"
         }
       }
     },
     {
-      "id": "v1.2.0-slow",
+      "id": "stock-seed-07",
       "spec": {
         "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
-        "tag": "v1.2.0",
-        "commit": "f06c4a17a55d649ff78961c7391f90e34fab929d",
-        "revision": "2.0.0",
-        "capability": "pause"
+        "tag": "v1.6.0",
+        "commit": "b4ba31eb2c7eaca2721d68d5d375260e2a114449",
+        "capability": "walk-hallway",
+        "revision": "0.1.0"
       },
       "system": {
-        "id": "pause-fixtures",
-        "version": "2.0.0"
+        "id": "unitree-g1/stock",
+        "version": "1.1.0"
       },
       "environment": {
-        "id": "deterministic-fixture-no-robot",
-        "version": "1.0.0"
+        "id": "hallway-open",
+        "version": "0.1.0"
       },
       "evidence": [
         {
-          "id": "observation",
-          "path": "evidence/slow.json",
-          "sha256": "c75ad29c3a0d4bdf9e27c9a83c64395c455a7c2cee0b1004981849baf97bf24c"
+          "id": "stock-seed-07",
+          "path": "evidence/stock-seed-07.json",
+          "sha256": "5f83350f79a392f22dd6c4c97d9c3eba4530c974405a4fcdce43af14f1d968c8"
         }
       ],
       "assessments": [
         {
-          "evaluator": "pause-rules",
-          "version": "1.1.0",
+          "id": "stock-seed-07/hallway-exit-reached",
+          "evaluator": "hallway-exit-reached",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-exit-reached PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-07"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-exit-reached",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-07/hallway-lateral-limit",
+          "evaluator": "hallway-lateral-limit",
+          "kind": "deterministic",
+          "version": "1.0.0",
           "status": "FAIL",
-          "rationale": "Pause state and 500 ms limit assessed; strict revision uses 250 ms inclusive limit",
+          "rationale": "hallway-lateral-limit FAIL",
           "mandatory": true,
-          "id": "pause-rules",
+          "evidence_ids": [
+            "stock-seed-07"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-lateral-limit",
+              "version": "1.0.0"
+            },
+            "details": {
+              "failures": [
+                {
+                  "check": "hallway-lateral-limit",
+                  "seed": 7,
+                  "observed": 0.62,
+                  "limit": 0.49,
+                  "unit": "m",
+                  "t": 10.26
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "stock-seed-07/hallway-wall-contact",
+          "evaluator": "hallway-wall-contact",
           "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "FAIL",
+          "rationale": "hallway-wall-contact FAIL",
+          "mandatory": true,
           "evidence_ids": [
-            "observation"
+            "stock-seed-07"
           ],
           "provenance": {
-            "source": "recorded fixture; no live review",
-            "mock": false
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-wall-contact",
+              "version": "1.0.0"
+            },
+            "details": {
+              "failures": [
+                {
+                  "check": "hallway-wall-contact",
+                  "seed": 7,
+                  "observed": 0.03,
+                  "limit": 0.0,
+                  "unit": "m",
+                  "t": 4.5,
+                  "wall": "wall-left"
+                }
+              ]
+            }
           }
         },
         {
-          "evaluator": "mock-ai",
+          "id": "stock-seed-07/hallway-fall",
+          "evaluator": "hallway-fall",
+          "kind": "deterministic",
           "version": "1.0.0",
           "status": "PASS",
-          "rationale": "MOCK AI; no model was called: Scripted state agreement; timing assessed by deterministic rules",
-          "mandatory": false,
-          "id": "mock-ai",
-          "kind": "mock-agent",
+          "rationale": "hallway-fall PASS",
+          "mandatory": true,
           "evidence_ids": [
-            "observation"
+            "stock-seed-07"
           ],
           "provenance": {
-            "source": "recorded fixture; no live review",
-            "mock": true
-          }
-        },
-        {
-          "evaluator": "human-fixture",
-          "version": "1.0.0",
-          "status": "PASS",
-          "rationale": "HUMAN FIXTURE; no live review: Recorded state agreement, not a timing override",
-          "mandatory": false,
-          "id": "human-fixture",
-          "kind": "human",
-          "evidence_ids": [
-            "observation"
-          ],
-          "provenance": {
-            "source": "recorded fixture; no live review",
-            "mock": false
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-fall",
+              "version": "1.0.0"
+            },
+            "details": {}
           }
         }
       ],
       "provenance": {
-        "spec": {
-          "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
-          "tag": "v1.2.0",
-          "commit": "f06c4a17a55d649ff78961c7391f90e34fab929d",
-          "revision": "2.0.0",
-          "capability": "pause"
+        "run_id": "run-1",
+        "plan": {
+          "trials": 20,
+          "seeds": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ],
+          "command_speed": 0.5,
+          "required_passes": 18
         },
-        "system": {
-          "id": "pause-fixtures",
-          "version": "2.0.0",
-          "fixture": "slow.json"
-        },
-        "simulator": null,
-        "runner": {
-          "id": "fixture-runner",
-          "version": "1.0.0"
-        },
-        "policy": {
-          "id": "all-required-v1",
-          "version": "1.0.0",
-          "members": [
-            "human-fixture",
-            "mock-ai",
-            "pause-rules"
-          ]
-        },
-        "evidence_sha256": "c75ad29c3a0d4bdf9e27c9a83c64395c455a7c2cee0b1004981849baf97bf24c"
+        "lock": {
+          "path": "verification.lock.json",
+          "sha256": "abcdef1000000000000000000000000000000000000000000000000000000000"
+        }
       },
       "original_result": {
+        "seed": 7
+      },
+      "decision": {
         "status": "FAIL",
-        "assessments": [
+        "reason": "Failed: hallway-lateral-limit FAIL; hallway-wall-contact FAIL",
+        "failures": [
           {
-            "evaluator": "pause-rules",
-            "version": "1.1.0",
-            "status": "FAIL",
-            "rationale": "Pause state and 500 ms limit assessed; strict revision uses 250 ms inclusive limit",
-            "mandatory": true
+            "check": "hallway-lateral-limit",
+            "seed": 7,
+            "observed": 0.62,
+            "limit": 0.49,
+            "unit": "m",
+            "t": 10.26
           },
           {
-            "evaluator": "mock-ai",
-            "version": "1.0.0",
-            "status": "PASS",
-            "rationale": "MOCK AI; no model was called: Scripted state agreement; timing assessed by deterministic rules",
-            "mandatory": false
-          },
-          {
-            "evaluator": "human-fixture",
-            "version": "1.0.0",
-            "status": "PASS",
-            "rationale": "HUMAN FIXTURE; no live review: Recorded state agreement, not a timing override",
-            "mandatory": false
+            "check": "hallway-wall-contact",
+            "seed": 7,
+            "observed": 0.03,
+            "limit": 0.0,
+            "unit": "m",
+            "t": 4.5,
+            "wall": "wall-left"
           }
         ],
-        "provenance": {
-          "spec": {
-            "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
-            "tag": "v1.2.0",
-            "commit": "f06c4a17a55d649ff78961c7391f90e34fab929d",
-            "revision": "2.0.0",
-            "capability": "pause"
-          },
-          "system": {
-            "id": "pause-fixtures",
-            "version": "2.0.0",
-            "fixture": "slow.json"
-          },
-          "simulator": null,
-          "runner": {
-            "id": "fixture-runner",
-            "version": "1.0.0"
-          },
-          "policy": {
-            "id": "all-required-v1",
-            "version": "1.0.0",
-            "members": [
-              "human-fixture",
-              "mock-ai",
-              "pause-rules"
-            ]
-          },
-          "evidence_sha256": "c75ad29c3a0d4bdf9e27c9a83c64395c455a7c2cee0b1004981849baf97bf24c"
+        "assessor_types": [
+          "deterministic"
+        ],
+        "policy": {
+          "id": "all-required-v1",
+          "version": "1.0.0"
+        }
+      }
+    },
+    {
+      "id": "stock-seed-08",
+      "spec": {
+        "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+        "tag": "v1.6.0",
+        "commit": "b4ba31eb2c7eaca2721d68d5d375260e2a114449",
+        "capability": "walk-hallway",
+        "revision": "0.1.0"
+      },
+      "system": {
+        "id": "unitree-g1/stock",
+        "version": "1.1.0"
+      },
+      "environment": {
+        "id": "hallway-open",
+        "version": "0.1.0"
+      },
+      "evidence": [
+        {
+          "id": "stock-seed-08",
+          "path": "evidence/stock-seed-08.json",
+          "sha256": "bb47df9938b823e1c54f8ee1ccd962a1e695679b5dd90dfbc2073816f89e33d5"
+        }
+      ],
+      "assessments": [
+        {
+          "id": "stock-seed-08/hallway-exit-reached",
+          "evaluator": "hallway-exit-reached",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-exit-reached PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-08"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-exit-reached",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-08/hallway-lateral-limit",
+          "evaluator": "hallway-lateral-limit",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-lateral-limit PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-08"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-lateral-limit",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-08/hallway-wall-contact",
+          "evaluator": "hallway-wall-contact",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-wall-contact PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-08"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-wall-contact",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-08/hallway-fall",
+          "evaluator": "hallway-fall",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-fall PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-08"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-fall",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        }
+      ],
+      "provenance": {
+        "run_id": "run-1",
+        "plan": {
+          "trials": 20,
+          "seeds": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ],
+          "command_speed": 0.5,
+          "required_passes": 18
+        },
+        "lock": {
+          "path": "verification.lock.json",
+          "sha256": "abcdef1000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "original_result": {
+        "seed": 8
+      },
+      "decision": {
+        "status": "PASS",
+        "reason": "All four hallway evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
+        ],
+        "policy": {
+          "id": "all-required-v1",
+          "version": "1.0.0"
+        }
+      }
+    },
+    {
+      "id": "stock-seed-09",
+      "spec": {
+        "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+        "tag": "v1.6.0",
+        "commit": "b4ba31eb2c7eaca2721d68d5d375260e2a114449",
+        "capability": "walk-hallway",
+        "revision": "0.1.0"
+      },
+      "system": {
+        "id": "unitree-g1/stock",
+        "version": "1.1.0"
+      },
+      "environment": {
+        "id": "hallway-open",
+        "version": "0.1.0"
+      },
+      "evidence": [
+        {
+          "id": "stock-seed-09",
+          "path": "evidence/stock-seed-09.json",
+          "sha256": "9d3cef612709e26fa8e0db2b1a99ad981d96b9d01ca1a32ea5347d408ffddfec"
+        }
+      ],
+      "assessments": [
+        {
+          "id": "stock-seed-09/hallway-exit-reached",
+          "evaluator": "hallway-exit-reached",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-exit-reached PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-09"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-exit-reached",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-09/hallway-lateral-limit",
+          "evaluator": "hallway-lateral-limit",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "FAIL",
+          "rationale": "hallway-lateral-limit FAIL",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-09"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-lateral-limit",
+              "version": "1.0.0"
+            },
+            "details": {
+              "failures": [
+                {
+                  "check": "hallway-lateral-limit",
+                  "seed": 9,
+                  "observed": 0.62,
+                  "limit": 0.49,
+                  "unit": "m",
+                  "t": 10.26
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "stock-seed-09/hallway-wall-contact",
+          "evaluator": "hallway-wall-contact",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-wall-contact PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-09"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-wall-contact",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-09/hallway-fall",
+          "evaluator": "hallway-fall",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-fall PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-09"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-fall",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        }
+      ],
+      "provenance": {
+        "run_id": "run-1",
+        "plan": {
+          "trials": 20,
+          "seeds": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ],
+          "command_speed": 0.5,
+          "required_passes": 18
+        },
+        "lock": {
+          "path": "verification.lock.json",
+          "sha256": "abcdef1000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "original_result": {
+        "seed": 9
+      },
+      "decision": {
+        "status": "FAIL",
+        "reason": "Failed: hallway-lateral-limit FAIL",
+        "failures": [
+          {
+            "check": "hallway-lateral-limit",
+            "seed": 9,
+            "observed": 0.62,
+            "limit": 0.49,
+            "unit": "m",
+            "t": 10.26
+          }
+        ],
+        "assessor_types": [
+          "deterministic"
+        ],
+        "policy": {
+          "id": "all-required-v1",
+          "version": "1.0.0"
+        }
+      }
+    },
+    {
+      "id": "stock-seed-10",
+      "spec": {
+        "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+        "tag": "v1.6.0",
+        "commit": "b4ba31eb2c7eaca2721d68d5d375260e2a114449",
+        "capability": "walk-hallway",
+        "revision": "0.1.0"
+      },
+      "system": {
+        "id": "unitree-g1/stock",
+        "version": "1.1.0"
+      },
+      "environment": {
+        "id": "hallway-open",
+        "version": "0.1.0"
+      },
+      "evidence": [
+        {
+          "id": "stock-seed-10",
+          "path": "evidence/stock-seed-10.json",
+          "sha256": "627d725ddc8ae30c24772171bdbde9ff90a72df3262a078aa4fb6a69222eb84c"
+        }
+      ],
+      "assessments": [
+        {
+          "id": "stock-seed-10/hallway-exit-reached",
+          "evaluator": "hallway-exit-reached",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-exit-reached PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-10"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-exit-reached",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-10/hallway-lateral-limit",
+          "evaluator": "hallway-lateral-limit",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-lateral-limit PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-10"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-lateral-limit",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-10/hallway-wall-contact",
+          "evaluator": "hallway-wall-contact",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-wall-contact PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-10"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-wall-contact",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-10/hallway-fall",
+          "evaluator": "hallway-fall",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-fall PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-10"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-fall",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        }
+      ],
+      "provenance": {
+        "run_id": "run-1",
+        "plan": {
+          "trials": 20,
+          "seeds": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ],
+          "command_speed": 0.5,
+          "required_passes": 18
+        },
+        "lock": {
+          "path": "verification.lock.json",
+          "sha256": "abcdef1000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "original_result": {
+        "seed": 10
+      },
+      "decision": {
+        "status": "PASS",
+        "reason": "All four hallway evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
+        ],
+        "policy": {
+          "id": "all-required-v1",
+          "version": "1.0.0"
+        }
+      }
+    },
+    {
+      "id": "stock-seed-11",
+      "spec": {
+        "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+        "tag": "v1.6.0",
+        "commit": "b4ba31eb2c7eaca2721d68d5d375260e2a114449",
+        "capability": "walk-hallway",
+        "revision": "0.1.0"
+      },
+      "system": {
+        "id": "unitree-g1/stock",
+        "version": "1.1.0"
+      },
+      "environment": {
+        "id": "hallway-open",
+        "version": "0.1.0"
+      },
+      "evidence": [
+        {
+          "id": "stock-seed-11",
+          "path": "evidence/stock-seed-11.json",
+          "sha256": "be713d5264d8c0bc96c1c388db18584a751dce8d554b5947a0560e354dee7dfa"
+        }
+      ],
+      "assessments": [
+        {
+          "id": "stock-seed-11/hallway-exit-reached",
+          "evaluator": "hallway-exit-reached",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-exit-reached PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-11"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-exit-reached",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-11/hallway-lateral-limit",
+          "evaluator": "hallway-lateral-limit",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-lateral-limit PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-11"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-lateral-limit",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-11/hallway-wall-contact",
+          "evaluator": "hallway-wall-contact",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-wall-contact PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-11"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-wall-contact",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-11/hallway-fall",
+          "evaluator": "hallway-fall",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-fall PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-11"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-fall",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        }
+      ],
+      "provenance": {
+        "run_id": "run-1",
+        "plan": {
+          "trials": 20,
+          "seeds": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ],
+          "command_speed": 0.5,
+          "required_passes": 18
+        },
+        "lock": {
+          "path": "verification.lock.json",
+          "sha256": "abcdef1000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "original_result": {
+        "seed": 11
+      },
+      "decision": {
+        "status": "PASS",
+        "reason": "All four hallway evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
+        ],
+        "policy": {
+          "id": "all-required-v1",
+          "version": "1.0.0"
+        }
+      }
+    },
+    {
+      "id": "stock-seed-12",
+      "spec": {
+        "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+        "tag": "v1.6.0",
+        "commit": "b4ba31eb2c7eaca2721d68d5d375260e2a114449",
+        "capability": "walk-hallway",
+        "revision": "0.1.0"
+      },
+      "system": {
+        "id": "unitree-g1/stock",
+        "version": "1.1.0"
+      },
+      "environment": {
+        "id": "hallway-open",
+        "version": "0.1.0"
+      },
+      "evidence": [
+        {
+          "id": "stock-seed-12",
+          "path": "evidence/stock-seed-12.json",
+          "sha256": "bd8cdd4ab7ed58f3b09ed3a4ffd80d78c5d1f84d40ce993248f62e7c170492ac"
+        }
+      ],
+      "assessments": [
+        {
+          "id": "stock-seed-12/hallway-exit-reached",
+          "evaluator": "hallway-exit-reached",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-exit-reached PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-12"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-exit-reached",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-12/hallway-lateral-limit",
+          "evaluator": "hallway-lateral-limit",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-lateral-limit PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-12"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-lateral-limit",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-12/hallway-wall-contact",
+          "evaluator": "hallway-wall-contact",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "FAIL",
+          "rationale": "hallway-wall-contact FAIL",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-12"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-wall-contact",
+              "version": "1.0.0"
+            },
+            "details": {
+              "failures": [
+                {
+                  "check": "hallway-wall-contact",
+                  "seed": 12,
+                  "observed": 0.03,
+                  "limit": 0.0,
+                  "unit": "m",
+                  "t": 4.5,
+                  "wall": "wall-left"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "stock-seed-12/hallway-fall",
+          "evaluator": "hallway-fall",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-fall PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-12"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-fall",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        }
+      ],
+      "provenance": {
+        "run_id": "run-1",
+        "plan": {
+          "trials": 20,
+          "seeds": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ],
+          "command_speed": 0.5,
+          "required_passes": 18
+        },
+        "lock": {
+          "path": "verification.lock.json",
+          "sha256": "abcdef1000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "original_result": {
+        "seed": 12
+      },
+      "decision": {
+        "status": "FAIL",
+        "reason": "Failed: hallway-wall-contact FAIL",
+        "failures": [
+          {
+            "check": "hallway-wall-contact",
+            "seed": 12,
+            "observed": 0.03,
+            "limit": 0.0,
+            "unit": "m",
+            "t": 4.5,
+            "wall": "wall-left"
+          }
+        ],
+        "assessor_types": [
+          "deterministic"
+        ],
+        "policy": {
+          "id": "all-required-v1",
+          "version": "1.0.0"
+        }
+      }
+    },
+    {
+      "id": "stock-seed-13",
+      "spec": {
+        "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+        "tag": "v1.6.0",
+        "commit": "b4ba31eb2c7eaca2721d68d5d375260e2a114449",
+        "capability": "walk-hallway",
+        "revision": "0.1.0"
+      },
+      "system": {
+        "id": "unitree-g1/stock",
+        "version": "1.1.0"
+      },
+      "environment": {
+        "id": "hallway-open",
+        "version": "0.1.0"
+      },
+      "evidence": [
+        {
+          "id": "stock-seed-13",
+          "path": "evidence/stock-seed-13.json",
+          "sha256": "1f0d9288d54b652276ff8c398b4cf1b68c43506885154ffe931cf48bc8f93a6e"
+        }
+      ],
+      "assessments": [
+        {
+          "id": "stock-seed-13/hallway-exit-reached",
+          "evaluator": "hallway-exit-reached",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-exit-reached PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-13"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-exit-reached",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-13/hallway-lateral-limit",
+          "evaluator": "hallway-lateral-limit",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-lateral-limit PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-13"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-lateral-limit",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-13/hallway-wall-contact",
+          "evaluator": "hallway-wall-contact",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-wall-contact PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-13"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-wall-contact",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-13/hallway-fall",
+          "evaluator": "hallway-fall",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-fall PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-13"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-fall",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        }
+      ],
+      "provenance": {
+        "run_id": "run-1",
+        "plan": {
+          "trials": 20,
+          "seeds": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ],
+          "command_speed": 0.5,
+          "required_passes": 18
+        },
+        "lock": {
+          "path": "verification.lock.json",
+          "sha256": "abcdef1000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "original_result": {
+        "seed": 13
+      },
+      "decision": {
+        "status": "PASS",
+        "reason": "All four hallway evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
+        ],
+        "policy": {
+          "id": "all-required-v1",
+          "version": "1.0.0"
+        }
+      }
+    },
+    {
+      "id": "stock-seed-14",
+      "spec": {
+        "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+        "tag": "v1.6.0",
+        "commit": "b4ba31eb2c7eaca2721d68d5d375260e2a114449",
+        "capability": "walk-hallway",
+        "revision": "0.1.0"
+      },
+      "system": {
+        "id": "unitree-g1/stock",
+        "version": "1.1.0"
+      },
+      "environment": {
+        "id": "hallway-open",
+        "version": "0.1.0"
+      },
+      "evidence": [
+        {
+          "id": "stock-seed-14",
+          "path": "evidence/stock-seed-14.json",
+          "sha256": "68cbe1a7bd1b6d5485a4ddaf4a8da610f046ae2fd667ca991fb6883c3dd93196"
+        }
+      ],
+      "assessments": [
+        {
+          "id": "stock-seed-14/hallway-exit-reached",
+          "evaluator": "hallway-exit-reached",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-exit-reached PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-14"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-exit-reached",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-14/hallway-lateral-limit",
+          "evaluator": "hallway-lateral-limit",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-lateral-limit PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-14"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-lateral-limit",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-14/hallway-wall-contact",
+          "evaluator": "hallway-wall-contact",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-wall-contact PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-14"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-wall-contact",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-14/hallway-fall",
+          "evaluator": "hallway-fall",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "FAIL",
+          "rationale": "hallway-fall FAIL",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-14"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-fall",
+              "version": "1.0.0"
+            },
+            "details": {
+              "failures": [
+                {
+                  "check": "hallway-fall",
+                  "seed": 14,
+                  "observed": 0.41,
+                  "limit": 0.5,
+                  "unit": "m",
+                  "t": 6.2
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "provenance": {
+        "run_id": "run-1",
+        "plan": {
+          "trials": 20,
+          "seeds": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ],
+          "command_speed": 0.5,
+          "required_passes": 18
+        },
+        "lock": {
+          "path": "verification.lock.json",
+          "sha256": "abcdef1000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "original_result": {
+        "seed": 14
+      },
+      "decision": {
+        "status": "FAIL",
+        "reason": "Failed: hallway-fall FAIL",
+        "failures": [
+          {
+            "check": "hallway-fall",
+            "seed": 14,
+            "observed": 0.41,
+            "limit": 0.5,
+            "unit": "m",
+            "t": 6.2
+          }
+        ],
+        "assessor_types": [
+          "deterministic"
+        ],
+        "policy": {
+          "id": "all-required-v1",
+          "version": "1.0.0"
+        }
+      }
+    },
+    {
+      "id": "stock-seed-15",
+      "spec": {
+        "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+        "tag": "v1.6.0",
+        "commit": "b4ba31eb2c7eaca2721d68d5d375260e2a114449",
+        "capability": "walk-hallway",
+        "revision": "0.1.0"
+      },
+      "system": {
+        "id": "unitree-g1/stock",
+        "version": "1.1.0"
+      },
+      "environment": {
+        "id": "hallway-open",
+        "version": "0.1.0"
+      },
+      "evidence": [
+        {
+          "id": "stock-seed-15",
+          "path": "evidence/stock-seed-15.json",
+          "sha256": "9c687efea895b3c77ce704e965d7ca9bc3a13aed04dd69e07e228248d4e0eca9"
+        }
+      ],
+      "assessments": [
+        {
+          "id": "stock-seed-15/hallway-exit-reached",
+          "evaluator": "hallway-exit-reached",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "FAIL",
+          "rationale": "hallway-exit-reached FAIL",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-15"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-exit-reached",
+              "version": "1.0.0"
+            },
+            "details": {
+              "failures": [
+                {
+                  "check": "hallway-exit-reached",
+                  "seed": 15,
+                  "observed": null,
+                  "limit": 27.0,
+                  "unit": "s",
+                  "t": 27.0
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "stock-seed-15/hallway-lateral-limit",
+          "evaluator": "hallway-lateral-limit",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-lateral-limit PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-15"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-lateral-limit",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-15/hallway-wall-contact",
+          "evaluator": "hallway-wall-contact",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-wall-contact PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-15"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-wall-contact",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-15/hallway-fall",
+          "evaluator": "hallway-fall",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-fall PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-15"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-fall",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        }
+      ],
+      "provenance": {
+        "run_id": "run-1",
+        "plan": {
+          "trials": 20,
+          "seeds": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ],
+          "command_speed": 0.5,
+          "required_passes": 18
+        },
+        "lock": {
+          "path": "verification.lock.json",
+          "sha256": "abcdef1000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "original_result": {
+        "seed": 15
+      },
+      "decision": {
+        "status": "FAIL",
+        "reason": "Failed: hallway-exit-reached FAIL",
+        "failures": [
+          {
+            "check": "hallway-exit-reached",
+            "seed": 15,
+            "observed": null,
+            "limit": 27.0,
+            "unit": "s",
+            "t": 27.0
+          }
+        ],
+        "assessor_types": [
+          "deterministic"
+        ],
+        "policy": {
+          "id": "all-required-v1",
+          "version": "1.0.0"
+        }
+      }
+    },
+    {
+      "id": "stock-seed-16",
+      "spec": {
+        "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+        "tag": "v1.6.0",
+        "commit": "b4ba31eb2c7eaca2721d68d5d375260e2a114449",
+        "capability": "walk-hallway",
+        "revision": "0.1.0"
+      },
+      "system": {
+        "id": "unitree-g1/stock",
+        "version": "1.1.0"
+      },
+      "environment": {
+        "id": "hallway-open",
+        "version": "0.1.0"
+      },
+      "evidence": [
+        {
+          "id": "stock-seed-16",
+          "path": "evidence/stock-seed-16.json",
+          "sha256": "933a3e1aaf1692414dfcbfcb71df875c35bb1e3d6516282f96896161d90e1052"
+        }
+      ],
+      "assessments": [
+        {
+          "id": "stock-seed-16/hallway-exit-reached",
+          "evaluator": "hallway-exit-reached",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-exit-reached PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-16"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-exit-reached",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-16/hallway-lateral-limit",
+          "evaluator": "hallway-lateral-limit",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-lateral-limit PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-16"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-lateral-limit",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-16/hallway-wall-contact",
+          "evaluator": "hallway-wall-contact",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-wall-contact PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-16"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-wall-contact",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-16/hallway-fall",
+          "evaluator": "hallway-fall",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-fall PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-16"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-fall",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        }
+      ],
+      "provenance": {
+        "run_id": "run-1",
+        "plan": {
+          "trials": 20,
+          "seeds": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ],
+          "command_speed": 0.5,
+          "required_passes": 18
+        },
+        "lock": {
+          "path": "verification.lock.json",
+          "sha256": "abcdef1000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "original_result": {
+        "seed": 16
+      },
+      "decision": {
+        "status": "PASS",
+        "reason": "All four hallway evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
+        ],
+        "policy": {
+          "id": "all-required-v1",
+          "version": "1.0.0"
+        }
+      }
+    },
+    {
+      "id": "stock-seed-17",
+      "spec": {
+        "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+        "tag": "v1.6.0",
+        "commit": "b4ba31eb2c7eaca2721d68d5d375260e2a114449",
+        "capability": "walk-hallway",
+        "revision": "0.1.0"
+      },
+      "system": {
+        "id": "unitree-g1/stock",
+        "version": "1.1.0"
+      },
+      "environment": {
+        "id": "hallway-open",
+        "version": "0.1.0"
+      },
+      "evidence": [
+        {
+          "id": "stock-seed-17",
+          "path": "evidence/stock-seed-17.json",
+          "sha256": "fc73e56abc4c4b2c8aaa9e046bd55054773fe6dad5b68b6f1eace5177041718f"
+        }
+      ],
+      "assessments": [
+        {
+          "id": "stock-seed-17/hallway-exit-reached",
+          "evaluator": "hallway-exit-reached",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-exit-reached PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-17"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-exit-reached",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-17/hallway-lateral-limit",
+          "evaluator": "hallway-lateral-limit",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-lateral-limit PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-17"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-lateral-limit",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-17/hallway-wall-contact",
+          "evaluator": "hallway-wall-contact",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-wall-contact PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-17"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-wall-contact",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-17/hallway-fall",
+          "evaluator": "hallway-fall",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-fall PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-17"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-fall",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        }
+      ],
+      "provenance": {
+        "run_id": "run-1",
+        "plan": {
+          "trials": 20,
+          "seeds": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ],
+          "command_speed": 0.5,
+          "required_passes": 18
+        },
+        "lock": {
+          "path": "verification.lock.json",
+          "sha256": "abcdef1000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "original_result": {
+        "seed": 17
+      },
+      "decision": {
+        "status": "PASS",
+        "reason": "All four hallway evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
+        ],
+        "policy": {
+          "id": "all-required-v1",
+          "version": "1.0.0"
+        }
+      }
+    },
+    {
+      "id": "stock-seed-18",
+      "spec": {
+        "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+        "tag": "v1.6.0",
+        "commit": "b4ba31eb2c7eaca2721d68d5d375260e2a114449",
+        "capability": "walk-hallway",
+        "revision": "0.1.0"
+      },
+      "system": {
+        "id": "unitree-g1/stock",
+        "version": "1.1.0"
+      },
+      "environment": {
+        "id": "hallway-open",
+        "version": "0.1.0"
+      },
+      "evidence": [
+        {
+          "id": "stock-seed-18",
+          "path": "evidence/stock-seed-18.json",
+          "sha256": "b0c56ef285575bcb2d339456d5f9e3105360eaea0850d37770a5cd897870f6a5"
+        }
+      ],
+      "assessments": [
+        {
+          "id": "stock-seed-18/hallway-exit-reached",
+          "evaluator": "hallway-exit-reached",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-exit-reached PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-18"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-exit-reached",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-18/hallway-lateral-limit",
+          "evaluator": "hallway-lateral-limit",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "FAIL",
+          "rationale": "hallway-lateral-limit FAIL",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-18"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-lateral-limit",
+              "version": "1.0.0"
+            },
+            "details": {
+              "failures": [
+                {
+                  "check": "hallway-lateral-limit",
+                  "seed": 18,
+                  "observed": 0.62,
+                  "limit": 0.49,
+                  "unit": "m",
+                  "t": 10.26
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "stock-seed-18/hallway-wall-contact",
+          "evaluator": "hallway-wall-contact",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-wall-contact PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-18"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-wall-contact",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-18/hallway-fall",
+          "evaluator": "hallway-fall",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-fall PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-18"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-fall",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        }
+      ],
+      "provenance": {
+        "run_id": "run-1",
+        "plan": {
+          "trials": 20,
+          "seeds": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ],
+          "command_speed": 0.5,
+          "required_passes": 18
+        },
+        "lock": {
+          "path": "verification.lock.json",
+          "sha256": "abcdef1000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "original_result": {
+        "seed": 18
+      },
+      "decision": {
+        "status": "FAIL",
+        "reason": "Failed: hallway-lateral-limit FAIL",
+        "failures": [
+          {
+            "check": "hallway-lateral-limit",
+            "seed": 18,
+            "observed": 0.62,
+            "limit": 0.49,
+            "unit": "m",
+            "t": 10.26
+          }
+        ],
+        "assessor_types": [
+          "deterministic"
+        ],
+        "policy": {
+          "id": "all-required-v1",
+          "version": "1.0.0"
+        }
+      }
+    },
+    {
+      "id": "stock-seed-19",
+      "spec": {
+        "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+        "tag": "v1.6.0",
+        "commit": "b4ba31eb2c7eaca2721d68d5d375260e2a114449",
+        "capability": "walk-hallway",
+        "revision": "0.1.0"
+      },
+      "system": {
+        "id": "unitree-g1/stock",
+        "version": "1.1.0"
+      },
+      "environment": {
+        "id": "hallway-open",
+        "version": "0.1.0"
+      },
+      "evidence": [
+        {
+          "id": "stock-seed-19",
+          "path": "evidence/stock-seed-19.json",
+          "sha256": "2bcd64cbf4cd70c9dd5b4ea863a370ae07ad55fb6b68ba4b9255523db90c9f09"
+        }
+      ],
+      "assessments": [
+        {
+          "id": "stock-seed-19/hallway-exit-reached",
+          "evaluator": "hallway-exit-reached",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-exit-reached PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-19"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-exit-reached",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-19/hallway-lateral-limit",
+          "evaluator": "hallway-lateral-limit",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-lateral-limit PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-19"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-lateral-limit",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-19/hallway-wall-contact",
+          "evaluator": "hallway-wall-contact",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-wall-contact PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-19"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-wall-contact",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-19/hallway-fall",
+          "evaluator": "hallway-fall",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-fall PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-19"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-fall",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        }
+      ],
+      "provenance": {
+        "run_id": "run-1",
+        "plan": {
+          "trials": 20,
+          "seeds": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ],
+          "command_speed": 0.5,
+          "required_passes": 18
+        },
+        "lock": {
+          "path": "verification.lock.json",
+          "sha256": "abcdef1000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "original_result": {
+        "seed": 19
+      },
+      "decision": {
+        "status": "PASS",
+        "reason": "All four hallway evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
+        ],
+        "policy": {
+          "id": "all-required-v1",
+          "version": "1.0.0"
+        }
+      }
+    },
+    {
+      "id": "stock-seed-20",
+      "spec": {
+        "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+        "tag": "v1.6.0",
+        "commit": "b4ba31eb2c7eaca2721d68d5d375260e2a114449",
+        "capability": "walk-hallway",
+        "revision": "0.1.0"
+      },
+      "system": {
+        "id": "unitree-g1/stock",
+        "version": "1.1.0"
+      },
+      "environment": {
+        "id": "hallway-open",
+        "version": "0.1.0"
+      },
+      "evidence": [
+        {
+          "id": "stock-seed-20",
+          "path": "evidence/stock-seed-20.json",
+          "sha256": "07b496da627d4dd5bf4ca9ad23cc6a982a90d2023a58e5ac6ae232f03e410be6"
+        }
+      ],
+      "assessments": [
+        {
+          "id": "stock-seed-20/hallway-exit-reached",
+          "evaluator": "hallway-exit-reached",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-exit-reached PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-20"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-exit-reached",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-20/hallway-lateral-limit",
+          "evaluator": "hallway-lateral-limit",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-lateral-limit PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-20"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-lateral-limit",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-20/hallway-wall-contact",
+          "evaluator": "hallway-wall-contact",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-wall-contact PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-20"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-wall-contact",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        },
+        {
+          "id": "stock-seed-20/hallway-fall",
+          "evaluator": "hallway-fall",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "hallway-fall PASS",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-20"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "hallway-fall",
+              "version": "1.0.0"
+            },
+            "details": {}
+          }
+        }
+      ],
+      "provenance": {
+        "run_id": "run-1",
+        "plan": {
+          "trials": 20,
+          "seeds": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ],
+          "command_speed": 0.5,
+          "required_passes": 18
+        },
+        "lock": {
+          "path": "verification.lock.json",
+          "sha256": "abcdef1000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "original_result": {
+        "seed": 20
+      },
+      "decision": {
+        "status": "PASS",
+        "reason": "All four hallway evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
+        ],
+        "policy": {
+          "id": "all-required-v1",
+          "version": "1.0.0"
         }
       }
     }
-  ]
+  ],
+  "assessment": {
+    "format": "livingproof-run-assessment/0.1",
+    "policy": {
+      "id": "all-required-v1",
+      "version": "1.0.0"
+    },
+    "aggregation": {
+      "id": "k-of-n-wilson95",
+      "version": "1.0.0"
+    },
+    "decisions": [
+      {
+        "result_id": "stock-seed-01",
+        "status": "PASS",
+        "reason": "All four hallway evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
+        ]
+      },
+      {
+        "result_id": "stock-seed-02",
+        "status": "PASS",
+        "reason": "All four hallway evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
+        ]
+      },
+      {
+        "result_id": "stock-seed-03",
+        "status": "PASS",
+        "reason": "All four hallway evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
+        ]
+      },
+      {
+        "result_id": "stock-seed-04",
+        "status": "FAIL",
+        "reason": "Failed: hallway-lateral-limit FAIL",
+        "failures": [
+          {
+            "check": "hallway-lateral-limit",
+            "seed": 4,
+            "observed": 0.62,
+            "limit": 0.49,
+            "unit": "m",
+            "t": 10.26
+          }
+        ],
+        "assessor_types": [
+          "deterministic"
+        ]
+      },
+      {
+        "result_id": "stock-seed-05",
+        "status": "FAIL",
+        "reason": "Failed: hallway-wall-contact FAIL",
+        "failures": [
+          {
+            "check": "hallway-wall-contact",
+            "seed": 5,
+            "observed": 0.03,
+            "limit": 0.0,
+            "unit": "m",
+            "t": 4.5,
+            "wall": "wall-left"
+          }
+        ],
+        "assessor_types": [
+          "deterministic"
+        ]
+      },
+      {
+        "result_id": "stock-seed-06",
+        "status": "PASS",
+        "reason": "All four hallway evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
+        ]
+      },
+      {
+        "result_id": "stock-seed-07",
+        "status": "FAIL",
+        "reason": "Failed: hallway-lateral-limit FAIL; hallway-wall-contact FAIL",
+        "failures": [
+          {
+            "check": "hallway-lateral-limit",
+            "seed": 7,
+            "observed": 0.62,
+            "limit": 0.49,
+            "unit": "m",
+            "t": 10.26
+          },
+          {
+            "check": "hallway-wall-contact",
+            "seed": 7,
+            "observed": 0.03,
+            "limit": 0.0,
+            "unit": "m",
+            "t": 4.5,
+            "wall": "wall-left"
+          }
+        ],
+        "assessor_types": [
+          "deterministic"
+        ]
+      },
+      {
+        "result_id": "stock-seed-08",
+        "status": "PASS",
+        "reason": "All four hallway evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
+        ]
+      },
+      {
+        "result_id": "stock-seed-09",
+        "status": "FAIL",
+        "reason": "Failed: hallway-lateral-limit FAIL",
+        "failures": [
+          {
+            "check": "hallway-lateral-limit",
+            "seed": 9,
+            "observed": 0.62,
+            "limit": 0.49,
+            "unit": "m",
+            "t": 10.26
+          }
+        ],
+        "assessor_types": [
+          "deterministic"
+        ]
+      },
+      {
+        "result_id": "stock-seed-10",
+        "status": "PASS",
+        "reason": "All four hallway evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
+        ]
+      },
+      {
+        "result_id": "stock-seed-11",
+        "status": "PASS",
+        "reason": "All four hallway evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
+        ]
+      },
+      {
+        "result_id": "stock-seed-12",
+        "status": "FAIL",
+        "reason": "Failed: hallway-wall-contact FAIL",
+        "failures": [
+          {
+            "check": "hallway-wall-contact",
+            "seed": 12,
+            "observed": 0.03,
+            "limit": 0.0,
+            "unit": "m",
+            "t": 4.5,
+            "wall": "wall-left"
+          }
+        ],
+        "assessor_types": [
+          "deterministic"
+        ]
+      },
+      {
+        "result_id": "stock-seed-13",
+        "status": "PASS",
+        "reason": "All four hallway evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
+        ]
+      },
+      {
+        "result_id": "stock-seed-14",
+        "status": "FAIL",
+        "reason": "Failed: hallway-fall FAIL",
+        "failures": [
+          {
+            "check": "hallway-fall",
+            "seed": 14,
+            "observed": 0.41,
+            "limit": 0.5,
+            "unit": "m",
+            "t": 6.2
+          }
+        ],
+        "assessor_types": [
+          "deterministic"
+        ]
+      },
+      {
+        "result_id": "stock-seed-15",
+        "status": "FAIL",
+        "reason": "Failed: hallway-exit-reached FAIL",
+        "failures": [
+          {
+            "check": "hallway-exit-reached",
+            "seed": 15,
+            "observed": null,
+            "limit": 27.0,
+            "unit": "s",
+            "t": 27.0
+          }
+        ],
+        "assessor_types": [
+          "deterministic"
+        ]
+      },
+      {
+        "result_id": "stock-seed-16",
+        "status": "PASS",
+        "reason": "All four hallway evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
+        ]
+      },
+      {
+        "result_id": "stock-seed-17",
+        "status": "PASS",
+        "reason": "All four hallway evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
+        ]
+      },
+      {
+        "result_id": "stock-seed-18",
+        "status": "FAIL",
+        "reason": "Failed: hallway-lateral-limit FAIL",
+        "failures": [
+          {
+            "check": "hallway-lateral-limit",
+            "seed": 18,
+            "observed": 0.62,
+            "limit": 0.49,
+            "unit": "m",
+            "t": 10.26
+          }
+        ],
+        "assessor_types": [
+          "deterministic"
+        ]
+      },
+      {
+        "result_id": "stock-seed-19",
+        "status": "PASS",
+        "reason": "All four hallway evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
+        ]
+      },
+      {
+        "result_id": "stock-seed-20",
+        "status": "PASS",
+        "reason": "All four hallway evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
+        ]
+      }
+    ],
+    "runs": [
+      {
+        "capability": "walk-hallway",
+        "spec": {
+          "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+          "tag": "v1.6.0",
+          "commit": "b4ba31eb2c7eaca2721d68d5d375260e2a114449",
+          "capability": "walk-hallway",
+          "revision": "0.1.0"
+        },
+        "system": {
+          "id": "unitree-g1/stock",
+          "version": "1.1.0"
+        },
+        "environment": {
+          "id": "hallway-open",
+          "version": "0.1.0"
+        },
+        "run_id": "run-1",
+        "k": 12,
+        "n": 20,
+        "required_passes": 18,
+        "grade": "FAIL",
+        "result_ids": [
+          "stock-seed-01",
+          "stock-seed-02",
+          "stock-seed-03",
+          "stock-seed-04",
+          "stock-seed-05",
+          "stock-seed-06",
+          "stock-seed-07",
+          "stock-seed-08",
+          "stock-seed-09",
+          "stock-seed-10",
+          "stock-seed-11",
+          "stock-seed-12",
+          "stock-seed-13",
+          "stock-seed-14",
+          "stock-seed-15",
+          "stock-seed-16",
+          "stock-seed-17",
+          "stock-seed-18",
+          "stock-seed-19",
+          "stock-seed-20"
+        ],
+        "failures": [
+          {
+            "check": "hallway-lateral-limit",
+            "seed": 4,
+            "observed": 0.62,
+            "limit": 0.49,
+            "unit": "m",
+            "t": 10.26
+          },
+          {
+            "check": "hallway-wall-contact",
+            "seed": 5,
+            "observed": 0.03,
+            "limit": 0.0,
+            "unit": "m",
+            "t": 4.5,
+            "wall": "wall-left"
+          },
+          {
+            "check": "hallway-lateral-limit",
+            "seed": 7,
+            "observed": 0.62,
+            "limit": 0.49,
+            "unit": "m",
+            "t": 10.26
+          },
+          {
+            "check": "hallway-wall-contact",
+            "seed": 7,
+            "observed": 0.03,
+            "limit": 0.0,
+            "unit": "m",
+            "t": 4.5,
+            "wall": "wall-left"
+          },
+          {
+            "check": "hallway-lateral-limit",
+            "seed": 9,
+            "observed": 0.62,
+            "limit": 0.49,
+            "unit": "m",
+            "t": 10.26
+          },
+          {
+            "check": "hallway-wall-contact",
+            "seed": 12,
+            "observed": 0.03,
+            "limit": 0.0,
+            "unit": "m",
+            "t": 4.5,
+            "wall": "wall-left"
+          },
+          {
+            "check": "hallway-fall",
+            "seed": 14,
+            "observed": 0.41,
+            "limit": 0.5,
+            "unit": "m",
+            "t": 6.2
+          },
+          {
+            "check": "hallway-exit-reached",
+            "seed": 15,
+            "observed": null,
+            "limit": 27.0,
+            "unit": "s",
+            "t": 27.0
+          },
+          {
+            "check": "hallway-lateral-limit",
+            "seed": 18,
+            "observed": 0.62,
+            "limit": 0.49,
+            "unit": "m",
+            "t": 10.26
+          }
+        ],
+        "prototype": null,
+        "interval": {
+          "method": "wilson",
+          "level": 0.95,
+          "lower": 0.3866,
+          "upper": 0.7812
+        },
+        "rationale": "12/20 PASS, needs 18"
+      }
+    ]
+  }
 }

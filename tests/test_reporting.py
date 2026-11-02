@@ -5,9 +5,16 @@ import json
 import pytest
 from click.testing import CliRunner
 
-from livingproof_capability_report import aggregate, grade, load_bundle, render
+from livingproof_capability_report import aggregate, load_bundle, render
 from livingproof_capability_report.cli import report
-from livingproof_capability_report.core import CONTRACTS, MEMBERS, decode, digest, validate_bundle
+from livingproof_capability_report.core import decode, validate_bundle
+from test_hallway import example, stored
+
+PAUSE = (
+    "https://github.com/Living-Proof-Labs/robot-capability-specs",
+    "e8ff8b45d76c6c0c0c3f7a0c2f62e1c0d1f2a3b4",
+)
+MEMBERS = {"pause-rules": "deterministic", "pause-review": "mock-agent"}
 
 
 @pytest.fixture
@@ -17,9 +24,9 @@ def bundle(tmp_path):
     result = {
         "id": "pause-120",
         "spec": {
-            "repository": CONTRACTS[0][0],
+            "repository": PAUSE[0],
             "tag": "v1.1.1",
-            "commit": CONTRACTS[0][2],
+            "commit": PAUSE[1],
             "capability": "pause",
             "revision": "1.0.0",
         },
@@ -61,56 +68,15 @@ def bundle(tmp_path):
     return manifest
 
 
-def test_lossless_and_nonmutating(bundle):
-    loaded = load_bundle(bundle)
+def test_lossless_nonmutating_and_escaped(tmp_path):
+    loaded = load_bundle(example(tmp_path))
     before = copy.deepcopy(loaded)
-    result = grade(loaded)
-    assert result["decisions"][0]["status"] == "PASS"
+    result = stored(example(tmp_path / "again"))
+    result["decisions"][0]["reason"] = "<script>alert(1)</script>"
     assert decode(render(result)) == result
     assert loaded == before
     assert "&lt;script&gt;" in render(result, "html")
     assert "<script>" not in render(result, "html")
-    assert "INCOMPATIBLE" == grade(loaded, "future@2")["decisions"][0]["status"]
-
-
-@pytest.mark.parametrize(
-    "mutation,expected",
-    [
-        ("fail", "FAIL"),
-        ("missing", "INSUFFICIENT_EVIDENCE"),
-        ("duplicate", "INSUFFICIENT_EVIDENCE"),
-        ("version", "INCOMPATIBLE"),
-        ("kind", "INCOMPATIBLE"),
-        ("no_refs", "INSUFFICIENT_EVIDENCE"),
-    ],
-)
-def test_policy(bundle, mutation, expected):
-    loaded = load_bundle(bundle)
-    assessments = loaded["bundle"]["results"][0]["assessments"]
-    if mutation == "fail":
-        assessments[0]["status"] = "FAIL"
-        loaded["evidence_state"] = {}  # Known mandatory failure still wins.
-    elif mutation == "missing":
-        assessments.pop()
-    elif mutation == "duplicate":
-        duplicate = copy.deepcopy(assessments[-1])
-        duplicate["id"] = "another"
-        assessments.append(duplicate)
-    elif mutation == "version":
-        assessments[0]["version"] = "9.0.0"
-    elif mutation == "kind":
-        assessments[0]["kind"] = "human"
-    else:
-        assessments[0]["evidence_ids"] = []
-    assert grade(loaded)["decisions"][0]["status"] == expected
-
-
-def test_missing_and_tampered_evidence(bundle):
-    evidence = bundle.parent / "evidence.json"
-    evidence.write_text("changed")
-    assert grade(load_bundle(bundle))["decisions"][0]["status"] == "INSUFFICIENT_EVIDENCE"
-    evidence.unlink()
-    assert grade(load_bundle(bundle))["decisions"][0]["status"] == "INSUFFICIENT_EVIDENCE"
 
 
 @pytest.mark.parametrize(
@@ -140,26 +106,7 @@ def test_symlinks(bundle):
         load_bundle(bundle)
 
 
-def test_human_addition_keeps_original(bundle):
-    loaded = load_bundle(bundle)
-    original = loaded["bundle"]["results"][0]
-    human = original["assessments"].pop()
-    contributions = {
-        "schema_version": "1.0.0",
-        "assessments": [
-            {"result_id": original["id"], "result_sha256": digest(original), "assessment": human}
-        ],
-    }
-    result = grade(loaded, human=contributions)
-    assert result["decisions"][0]["status"] == "PASS"
-    assert len(result["source_bundle"]["results"][0]["assessments"]) == 2
-    assert result["human_contributions"] == contributions
-    contributions["assessments"][0]["result_sha256"] = "0" * 64
-    with pytest.raises(ValueError, match="digest"):
-        grade(loaded, human=contributions)
-
-
-def test_grouping_and_render_never_regrade(bundle, monkeypatch):
+def test_grouping_and_render_never_regrade(bundle, tmp_path):
     loaded = load_bundle(bundle)
     result = loaded["bundle"]["results"][0]
     other = copy.deepcopy(result)
@@ -169,57 +116,36 @@ def test_grouping_and_render_never_regrade(bundle, monkeypatch):
     other["spec"] = result["spec"]
     other["environment"]["version"] = "2.0.0"
     assert len(aggregate([result, other])) == 2
-    saved = grade(loaded)
+    saved = stored(example(tmp_path))
     saved["policy"] = "retired-policy@0.1.0"
-    monkeypatch.setattr("livingproof_capability_report.core.grade", lambda *a: pytest.fail())
     assert "PASS" in render(saved, "html")
 
 
-def test_cli_and_no_overwrite(bundle):
+def test_cli_and_no_overwrite(bundle, tmp_path):
     runner = CliRunner()
-    output = bundle.parent / "report.json"
     assert runner.invoke(report, ["validate", str(bundle)]).exit_code == 0
-    assert runner.invoke(report, ["grade", str(bundle), "-o", str(output)]).exit_code == 0
-    assert runner.invoke(report, ["grade", str(bundle), "-o", str(bundle)]).exit_code != 0
+    manifest = example(tmp_path)
+    output = manifest.parent / "report.json"
+    assert (
+        runner.invoke(
+            report, ["render", str(manifest), "--format", "json", "-o", str(output)]
+        ).exit_code
+        == 0
+    )
+    assert runner.invoke(report, ["render", str(manifest), "-o", str(manifest)]).exit_code != 0
     assert (
         runner.invoke(
             report,
-            ["render", str(output), "--format", "html", "-o", str(bundle.parent / "report.html")],
+            ["render", str(output), "--format", "html", "-o", str(manifest.parent / "report.html")],
         ).exit_code
         == 0
     )
 
 
-def test_reject_bad_json_and_csv_formula(bundle):
+def test_reject_bad_json_and_csv_formula(tmp_path):
     for value in ['{"a":1,"a":2}', '{"a": NaN}']:
         with pytest.raises(ValueError):
             decode(value)
-    saved = grade(load_bundle(bundle))
+    saved = stored(example(tmp_path))
     saved["decisions"][0]["reason"] = " =1+1"
     assert "' =1+1" in render(saved, "csv")
-
-
-def test_unknown_contract_is_incompatible(bundle):
-    loaded = load_bundle(bundle)
-    loaded["bundle"]["results"][0]["spec"]["commit"] = "f" * 40
-    assert grade(loaded)["decisions"][0]["status"] == "INCOMPATIBLE"
-
-
-def test_human_template_binds_exact_result(bundle):
-    output = bundle.parent / "human.json"
-    runner = CliRunner()
-    assert (
-        runner.invoke(
-            report, ["human-template", str(bundle), "--result", "pause-120", "-o", str(output)]
-        ).exit_code
-        == 0
-    )
-    contribution = decode(output.read_text())["assessments"][0]
-    assert contribution["result_sha256"] == digest(load_bundle(bundle)["bundle"]["results"][0])
-    assert contribution["assessment"]["status"] == "INSUFFICIENT_EVIDENCE"
-    assert (
-        runner.invoke(
-            report, ["human-template", str(bundle), "--result", "absent", "-o", str(output)]
-        ).exit_code
-        != 0
-    )
