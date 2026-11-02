@@ -229,3 +229,29 @@ def test_golden_reports_are_byte_identical(tmp_path):
         assert out.exit_code == 0, out.output
         expected = (golden / f"comment-{robot}.md").read_bytes()
         assert sha(out.output.encode()) == sha(expected), robot
+
+
+@pytest.mark.parametrize("grade", [["PASS"], {"grade": "PASS"}, 1])
+def test_a_malformed_stored_grade_fails_clearly(pair, grade):
+    """A grade that is not a string stops every format with a message naming the field."""
+    _, manifest = pair
+    data = json.loads(manifest.read_text())
+    data["assessment"]["runs"][0]["grade"] = grade
+    manifest.write_text(json.dumps(data))
+    for fmt in ("html", "markdown", "json"):
+        result = CliRunner().invoke(cli, ["render", str(manifest), "--format", fmt])
+        assert result.exit_code == 1
+        assert "assessment run 0 field 'grade' must be str" in result.output
+
+
+@pytest.mark.parametrize("grade", [["PASS"], "MAYBE"])
+def test_a_malformed_grade_in_a_stored_report_fails_clearly(pair, tmp_path, grade):
+    _, manifest = pair
+    rendered = CliRunner().invoke(cli, ["render", str(manifest), "--format", "json"])
+    report = json.loads(rendered.output)
+    report["summaries"][0]["grade"] = grade
+    stored = tmp_path / "report.json"
+    stored.write_text(json.dumps(report))
+    result = CliRunner().invoke(cli, ["render", str(stored), "--format", "markdown"])
+    assert result.exit_code == 1
+    assert "Report summary grade is" in result.output and "unhashable" not in result.output

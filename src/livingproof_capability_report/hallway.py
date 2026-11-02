@@ -22,6 +22,15 @@ GRADE = {
     INCOMPATIBLE: "⚠️ INCOMPATIBLE",
 }
 ORDER = list(EVALUATORS)
+
+
+def _label(value, where):
+    """Display label for a stored grade or status; a malformed one is a clear error."""
+    if not isinstance(value, str) or value not in GRADE:
+        raise ValueError(f"Report {where} is {value!r}; expected one of {', '.join(GRADE)}")
+    return GRADE[value]
+
+
 WHAT = {
     "hallway-exit-reached": "exit not reached in time",
     "hallway-lateral-limit": "lateral limit exceeded",
@@ -105,7 +114,7 @@ def _verdict(run):
             f"{subject} {run['spec']['capability']}: {run['k']} of {run['n']} trials passed, "
             f"{run['required_passes']} needed."
         )
-    return f"{_robot(run['system'])} cannot be graded on {run['spec']['capability']}: {GRADE[run['grade']]}."
+    return f"{_robot(run['system'])} cannot be graded on {run['spec']['capability']}: {_label(run['grade'], 'summary grade')}."
 
 
 def markdown(report, links=None):
@@ -124,7 +133,7 @@ def markdown(report, links=None):
         ]
         for s in runs:
             lines.append(
-                f"| {_robot(s['system'])} {s['system']['version']} | **{GRADE[s['grade']]}** | "
+                f"| {_robot(s['system'])} {s['system']['version']} | **{_label(s['grade'], 'summary grade')}** | "
                 f"{s['k']}/{s['n']} | {_interval(s['wilson95'])} | {s['required_passes']} |"
             )
         lines.append("")

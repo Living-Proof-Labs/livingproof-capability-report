@@ -69,6 +69,7 @@ def _summary(run, index):
     where = f"assessment run {index}"
     for key in RUN_KEYS:
         _need(run, key, where)
+    _need(run, "grade", where, str)
     interval = _need(run, "interval", where, dict)
     for key in ("method", "level", "lower", "upper"):
         _need(interval, key, f"{where} interval")
