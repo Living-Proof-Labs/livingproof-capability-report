@@ -337,6 +337,7 @@ def html_summary(report, bundle, escape):
     provenance = items(
         [
             ("Policy", report.get("policy")),
+            ("Grade revision", str(report.get("grade_revision", 1))),
             ("Aggregation", ref(assessment.get("aggregation"))),
             ("Assessment format", assessment.get("format")),
             (

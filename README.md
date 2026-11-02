@@ -163,6 +163,24 @@ What changes for callers:
   render as stored.
 - How human reviews apply to 1.1.0 bundles is not decided yet.
 
+## What the HTML report shows
+
+`--format html` opens with a **Summary** section above the trial table, so a reader can
+see the outcome with the full report collapsed. For each stored run summary it lists the
+robot (system and version), run id, overall status (the stored grade), observed k/N PASS,
+the threshold ("18/20 PASS required"), the stored Wilson 95% interval, the capability,
+the spec (tag, revision, commit) and the environment. A **Provenance** list follows: the
+grading policy (for example `Policy: all-required-v1@1.0.0`), the grade revision, the
+aggregation and assessment format of a 1.1.0 bundle, the producer that assessed it
+(id@version and commit) and the bundle schema version.
+
+Every value is read from the stored report and its source bundle and HTML-escaped;
+nothing is regraded or recomputed, and a field the report does not carry is left out.
+The trial table (Result, Catalog, Revision, Environment, Status, Reason) follows, and the
+lossless JSON stays unchanged inside the collapsed `<details>` block. `--format table`
+prints the policy and grade revision as trailing lines; `--format csv` adds `policy` and
+`grade_revision` columns only when the decisions carry `assessment_details`.
+
 ## Compatibility evidence
 
 `examples/bundle` is a walk-hallway bundle 1.1.0 in the layout capability-verifier
