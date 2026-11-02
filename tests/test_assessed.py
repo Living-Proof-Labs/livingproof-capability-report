@@ -1,6 +1,7 @@
 """Bundle 1.1.0: render the verifier's stored decisions and run assessments, grade nothing."""
 
 import hashlib
+from html import escape as html_escape
 import json
 import os
 from pathlib import Path
@@ -229,3 +230,70 @@ def test_golden_reports_are_byte_identical(tmp_path):
         assert out.exit_code == 0, out.output
         expected = (golden / f"comment-{robot}.md").read_bytes()
         assert sha(out.output.encode()) == sha(expected), robot
+
+
+def _html_summary(html):
+    """The HTML before the trial table, and before the collapsed full report."""
+    assert html.index("<section id='summary'>") < html.index("<table>") < html.index("<details>")
+    assert "<details open" not in html
+    return html[html.index("<section id='summary'>") : html.index("<table>")]
+
+
+def test_html_shows_the_stored_run_summary_above_the_trials(pair):
+    """Reporter #23: a robot FAIL report is understandable with <details> collapsed."""
+    _, manifest = pair
+    stored = assessed.report_from_bundle(load_bundle(manifest))
+    html = render(stored, "html")
+    top = _html_summary(html)
+    s = stored["summaries"][0]
+    for text in (
+        "unitree-g1/stock@1.1.0",
+        f"<dd>{s['run_id']}</dd>",
+        "<dt>Overall status</dt><dd>FAIL</dd>",
+        "<dt>Observed</dt><dd>12/20 PASS</dd>",
+        "<dt>Threshold</dt><dd>18/20 PASS required</dd>",
+        "<dt>Policy</dt><dd>all-required-v1@1.0.0</dd>",
+        "<dt>Aggregation</dt><dd>k-of-n-wilson95@1.0.0</dd>",
+        "<dt>Assessed by</dt><dd>capability-verifier@",
+    ):
+        assert text in top, text
+    # The lossless JSON is unchanged, and still only inside <details>.
+    assert render(json.loads(render(stored, "json")), "json") == render(stored, "json")
+    full = html[html.index("<details>") :]
+    assert html_escape(render(stored, "json").rstrip("\n")) in full
+
+
+def test_html_summary_shows_stored_values_without_regrading(pair):
+    _, manifest = pair
+    data = json.loads(manifest.read_text())
+    data["assessment"]["runs"][0]["grade"] = "PASS"  # stored value wins, even if inconsistent
+    manifest.write_text(json.dumps(data))
+    top = _html_summary(render(assessed.report_from_bundle(load_bundle(manifest)), "html"))
+    assert "<dt>Overall status</dt><dd>PASS</dd>" in top
+    assert "<dt>Observed</dt><dd>12/20 PASS</dd>" in top
+
+
+def test_html_summary_escapes_every_value(pair):
+    _, manifest = pair
+    stored = assessed.report_from_bundle(load_bundle(manifest))
+    evil = "<script>alert('x')</script>&\""
+    stored["summaries"][0]["run_id"] = evil
+    stored["summaries"][0]["system"] = {"id": evil, "version": "1"}
+    stored["summaries"][0]["grade"] = evil
+    stored["policy"] = evil
+    top = _html_summary(render(stored, "html"))
+    assert "<script>" not in top and "alert('x')" not in top
+    safe = html_escape(evil)
+    assert f"<dt>Run</dt><dd>{safe}</dd>" in top
+    assert f"<dt>Overall status</dt><dd>{safe}</dd>" in top
+    assert f"<dt>Policy</dt><dd>{safe}</dd>" in top
+    assert f"<dt>Robot</dt><dd>{safe}@1</dd>" in top
+
+
+def test_html_summary_leaves_out_absent_fields(pair):
+    _, manifest = pair
+    stored = assessed.report_from_bundle(load_bundle(manifest))
+    del stored["summaries"]
+    top = _html_summary(render(stored, "html"))
+    assert "Observed" not in top and "Threshold" not in top and "Overall status" not in top
+    assert "<dt>Policy</dt><dd>all-required-v1@1.0.0</dd>" in top
