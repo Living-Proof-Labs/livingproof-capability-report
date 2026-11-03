@@ -62,7 +62,7 @@ def test_g1_header_context_failures_and_grid():
         "<strong>FAIL</strong>",
         "12 of 20 trials passed; overall FAIL",
         "18 of 20 required",
-        "95% interval 39–78% (Wilson, stored)",
+        "95% interval 39–78% (Wilson, stored, rounded to whole percent)",
         "<strong>Expected:</strong> The robot starts at the hallway entrance",
         "<strong>Actual:</strong> 8 of 20 trials failed; primary failure: lateral limit "
         "exceeded in 8 (seeds 4, 5, 7, 9, 12, 14, 15, 18).",
