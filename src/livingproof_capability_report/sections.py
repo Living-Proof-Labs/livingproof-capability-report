@@ -186,7 +186,9 @@ def header(report, summary, description):
         f"{summary['required_passes']} of {summary['n']} required",
     ]
     if isinstance(interval, list) and len(interval) == 2:
-        facts.append(f"95% interval {hallway._interval(interval)} (Wilson, stored)")
+        facts.append(
+            f"95% interval {hallway._interval(interval)} (Wilson, stored, rounded to whole percent)"
+        )
     out = [
         f"<section class='verdict' data-grade='{esc(grade)}'>",
         f"<p class='robot'>{esc(title)}</p>",
