@@ -260,9 +260,9 @@ def test_a_malformed_grade_in_a_stored_report_fails_clearly(pair, tmp_path, grad
 
 def _html_summary(html):
     """The HTML before the trial table, and before the collapsed full report."""
-    assert html.index("<section id='summary'>") < html.index("<table>") < html.index("<details>")
+    assert html.index("<section id='summary'>") < html.index("<table") < html.index("<details>")
     assert "<details open" not in html
-    return html[html.index("<section id='summary'>") : html.index("<table>")]
+    return html[html.index("<section id='summary'>") : html.index("<table")]
 
 
 def test_html_shows_the_stored_run_summary_above_the_trials(pair):
