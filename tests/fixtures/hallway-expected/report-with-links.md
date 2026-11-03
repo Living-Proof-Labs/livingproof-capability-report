@@ -1,11 +1,11 @@
 <!-- livingproof-verification -->
 ## walk-hallway@0.1.0 · N=20 · 0.50 m/s · pass bar 18/20 · `verification.lock.json @ abcdef1`
 
+unitree-g1 · stock does not pass walk-hallway: 12 of 20 trials passed, 18 needed.
+
 | Robot · configuration | Grade | Passed | 95% interval | Needs |
 |---|---|---|---|---|
 | unitree-g1 · stock 1.1.0 | **❌ FAIL** | 12/20 | 39–78% | 18 |
-
-unitree-g1 · stock does not pass walk-hallway: 12 of 20 trials passed, 18 needed.
 
 **Why runs failed · unitree-g1 · stock**
 - 3× lateral limit exceeded — worst: 0.62 > 0.49 m at 10.26 s (seed 18)

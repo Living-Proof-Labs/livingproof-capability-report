@@ -123,9 +123,20 @@ def markdown(report, links=None):
     results = {r["id"]: r for r in report["source_bundle"]["results"]}
     lines = [MARKER]
     if runs:
+        from . import sections
+
         plans = {canonical_plan(results[s["result_ids"][0]]) for s in runs}
         for plan in sorted(plans):
             lines.append(f"## {plan}")
+        # #39 header: verdict, expected (spec text) and actual (verifier) above the table.
+        lines += ["", *[_verdict(s) for s in runs]]
+        mission = (report["source_bundle"].get("description") or {}).get("mission") or {}
+        if isinstance(mission, dict) and mission.get("description"):
+            lines += ["", f"**Expected:** {mission['description']}"]
+        if any(sections.stored_run(report, s).get("failure_summary") for s in runs):
+            lines += [""] + [
+                f"**Actual · {_robot(s['system'])}:** {sections.actual(report, s)}" for s in runs
+            ]
         lines += [
             "",
             "| Robot · configuration | Grade | Passed | 95% interval | Needs |",
@@ -136,10 +147,10 @@ def markdown(report, links=None):
                 f"| {_robot(s['system'])} {s['system']['version']} | **{_label(s['grade'], 'summary grade')}** | "
                 f"{s['k']}/{s['n']} | {_interval(s['wilson95'])} | {s['required_passes']} |"
             )
-        lines.append("")
-        lines += [_verdict(s) for s in runs]
         for s in runs:
-            why = why_failed(s)
+            why = sections.why_lines(report, s)
+            if why is None:  # bundles before capability-verifier v1.12.0
+                why = why_failed(s)
             if why:
                 lines += ["", f"**Why runs failed · {_robot(s['system'])}**", *why]
         for s in runs:
@@ -224,6 +235,10 @@ def markdown(report, links=None):
     )
     footer = [f"Policy {report['policy']}", "catalog " + ", ".join(catalogs)]
     footer += [f"run {s['run_id']}" for s in runs if s.get("run_id")]
+    from . import sections
+
+    if any(sections.visual_walls(report, s) for s in runs):
+        footer.append(sections.WALLS_SHORT)
     footer += ["stored decisions, no regrading", "simulation evidence, not hardware validation"]
     lines += ["", "<sub>" + " · ".join(footer) + "</sub>"]
     notes = sorted({s["prototype"] for s in runs if s.get("prototype")})

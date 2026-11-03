@@ -198,11 +198,18 @@ def render(report, format="json", links=None):
     ]
     if format == "table":
         text = terminal_table(rows, aggregate(bundle["results"]))
-        details = [
-            f"Run {s['system']['id']}: {s['k']}/{s['n']} PASS, needs {s['required_passes']}, "
-            f"Wilson 95% [{s['wilson95'][0]:.4f}, {s['wilson95'][1]:.4f}]: {s['grade']}"
-            for s in report.get("summaries", [])
-        ]
+        from . import sections
+
+        details = []
+        for s in report.get("summaries", []):
+            details.append(
+                f"Run {s['system']['id']}: {s['k']} of {s['n']} trials passed; overall "
+                f"{s['grade']}. {s['required_passes']} of {s['n']} required; 95% interval "
+                f"{hallway._interval(s['wilson95'])} (Wilson, stored "
+                f"[{s['wilson95'][0]:.4f}, {s['wilson95'][1]:.4f}])"
+            )
+            if sections.stored_run(report, s).get("failure_summary"):
+                details.append("  Actual: " + sections.actual(report, s))
         details += [
             "Policy: " + canonical(report["policy"]),
             "Grade revision: " + str(report.get("grade_revision", 1)),
@@ -234,8 +241,21 @@ def render(report, format="json", links=None):
     def escape(value):
         return html.escape(str(value), quote=True)
 
+    from . import sections
+
+    runs = [s for s in report.get("summaries") or [] if isinstance(s, dict)]
+    in_runs = {r for s in runs for r in s.get("result_ids", [])}
+    description = bundle.get("description") if isinstance(bundle.get("description"), dict) else None
+    # Results outside any stored run keep a plain row; no Environment JSON column (#40).
     table = "".join(
-        "<tr>" + "".join(f"<td>{escape(v)}</td>" for v in row.values()) + "</tr>" for row in rows
+        "<tr>"
+        + "".join(
+            f"<td>{escape(row[k])}</td>"
+            for k in ("result_id", "spec_tag", "revision", "status", "reason")
+        )
+        + "</tr>"
+        for row in rows
+        if row["result_id"] not in in_runs
     )
     full = escape(json.dumps(report, indent=2, ensure_ascii=False, allow_nan=False))
     evidence = ""
@@ -256,23 +276,44 @@ def render(report, format="json", links=None):
             + "".join(f"<li><a href='{escape(u)}'>{escape(t)}</a></li>" for t, u in items)
             + "</ul>"
         )
+    headers = "".join(sections.header(report, s, description) for s in runs)
     summary = html_summary(report, bundle, escape)
+    detail = "".join(
+        "<section class='run-detail'>"
+        + sections.context(report, s, description)
+        + sections.failures(report, s)
+        + sections.trials(report, s)
+        + "</section>"
+        for s in runs
+    )
+    others = ""
+    if table:
+        others = (
+            ("<h2>Other results</h2>" if runs else "")
+            + "<table><thead><tr><th>Result</th><th>Catalog</th><th>Revision</th>"
+            "<th>Status</th><th>Reason</th></tr></thead><tbody>" + table + "</tbody></table>"
+        )
     return (
         "<!doctype html><html lang='en'><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width'>"
         "<title>Living Proof Labs capability report</title>"
         "<style>body{font:16px system-ui;margin:2rem;max-width:90rem}"
-        "td,th{border:1px solid #aaa;padding:.6rem;text-align:left}"
+        "td,th{border:1px solid #aaa;padding:.6rem;text-align:left;vertical-align:top}"
         "table{border-collapse:collapse}dt{font-weight:600}dd{margin:0 0 .4rem 1rem}"
         "pre{white-space:pre-wrap;overflow-wrap:anywhere}"
+        ".verdict{border:2px solid #444;padding:1rem;margin:1rem 0}"
+        ".verdict .grade{font-size:2rem;margin:.2rem 0}.verdict .robot{font-weight:600}"
+        ".muted{color:#666}.limit{color:#444;font-size:.9rem}"
+        ".note{border-left:4px solid #b60;padding:.4rem .8rem;background:#fff6e8}"
+        ".chips{list-style:none;padding:0;display:flex;flex-wrap:wrap;gap:.4rem}"
+        ".chip{border:1px solid #393;border-radius:1rem;padding:.1rem .6rem}"
         "</style><h1>Living Proof Labs capability report</h1>"
         "<p>Fixture evidence, not robot safety certification. Stored decisions; "
         "no regrading. Incompatible environments and revisions remain separate.</p>"
+        + headers
         + summary
-        + "<table><thead><tr><th>Result</th><th>Catalog</th><th>Revision</th>"
-        "<th>Environment</th><th>Status</th><th>Reason</th></tr></thead><tbody>"
-        + table
-        + "</tbody></table>"
+        + detail
+        + others
         + evidence
         + "<details><summary>Full lossless report</summary><pre>"
         + full
