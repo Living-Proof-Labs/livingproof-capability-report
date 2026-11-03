@@ -305,7 +305,9 @@ def html_summary(report, bundle, escape):
         check_grade(s.get("grade"))
         spec = s.get("spec") if isinstance(s.get("spec"), dict) else {}
         observed = (
-            f"{s['k']}/{s['n']} PASS" if s.get("k") is not None and s.get("n") is not None else None
+            f"{s['k']} of {s['n']} trials passed; overall {s['grade']}"
+            if s.get("k") is not None and s.get("n") is not None and s.get("grade")
+            else None
         )
         interval = s.get("wilson95")
         title = " ".join(x for x in (ref(s.get("system")), s.get("grade")) if x)
@@ -321,11 +323,11 @@ def html_summary(report, bundle, escape):
                         "Threshold",
                         None
                         if s.get("required_passes") is None
-                        else f"{s['required_passes']}/{s.get('n', '?')} PASS required",
+                        else f"{s['required_passes']} of {s.get('n', '?')} trials required",
                     ),
                     (
                         "Wilson 95% (stored)",
-                        f"[{interval[0]}, {interval[1]}]"
+                        f"{round(interval[0] * 100)}–{round(interval[1] * 100)}%"
                         if isinstance(interval, list) and len(interval) == 2
                         else None,
                     ),

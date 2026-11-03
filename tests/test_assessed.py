@@ -276,8 +276,9 @@ def test_html_shows_the_stored_run_summary_above_the_trials(pair):
         "unitree-g1/stock@1.1.0",
         f"<dd>{s['run_id']}</dd>",
         "<dt>Overall status</dt><dd>FAIL</dd>",
-        "<dt>Observed</dt><dd>12/20 PASS</dd>",
-        "<dt>Threshold</dt><dd>18/20 PASS required</dd>",
+        "<dt>Observed</dt><dd>12 of 20 trials passed; overall FAIL</dd>",
+        "<dt>Threshold</dt><dd>18 of 20 trials required</dd>",
+        "<dt>Wilson 95% (stored)</dt><dd>39–78%</dd>",
         "<dt>Policy</dt><dd>all-required-v1@1.0.0</dd>",
         "<dt>Aggregation</dt><dd>k-of-n-wilson95@1.0.0</dd>",
         "<dt>Assessed by</dt><dd>capability-verifier@",
@@ -296,7 +297,21 @@ def test_html_summary_shows_stored_values_without_regrading(pair):
     manifest.write_text(json.dumps(data))
     top = _html_summary(render(assessed.report_from_bundle(load_bundle(manifest)), "html"))
     assert "<dt>Overall status</dt><dd>PASS</dd>" in top
-    assert "<dt>Observed</dt><dd>12/20 PASS</dd>" in top
+    assert "<dt>Observed</dt><dd>12 of 20 trials passed; overall PASS</dd>" in top
+
+
+def test_html_summary_wording_is_n_of_m_without_pass_on_a_fail(pair):
+    """Reporter #39 slice A: k of n with the stored verdict; interval as whole percents."""
+    _, manifest = pair
+    data = json.loads(manifest.read_text())
+    run = data["assessment"]["runs"][0]
+    run["k"], run["n"] = 3, 7
+    run["interval"]["lower"], run["interval"]["upper"] = 0.1, 0.706
+    manifest.write_text(json.dumps(data))
+    top = _html_summary(render(assessed.report_from_bundle(load_bundle(manifest)), "html"))
+    assert "<dt>Observed</dt><dd>3 of 7 trials passed; overall FAIL</dd>" in top
+    assert "<dt>Wilson 95% (stored)</dt><dd>10–71%</dd>" in top
+    assert "PASS" not in top.replace("all-required", "")
 
 
 def test_html_summary_escapes_every_value(pair):
