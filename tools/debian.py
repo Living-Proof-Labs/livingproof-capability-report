@@ -15,6 +15,7 @@ subprocess.run(["python3", "-m", "pip", "download", "--only-binary=:all:",
                 "--dest", str(wheels), "-r", "/requirements.txt", str(wheel), str(out / "livingproof_common-1.0.0-py3-none-any.whl")], check=True)
 root = Path("/tmp/debian-stage")
 packages = root / "usr/lib/python3/dist-packages"
+ofl = ""
 with zipfile.ZipFile(wheel) as archive:
     for entry in archive.infolist():
         name = Path(entry.filename)
@@ -26,6 +27,8 @@ with zipfile.ZipFile(wheel) as archive:
         data = archive.read(entry)
         if data.startswith(b"\x7fELF") or name.suffix in {".so", ".dll", ".dylib", ".pyc"}:
             raise SystemExit("Native or interpreter-specific content cannot enter Architecture: all")
+        if name.as_posix() == "livingproof_capability_report/fonts/OFL.txt":
+            ofl = data.decode()
         if not entry.is_dir():
             destination = packages / name
             destination.parent.mkdir(parents=True, exist_ok=True)
@@ -53,7 +56,9 @@ command.write_text('#!/bin/sh\nexec /usr/bin/python3 -m livingproof_capability_r
 command.chmod(0o755)
 copyright = root / "usr/share/doc/livingproof-capability-report/copyright"
 copyright.parent.mkdir(parents=True)
-copyright.write_text(Path("/build/LICENSE").read_text())
+if "SIL Open Font License" not in ofl:
+    raise SystemExit("DM Sans SIL Open Font License is missing from the wheel")
+copyright.write_text(Path("/build/LICENSE").read_text().rstrip() + "\n\n" + ofl)
 subprocess.run(["dpkg-deb", "--root-owner-group", "--build", str(root),
                 str(out / f"livingproof-capability-report_{version}_all.deb")], check=True)
 for path in out.rglob("*"):

@@ -13,6 +13,7 @@ from pathlib import Path, PurePosixPath
 from jsonschema import Draft202012Validator
 
 from . import hallway
+from . import html_theme
 from . import links as elinks
 
 PASS, FAIL, INSUFFICIENT, INCOMPATIBLE = ("PASS", "FAIL", "INSUFFICIENT_EVIDENCE", "INCOMPATIBLE")
@@ -246,14 +247,17 @@ def render(report, format="json", links=None):
     runs = [s for s in report.get("summaries") or [] if isinstance(s, dict)]
     in_runs = {r for s in runs for r in s.get("result_ids", [])}
     description = bundle.get("description") if isinstance(bundle.get("description"), dict) else None
-    # Results outside any stored run keep a plain row; no Environment JSON column (#40).
+    # Results outside any stored run keep these columns; no Environment JSON column (#40).
+    # The status chip repeats the stored decision. It is not a new grade.
+    def cell(key, value):
+        if key == "status":
+            cls = html_theme.CHIP.get(value, "chip")
+            return f"<td><span class='{cls}'>{escape(value)}</span></td>"
+        return f"<td>{escape(value)}</td>"
+
+    columns = ("result_id", "spec_tag", "revision", "status", "reason")
     table = "".join(
-        "<tr>"
-        + "".join(
-            f"<td>{escape(row[k])}</td>"
-            for k in ("result_id", "spec_tag", "revision", "status", "reason")
-        )
-        + "</tr>"
+        "<tr>" + "".join(cell(key, row[key]) for key in columns) + "</tr>"
         for row in rows
         if row["result_id"] not in in_runs
     )
@@ -290,34 +294,31 @@ def render(report, format="json", links=None):
     if table:
         others = (
             ("<h2>Other results</h2>" if runs else "")
-            + "<table><thead><tr><th>Result</th><th>Catalog</th><th>Revision</th>"
-            "<th>Status</th><th>Reason</th></tr></thead><tbody>" + table + "</tbody></table>"
+            + "<table class='results'><thead><tr><th>Result</th><th>Catalog</th>"
+            "<th>Revision</th><th>Status</th><th>Reason</th></tr></thead><tbody>"
+            + table
+            + "</tbody></table>"
         )
-    return (
-        "<!doctype html><html lang='en'><meta charset='utf-8'>"
-        "<meta name='viewport' content='width=device-width'>"
-        "<title>Living Proof Labs capability report</title>"
-        "<style>body{font:16px system-ui;margin:2rem;max-width:90rem}"
-        "td,th{border:1px solid #aaa;padding:.6rem;text-align:left;vertical-align:top}"
-        "table{border-collapse:collapse}dt{font-weight:600}dd{margin:0 0 .4rem 1rem}"
-        "pre{white-space:pre-wrap;overflow-wrap:anywhere}"
-        ".verdict{border:2px solid #444;padding:1rem;margin:1rem 0}"
-        ".verdict .grade{font-size:2rem;margin:.2rem 0}.verdict .robot{font-weight:600}"
-        ".muted{color:#666}.limit{color:#444;font-size:.9rem}"
-        ".note{border-left:4px solid #b60;padding:.4rem .8rem;background:#fff6e8}"
-        ".chips{list-style:none;padding:0;display:flex;flex-wrap:wrap;gap:.4rem}"
-        ".chip{border:1px solid #393;border-radius:1rem;padding:.1rem .6rem}"
-        "</style><h1>Living Proof Labs capability report</h1>"
-        "<p>Fixture evidence, not robot safety certification. Stored decisions; "
-        "no regrading. Incompatible environments and revisions remain separate.</p>"
-        + headers
-        + summary
-        + detail
-        + others
-        + evidence
-        + "<details><summary>Full lossless report</summary><pre>"
-        + full
-        + "</pre></details></html>\n"
+    badges = []
+    for summary_row in runs:
+        badge = html_theme.grade_badge(
+            summary_row.get("k"), summary_row.get("n"), summary_row.get("grade"), escape
+        )
+        if badge:
+            badges.append(badge)
+    return html_theme.page(
+        title="Living Proof Labs capability report",
+        lede=(
+            "Fixture evidence, not robot safety certification. Stored decisions; "
+            "no regrading. Incompatible environments and revisions remain separate."
+        ),
+        headers=headers,
+        summary=summary,
+        detail=detail,
+        table=others,
+        evidence=evidence,
+        full=("<details><summary>Full lossless report</summary><pre>" + full + "</pre></details>"),
+        header_badge=f"<div class='grades'>{''.join(badges)}</div>" if badges else "",
     )
 
 

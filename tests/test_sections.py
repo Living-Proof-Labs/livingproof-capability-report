@@ -54,6 +54,19 @@ def test_robot_snapshots(name):
         assert text == path.read_text(encoding="utf-8"), file
 
 
+def test_html_embeds_dm_sans_and_keeps_body_text_above_the_contrast_floor():
+    """The report carries its own font and license, and link text is darker than the brand teal."""
+    page = render(report(bundle("g1")), "html")
+    assert "fonts.googleapis.com" not in page and "fonts.gstatic.com" not in page
+    assert "data:font/woff2;base64," in page
+    assert "SIL Open Font License, Version 1.1" in page
+    assert "Copyright 2014 The DM Sans Project Authors" in page
+    assert "<script" not in page
+    # Body-sized links and the Show control use these, not #0e8785 (4.35:1 / 3.79:1).
+    assert "--link: #0b6e6c" in page and "--link: #64dfc7" in page
+    assert "summary::after" in page and "color: var(--link)" in page
+
+
 def test_g1_header_context_failures_and_grid():
     page = top(render(report(bundle("g1")), "html"))
     verdict = page[page.index("<section class='verdict'") : page.index("<section id='summary'>")]
