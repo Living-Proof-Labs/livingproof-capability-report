@@ -10,10 +10,14 @@ no digest and no grade. Each ``--evidence-links`` file is a JSON object::
 
 Files are merged in order; a second ``run`` must match the first. A per-trial link names
 the verifier's status for that seed, and rendering refuses a link whose status disagrees
-with the stored decision, so a "pass" video can never point at a failed trial.
+with the stored decision, so a "pass" video can never point at a failed trial. The
+rendered line says trial for an evidence 2.0.0 result and seed for the earlier model.
+The ``seed`` field itself is unchanged.
 """
 
 import re
+
+from . import hallway
 
 KINDS = ("artifact", "video", "mcap")
 _URL = re.compile(r"^https://[^\s()<>\[\]|`]+$")
@@ -102,9 +106,10 @@ def lines(report, run):
                     f"stored decision is {stored_status}"
                 )
             trials.setdefault((e["status"] != "FAIL", e["seed"]), []).append(e)
+    name = hallway.repeat_name(report=report, result_ids=run.get("result_ids") or [])
     for (_, seed), items in sorted(trials.items()):
         word = "pass" if items[0]["status"] == "PASS" else "fail"
         icon = "▶️" if any(e["kind"] == "video" for e in items) else "📎"
         cells = " · ".join(f"[{e['label']}]({e['url']})" for e in items)
-        out.append(f"- {icon} seed {seed} ({word}): {cells}")
+        out.append(f"- {icon} {name} {seed} ({word}): {cells}")
     return out

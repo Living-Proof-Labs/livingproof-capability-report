@@ -214,6 +214,9 @@ def why_lines(report, summary):
     if not fs:
         return None
     worst = {w.get("check"): w for w in _list(run.get("worst")) if isinstance(w, dict)}
+    ids = summary.get("result_ids") or []
+    one = hallway.repeat_name(report=report, result_ids=ids)
+    many = hallway.repeat_name(report=report, result_ids=ids, plural=True)
     lines = []
     for b in _list(fs.get("by_primary")):
         if not isinstance(b, dict):
@@ -221,11 +224,11 @@ def why_lines(report, summary):
         w = worst.get(b.get("check"), {})
         tail = ""
         if w.get("observed") is not None:
-            tail = f" — worst {num(w['observed'])} {w.get('unit', '')} (seed {w.get('seed')})"
+            tail = f" — worst {num(w['observed'])} {w.get('unit', '')} ({one} {w.get('seed')})"
         seeds = ", ".join(str(x) for x in _list(b.get("seeds")))
         lines.append(
             f"- {b.get('count')}× {hallway.WHAT.get(b.get('check'), b.get('check'))} "
-            f"(primary) — seeds {seeds}{tail}"
+            f"(primary) — {many} {seeds}{tail}"
         )
     return lines
 
@@ -237,13 +240,17 @@ def actual(report, summary):
     failed = fs.get("failed_trials")
     if not failed:
         return f"No trial failed: {summary['k']} of {summary['n']} trials passed."
-    parts = [
-        f"{hallway.WHAT.get(b['check'], b['check'])} in {b['count']} "
-        f"(seed{'s' if len(_list(b.get('seeds'))) != 1 else ''} "
-        f"{', '.join(str(s) for s in _list(b.get('seeds')))})"
-        for b in _list(fs.get("by_primary"))
-        if isinstance(b, dict)
-    ]
+    ids = summary.get("result_ids") or []
+    parts = []
+    for b in _list(fs.get("by_primary")):
+        if not isinstance(b, dict):
+            continue
+        listed = _list(b.get("seeds"))
+        name = hallway.repeat_name(report=report, result_ids=ids, plural=len(listed) != 1)
+        parts.append(
+            f"{hallway.WHAT.get(b['check'], b['check'])} in {b['count']} "
+            f"({name} {', '.join(str(s) for s in listed)})"
+        )
     text = f"{failed} of {summary['n']} trials failed"
     if parts:
         text += "; primary failure: " + "; ".join(parts)
@@ -364,6 +371,9 @@ def failures(report, summary):
     fs = _dict(run.get("failure_summary"))
     worst = _list(run.get("worst"))
     limits = _dict(run_limits(report, summary))
+    ids = summary.get("result_ids") or []
+    many = hallway.repeat_name(report=report, result_ids=ids, plural=True, capital=True)
+    one = hallway.repeat_name(report=report, result_ids=ids, capital=True)
     out = ["<section class='failures'><h3>Why trials failed</h3>"]
     if fs:
         out.append(
@@ -381,7 +391,7 @@ def failures(report, summary):
         if rows:
             out.append(
                 "<table class='primary'><thead><tr><th>Primary failure</th><th>Trials</th>"
-                "<th>Seeds</th></tr></thead><tbody>" + "".join(rows) + "</tbody></table>"
+                f"<th>{many}</th></tr></thead><tbody>" + "".join(rows) + "</tbody></table>"
             )
     else:
         out.append(
@@ -422,7 +432,7 @@ def failures(report, summary):
         out.append(
             "<h4>Worst value per check (all trials, as stored)</h4>"
             "<table class='worst'><thead><tr><th>Check</th><th>Worst is</th><th>Value</th>"
-            "<th>Seed</th><th>Time</th><th>Limit</th></tr></thead><tbody>"
+            f"<th>{one}</th><th>Time</th><th>Limit</th></tr></thead><tbody>"
             + "".join(rows)
             + "</tbody></table>"
         )
@@ -446,7 +456,7 @@ def trials(report, summary):
         result, decision = results.get(rid, {}), decisions.get(rid, {})
         bundle_decision = _dict(result.get("decision"))
         seed = _seed(result, decision)
-        label = f"seed {seed}" if seed is not None else rid
+        label = f"{hallway.repeat_name(result)} {seed}" if seed is not None else rid
         links = "".join(
             f" <a href='{esc(e['url'])}'>{esc(e['label'])}</a>" for e in per_seed.get(seed, [])
         )
