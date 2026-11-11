@@ -2,7 +2,13 @@
 
 Visual presentation only: the report still shows stored decisions and never grades
 or recalculates a result. A pass-rate ring, when shown, is the stored k of n.
+
+DM Sans is embedded from the package so a saved report does not fetch a font.
+The SIL Open Font License travels with those bytes.
 """
+
+import base64
+from importlib.resources import files
 
 CSS = """
 :root {
@@ -33,6 +39,8 @@ CSS = """
   --focus: #0e8785;
   --pre-bg: #0b1120;
   --pre-text: #e2e8f0;
+  --link: #0b6e6c;
+  --link-hover: #08524f;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -54,6 +62,8 @@ CSS = """
     --chip-warn-bg: #33260a;
     --chip-muted-fg: #cbd5e1;
     --chip-muted-bg: #1e293b;
+    --link: #64dfc7;
+    --link-hover: #8ef3e4;
   }
 }
 
@@ -75,6 +85,8 @@ html:has(#theme-light:checked) {
   --chip-warn-bg: #fef3c7;
   --chip-muted-fg: #334155;
   --chip-muted-bg: #e2e8f0;
+  --link: #0b6e6c;
+  --link-hover: #08524f;
 }
 
 html:has(#theme-dark:checked) {
@@ -95,6 +107,8 @@ html:has(#theme-dark:checked) {
   --chip-warn-bg: #33260a;
   --chip-muted-fg: #cbd5e1;
   --chip-muted-bg: #1e293b;
+  --link: #64dfc7;
+  --link-hover: #8ef3e4;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -119,18 +133,12 @@ body, table, .num {
 }
 
 a {
-  color: var(--teal);
+  color: var(--link);
   text-decoration-thickness: 1px;
   text-underline-offset: 0.15em;
 }
 
-a:hover { color: #0b6e6c; }
-
-@media (prefers-color-scheme: dark) {
-  a:hover { color: var(--teal-bright); }
-}
-html:has(#theme-dark:checked) a:hover { color: var(--teal-bright); }
-html:has(#theme-light:checked) a:hover { color: #0b6e6c; }
+a:hover { color: var(--link-hover); }
 
 a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visible {
   outline: 3px solid var(--focus);
@@ -481,7 +489,7 @@ details summary::after {
   text-transform: none;
   letter-spacing: 0;
   font-weight: 600;
-  color: var(--teal);
+  color: var(--link);
 }
 
 details[open] summary::after { content: "Hide"; }
@@ -529,6 +537,8 @@ pre {
     --chip-warn-bg: #fef3c7;
     --chip-muted-fg: #334155;
     --chip-muted-bg: #e2e8f0;
+    --link: #0b6e6c;
+    --link-hover: #08524f;
   }
   .theme { display: none; }
   .masthead { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -606,6 +616,57 @@ def grade_badge(k, n, grade, escape):
 </div>"""
 
 
+_LATIN_EXT = (
+    "U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, "
+    "U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, "
+    "U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF"
+)
+_LATIN = (
+    "U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, "
+    "U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, "
+    "U+2212, U+2215, U+FEFF, U+FFFD"
+)
+
+
+def _font_face(filename, unicode_range):
+    encoded = base64.b64encode(
+        files("livingproof_capability_report").joinpath("fonts", filename).read_bytes()
+    ).decode("ascii")
+    return (
+        "@font-face{font-family:'DM Sans';font-style:normal;font-weight:100 1000;"
+        "font-display:swap;"
+        f"src:url(data:font/woff2;base64,{encoded}) format('woff2');"
+        f"unicode-range:{unicode_range};}}"
+    )
+
+
+def _build_stylesheet():
+    """Theme CSS with the embedded DM Sans files and their SIL license."""
+    ofl = (
+        files("livingproof_capability_report")
+        .joinpath("fonts", "OFL.txt")
+        .read_text(encoding="utf-8")
+        .strip()
+    )
+    if "*/" in ofl:
+        raise RuntimeError("The font license cannot be placed in a CSS comment")
+    return (
+        "/*\n"
+        + ofl
+        + "\n*/\n"
+        + _font_face("DMSans-latin-ext.woff2", _LATIN_EXT)
+        + _font_face("DMSans-latin.woff2", _LATIN)
+        + CSS
+    )
+
+
+_STYLESHEET = _build_stylesheet()
+
+
+def stylesheet():
+    return _STYLESHEET
+
+
 def _card(inner, extra=""):
     if not inner:
         return ""
@@ -620,11 +681,7 @@ def page(*, title, lede, summary, table, evidence, full, header_badge, headers="
         "<!doctype html><html lang='en'><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
         f"<title>{title}</title>"
-        "<link rel='preconnect' href='https://fonts.googleapis.com'>"
-        "<link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>"
-        "<link rel='stylesheet' href='https://fonts.googleapis.com/css2?family=DM+Sans:"
-        "ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&amp;display=swap'>"
-        f"<style>{CSS}</style>"
+        f"<style>{stylesheet()}</style>"
         "<body>"
         "<header class='masthead'><div class='masthead-inner'>"
         "<div class='masthead-top'><p class='eyebrow'>Living Proof Labs</p>"
