@@ -1,1 +1,554 @@
-<!doctype html><html lang='en'><meta charset='utf-8'><meta name='viewport' content='width=device-width'><title>Living Proof Labs capability report</title><style>body{font:16px system-ui;margin:2rem;max-width:90rem}td,th{border:1px solid #aaa;padding:.6rem;text-align:left;vertical-align:top}table{border-collapse:collapse}dt{font-weight:600}dd{margin:0 0 .4rem 1rem}pre{white-space:pre-wrap;overflow-wrap:anywhere}.verdict{border:2px solid #444;padding:1rem;margin:1rem 0}.verdict .grade{font-size:2rem;margin:.2rem 0}.verdict .robot{font-weight:600}.muted{color:#666}.limit{color:#444;font-size:.9rem}.note{border-left:4px solid #b60;padding:.4rem .8rem;background:#fff6e8}.chips{list-style:none;padding:0;display:flex;flex-wrap:wrap;gap:.4rem}.chip{border:1px solid #393;border-radius:1rem;padding:.1rem .6rem}</style><h1>Living Proof Labs capability report</h1><p>Fixture evidence, not robot safety certification. Stored decisions; no regrading. Incompatible environments and revisions remain separate.</p><section class='verdict' data-grade='FAIL'><p class='robot'>booster-t1 · stock 1.0.0 — Walk the hallway in the Open hallway</p><p class='grade'><strong>FAIL</strong></p><ul class='facts'><li>0 of 20 trials passed; overall FAIL</li><li>18 of 20 required</li><li>95% interval 0–16% (Wilson, stored, rounded to whole percent)</li></ul><p><strong>Expected:</strong> The robot starts at the hallway entrance and is commanded to walk straight ahead at 0.5 m/s. It must reach the exit, 5.5 m along the route, within 27 s, staying upright, never touching either wall, and staying within its lateral limit of the centreline.</p><p><strong>Actual:</strong> 20 of 20 trials failed; primary failure: lateral limit exceeded in 20 (seeds 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20).</p></section><section id='summary'><h2>Summary</h2><section class='run'><h3>booster-t1/stock@1.0.0 FAIL</h3><dl><dt>Robot</dt><dd>booster-t1/stock@1.0.0</dd><dt>Run</dt><dd>walk-hallway-booster-t1-stock-local-sim-mujoco-v1.8.3</dd><dt>Overall status</dt><dd>FAIL</dd><dt>Observed</dt><dd>0 of 20 trials passed; overall FAIL</dd><dt>Threshold</dt><dd>18 of 20 trials required</dd><dt>Wilson 95% (stored)</dt><dd>0–16%</dd><dt>Capability</dt><dd>walk-hallway</dd><dt>Spec</dt><dd>v1.9.0 revision 0.1.0 d677bd9770e60a6d42ea597966799e119dc7dd18</dd><dt>Environment</dt><dd>hallway-open@0.1.0</dd></dl></section><h3>Provenance</h3><dl><dt>Policy</dt><dd>all-required-v1@1.0.0</dd><dt>Grade revision</dt><dd>1</dd><dt>Aggregation</dt><dd>k-of-n-wilson95@1.0.0</dd><dt>Assessment format</dt><dd>livingproof-run-assessment/0.1</dd><dt>Assessed by</dt><dd>capability-verifier@1.12.0 34d33230cdc142f87a10f7d43ff740e9c9b4052f</dd><dt>Bundle</dt><dd>schema 1.1.0</dd></dl></section><section class='run-detail'><section class='context'><h3>Test context</h3><dl><dt>Mission</dt><dd>Walk the hallway — The robot starts at the hallway entrance and is commanded to walk straight ahead at 0.5 m/s. It must reach the exit, 5.5 m along the route, within 27 s, staying upright, never touching either wall, and staying within its lateral limit of the centreline.</dd><dt>Success criteria</dt><dd><ul><li>Reaches the exit, 5.5 m along the route, within 27 s, crossing it inside the exit segment.<br><span class='limit'>time limit: 27 s = 2 * route_length / command_speed + 5 s (command_speed 0.5, route_length 5.5)</span><br><span class='limit'>exit segment: 0.75 m = |y| &lt;= clear_width / 2 (clear_width 1.5)</span></li><li>Never touches a side wall.</li><li>Stays upright: the base never drops below the fall height.<br><span class='limit'>fall height: 0.44 m = configuration.profile.locomotion.fall_base_height</span></li><li>Stays within its lateral limit of the hallway centreline.<br><span class='limit'>lateral limit: 0.4795 m = clear_width / 2 - robot_width / 2 (clear_width 1.5, robot_width 0.541)</span></li></ul></dd><dt>Grading</dt><dd>20 runs (seeds 1 to 20), no retries. A configuration passes when at least 18 of 20 runs pass. Results show k/20 with a Wilson 95% interval.</dd><dt>Time limit</dt><dd>27 s is twice the time the route takes at the commanded speed, plus 5 s (2 × 5.5 m ÷ 0.5 m/s + 5 s).</dd><dt>World</dt><dd>Open hallway — A straight, empty hallway 1.50 m wide between the walls and 6.00 m long, with 2.50 m-high walls. Nothing else is in it: the test is whether the robot can hold a straight line.<br><span class='limit'>clear width 1.5 m, length 6 m, wall height 2.5 m, wall thickness 0.15 m</span></dd><dt>Robot and configuration</dt><dd>booster-t1 · stock 1.0.0</dd><dt>Lateral limit</dt><dd>booster-t1 · stock may drift up to 0.4795 m either side of the centreline: half the 1.5 m hallway, minus half its 0.541 m width. Robot width from robot.profile.dimensions.width.</dd><dt>Fits the hallway</dt><dd>0.541 + 2 x 0.05 = 0.641 m &lt;= 1.5 m (recomputed by the verifier)</dd></dl><p class='note'><strong>Note:</strong> The hallway walls in the MuJoCo simulation are visual only: they do not collide, so a robot that drifts can pass into and through them. Touching or entering a wall is a failed check. From livingproof-sim-mujoco v1.8.3, a trial ends <code>left_hallway</code> as soon as any robot part reaches past a wall's outer face, and that trial does not reach the exit.</p></section><section class='failures'><h3>Why trials failed</h3><p>20 of 20 trials failed. Each failed trial is counted once, under the primary failure the verifier stored; its other failures are listed with it below.</p><table class='primary'><thead><tr><th>Primary failure</th><th>Trials</th><th>Seeds</th></tr></thead><tbody><tr><td>lateral limit exceeded</td><td>20</td><td>1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20</td></tr></tbody></table><h4>Worst value per check (all trials, as stored)</h4><table class='worst'><thead><tr><th>Check</th><th>Worst is</th><th>Value</th><th>Seed</th><th>Time</th><th>Limit</th></tr></thead><tbody><tr><td>Lateral drift</td><td>highest</td><td>0.7047 m</td><td>8</td><td>7.62 s</td><td>0.4795 m</td></tr><tr><td>Wall contact</td><td>highest</td><td>0.1615 m (right wall)</td><td>20</td><td>7.28 s</td><td>any contact fails</td></tr><tr><td>Base height (fall)</td><td>lowest</td><td>0.6389 m</td><td>1</td><td>0.66 s</td><td>0.44 m</td></tr><tr><td>Exit reached</td><td>highest</td><td>no exit time in 20 of 20 trials</td><td></td><td></td><td>27 s</td></tr></tbody></table></section><section class='trials'><h3>Trials · booster-t1 · stock</h3><table class='failed'><thead><tr><th>Trial</th><th>Status</th><th>Primary failure, then the others</th><th>Evidence</th></tr></thead><tbody><tr><td title='stock-seed-01'>seed 1</td><td>FAIL</td><td>drifted 0.67 m &gt; 0.4795 m from the centreline at 6.56 s<br><span class='muted'>then touched the right wall at 7.08 s (0.150 m in); then left the hallway through the right wall at 7.86 s</span></td><td></td></tr><tr><td title='stock-seed-02'>seed 2</td><td>FAIL</td><td>drifted 0.66 m &gt; 0.4795 m from the centreline at 7.26 s<br><span class='muted'>then touched the right wall at 7.80 s (0.152 m in); then left the hallway through the right wall at 8.56 s</span></td><td></td></tr><tr><td title='stock-seed-03'>seed 3</td><td>FAIL</td><td>drifted 0.68 m &gt; 0.4795 m from the centreline at 6.76 s<br><span class='muted'>then touched the right wall at 7.24 s (0.156 m in); then left the hallway through the right wall at 8.50 s</span></td><td></td></tr><tr><td title='stock-seed-04'>seed 4</td><td>FAIL</td><td>drifted 0.68 m &gt; 0.4795 m from the centreline at 8.12 s<br><span class='muted'>then touched the right wall at 8.58 s (0.152 m in); then left the hallway through the right wall at 9.84 s</span></td><td></td></tr><tr><td title='stock-seed-05'>seed 5</td><td>FAIL</td><td>drifted 0.70 m &gt; 0.4795 m from the centreline at 6.72 s<br><span class='muted'>then touched the right wall at 7.20 s (0.154 m in); then left the hallway through the right wall at 8.44 s</span></td><td></td></tr><tr><td title='stock-seed-06'>seed 6</td><td>FAIL</td><td>drifted 0.69 m &gt; 0.4795 m from the centreline at 6.08 s<br><span class='muted'>then touched the right wall at 6.56 s (0.150 m in); then left the hallway through the right wall at 7.80 s</span></td><td></td></tr><tr><td title='stock-seed-07'>seed 7</td><td>FAIL</td><td>drifted 0.69 m &gt; 0.4795 m from the centreline at 7.38 s<br><span class='muted'>then touched the right wall at 7.88 s (0.156 m in); then left the hallway through the right wall at 9.14 s</span></td><td></td></tr><tr><td title='stock-seed-08'>seed 8</td><td>FAIL</td><td>drifted 0.70 m &gt; 0.4795 m from the centreline at 6.04 s<br><span class='muted'>then touched the right wall at 6.54 s (0.151 m in); then left the hallway through the right wall at 7.74 s</span></td><td></td></tr><tr><td title='stock-seed-09'>seed 9</td><td>FAIL</td><td>drifted 0.69 m &gt; 0.4795 m from the centreline at 8.06 s<br><span class='muted'>then touched the right wall at 8.56 s (0.151 m in); then left the hallway through the right wall at 9.80 s</span></td><td></td></tr><tr><td title='stock-seed-10'>seed 10</td><td>FAIL</td><td>drifted 0.67 m &gt; 0.4795 m from the centreline at 7.16 s<br><span class='muted'>then touched the right wall at 7.28 s (0.159 m in); then left the hallway through the right wall at 8.54 s</span></td><td></td></tr><tr><td title='stock-seed-11'>seed 11</td><td>FAIL</td><td>drifted 0.66 m &gt; 0.4795 m from the centreline at 7.28 s<br><span class='muted'>then touched the right wall at 7.80 s (0.152 m in); then left the hallway through the right wall at 8.56 s</span></td><td></td></tr><tr><td title='stock-seed-12'>seed 12</td><td>FAIL</td><td>drifted 0.65 m &gt; 0.4795 m from the centreline at 7.98 s<br><span class='muted'>then touched the right wall at 8.50 s (0.155 m in); then left the hallway through the right wall at 9.26 s</span></td><td></td></tr><tr><td title='stock-seed-13'>seed 13</td><td>FAIL</td><td>drifted 0.67 m &gt; 0.4795 m from the centreline at 7.26 s<br><span class='muted'>then touched the right wall at 7.78 s (0.161 m in); then left the hallway through the right wall at 8.56 s</span></td><td></td></tr><tr><td title='stock-seed-14'>seed 14</td><td>FAIL</td><td>drifted 0.66 m &gt; 0.4795 m from the centreline at 7.90 s<br><span class='muted'>then touched the right wall at 8.46 s (0.161 m in); then left the hallway through the right wall at 9.24 s</span></td><td></td></tr><tr><td title='stock-seed-15'>seed 15</td><td>FAIL</td><td>drifted 0.65 m &gt; 0.4795 m from the centreline at 6.66 s<br><span class='muted'>then touched the right wall at 7.16 s (0.151 m in); then left the hallway through the right wall at 7.92 s</span></td><td></td></tr><tr><td title='stock-seed-16'>seed 16</td><td>FAIL</td><td>drifted 0.65 m &gt; 0.4795 m from the centreline at 7.28 s<br><span class='muted'>then touched the right wall at 7.82 s (0.151 m in); then left the hallway through the right wall at 8.58 s</span></td><td></td></tr><tr><td title='stock-seed-17'>seed 17</td><td>FAIL</td><td>drifted 0.66 m &gt; 0.4795 m from the centreline at 7.24 s<br><span class='muted'>then touched the right wall at 7.78 s (0.157 m in); then left the hallway through the right wall at 8.56 s</span></td><td></td></tr><tr><td title='stock-seed-18'>seed 18</td><td>FAIL</td><td>drifted 0.66 m &gt; 0.4795 m from the centreline at 6.62 s<br><span class='muted'>then touched the right wall at 7.16 s (0.158 m in); then left the hallway through the right wall at 7.92 s</span></td><td></td></tr><tr><td title='stock-seed-19'>seed 19</td><td>FAIL</td><td>drifted 0.67 m &gt; 0.4795 m from the centreline at 6.54 s<br><span class='muted'>then touched the right wall at 6.64 s (0.001 m in); then touched the right wall at 6.86 s (0.155 m in); then left the hallway through the right wall at 7.86 s</span></td><td></td></tr><tr><td title='stock-seed-20'>seed 20</td><td>FAIL</td><td>drifted 0.67 m &gt; 0.4795 m from the centreline at 7.18 s<br><span class='muted'>then touched the right wall at 7.28 s (0.162 m in); then left the hallway through the right wall at 8.54 s</span></td><td></td></tr></tbody></table></section></section>
+<!doctype html><html lang='en'><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>Living Proof Labs capability report</title><link rel='preconnect' href='https://fonts.googleapis.com'><link rel='preconnect' href='https://fonts.gstatic.com' crossorigin><link rel='stylesheet' href='https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&amp;display=swap'><style>:root {
+  color-scheme: light;
+  --font-sans: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --navy: #01152d;
+  --teal: #0e8785;
+  --teal-bright: #64dfc7;
+  --track: #0b4f4d;
+  --text: #0f172a;
+  --text-muted: #475569;
+  --bg: #f4f7fb;
+  --bg-muted: #e8eef5;
+  --surface: #ffffff;
+  --border: #d5dee9;
+  --border-strong: #c3cedb;
+  --shadow: 0 12px 32px rgba(1, 21, 45, 0.06);
+  --chip-pass-fg: #0f5f5c;
+  --chip-pass-bg: #d7f3ef;
+  --chip-fail-fg: #9f1239;
+  --chip-fail-bg: #ffe4e6;
+  --chip-warn-fg: #92400e;
+  --chip-warn-bg: #fef3c7;
+  --chip-muted-fg: #334155;
+  --chip-muted-bg: #e2e8f0;
+  --header-text: #f8fafc;
+  --header-muted: #b7c5d6;
+  --focus: #0e8785;
+  --pre-bg: #0b1120;
+  --pre-text: #e2e8f0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --bg: #0b1120;
+    --bg-muted: #111827;
+    --surface: #151f32;
+    --border: #2a364a;
+    --border-strong: #3d4b63;
+    --shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+    --chip-pass-fg: #5eead4;
+    --chip-pass-bg: #0f2e2b;
+    --chip-fail-fg: #fda4af;
+    --chip-fail-bg: #4c0519;
+    --chip-warn-fg: #fcd34d;
+    --chip-warn-bg: #33260a;
+    --chip-muted-fg: #cbd5e1;
+    --chip-muted-bg: #1e293b;
+  }
+}
+
+html:has(#theme-light:checked) {
+  color-scheme: light;
+  --text: #0f172a;
+  --text-muted: #475569;
+  --bg: #f4f7fb;
+  --bg-muted: #e8eef5;
+  --surface: #ffffff;
+  --border: #d5dee9;
+  --border-strong: #c3cedb;
+  --shadow: 0 12px 32px rgba(1, 21, 45, 0.06);
+  --chip-pass-fg: #0f5f5c;
+  --chip-pass-bg: #d7f3ef;
+  --chip-fail-fg: #9f1239;
+  --chip-fail-bg: #ffe4e6;
+  --chip-warn-fg: #92400e;
+  --chip-warn-bg: #fef3c7;
+  --chip-muted-fg: #334155;
+  --chip-muted-bg: #e2e8f0;
+}
+
+html:has(#theme-dark:checked) {
+  color-scheme: dark;
+  --text: #e2e8f0;
+  --text-muted: #94a3b8;
+  --bg: #0b1120;
+  --bg-muted: #111827;
+  --surface: #151f32;
+  --border: #2a364a;
+  --border-strong: #3d4b63;
+  --shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  --chip-pass-fg: #5eead4;
+  --chip-pass-bg: #0f2e2b;
+  --chip-fail-fg: #fda4af;
+  --chip-fail-bg: #4c0519;
+  --chip-warn-fg: #fcd34d;
+  --chip-warn-bg: #33260a;
+  --chip-muted-fg: #cbd5e1;
+  --chip-muted-bg: #1e293b;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: auto; }
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+main, .wrap, .hero, .hero > div, dl, dd, section { min-width: 0; }
+
+body, table, .num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+a {
+  color: var(--teal);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.15em;
+}
+
+a:hover { color: #0b6e6c; }
+
+@media (prefers-color-scheme: dark) {
+  a:hover { color: var(--teal-bright); }
+}
+html:has(#theme-dark:checked) a:hover { color: var(--teal-bright); }
+html:has(#theme-light:checked) a:hover { color: #0b6e6c; }
+
+a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.masthead {
+  background:
+    radial-gradient(ellipse 70% 80% at 88% 0%, rgba(14, 135, 133, 0.28), transparent 58%),
+    var(--navy);
+  color: var(--header-text);
+  border-bottom: 3px solid var(--teal);
+}
+
+.masthead-inner, .wrap, main {
+  width: min(76rem, 100% - 2.5rem);
+  margin-inline: auto;
+}
+
+.masthead-inner {
+  padding: 1.75rem 0 2.15rem;
+}
+
+.masthead-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--teal-bright);
+}
+
+.theme {
+  position: relative;
+  display: flex;
+  gap: 0.15rem;
+  margin: 0;
+  min-inline-size: 0;
+  padding: 0.15rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.theme legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.theme label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.7rem;
+  padding: 0 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--header-muted);
+  cursor: pointer;
+}
+
+.theme input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.theme label:has(input:checked) {
+  background: rgba(14, 135, 133, 0.35);
+  color: #fff;
+}
+
+.theme label:hover { color: #fff; }
+
+.theme label:focus-within {
+  outline: 3px solid var(--teal-bright);
+  outline-offset: 2px;
+}
+
+.hero {
+  display: grid;
+  gap: 1.75rem;
+  align-items: center;
+}
+
+@media (min-width: 720px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2.5rem;
+  }
+}
+
+.masthead h1 {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.65rem, 3vw, 2.15rem);
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  color: var(--header-text);
+}
+
+.masthead .lede {
+  margin: 0;
+  max-width: 40rem;
+  color: var(--header-muted);
+  font-size: 0.98rem;
+  line-height: 1.55;
+}
+
+.grades {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem 2rem;
+  align-items: center;
+}
+
+.masthead .grade {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+}
+
+.masthead .grade svg {
+  width: 6.5rem;
+  height: 6.5rem;
+  flex: none;
+  display: block;
+}
+
+.masthead .grade .meta { min-width: 0; }
+
+.masthead .grade .caption {
+  margin: 0 0 0.65rem;
+  color: var(--header-muted);
+  font-size: 0.9rem;
+}
+
+main {
+  padding: 2.25rem 0 4rem;
+  display: grid;
+  gap: 1.35rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  box-shadow: var(--shadow);
+  padding: 1.6rem 1.7rem 1.7rem;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.card > h2, #summary > h2, #summary > h3, .evidence h2, .table-wrap > h2, details summary {
+  margin: 0 0 1.1rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+section.run + section.run,
+#summary .run + h3,
+.verdict + .verdict,
+.run-detail > section + section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+section.run h3, .context > h3, .failures > h3, .trials > h3 {
+  margin: 0 0 1rem;
+  font-size: 1.15rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  color: var(--text);
+}
+
+.failures h4 {
+  margin: 1.25rem 0 0.7rem;
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+.verdict p { margin: 0 0 0.75rem; }
+.verdict p:last-child { margin-bottom: 0; }
+.verdict .robot {
+  font-weight: 650;
+  font-size: 1.2rem;
+  letter-spacing: -0.02em;
+}
+.verdict .grade {
+  margin: 0.15rem 0 0.75rem;
+  font-size: 1.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.verdict[data-grade="PASS"] .grade { color: var(--chip-pass-fg); }
+.verdict[data-grade="FAIL"] .grade { color: var(--chip-fail-fg); }
+.verdict[data-grade="INSUFFICIENT_EVIDENCE"] .grade { color: var(--chip-warn-fg); }
+.verdict[data-grade="INCOMPATIBLE"] .grade { color: var(--chip-muted-fg); }
+.verdict .facts {
+  margin: 0 0 0.9rem;
+  padding-left: 1.15rem;
+  color: var(--text-muted);
+}
+
+dl {
+  display: grid;
+  grid-template-columns: minmax(8.5rem, 14rem) minmax(0, 1fr);
+  gap: 0.55rem 1.5rem;
+  margin: 0;
+}
+
+dt {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding-top: 0.15rem;
+}
+
+dd, td, .lede, .caption {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+dd { margin: 0; }
+
+dd ul { margin: 0.2rem 0 0; padding-left: 1.1rem; }
+
+.muted, .limit { color: var(--text-muted); }
+.limit { font-size: 0.9rem; }
+
+.note {
+  border-left: 4px solid var(--chip-warn-fg);
+  padding: 0.55rem 0.9rem;
+  background: var(--chip-warn-bg);
+  border-radius: 0.35rem;
+}
+
+code { font-size: 0.92em; }
+
+.table-wrap { overflow-x: auto; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.85rem 1rem;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: var(--bg-muted);
+  border-bottom: 1px solid var(--border-strong);
+  white-space: nowrap;
+}
+
+tbody tr:last-child td { border-bottom: 0; }
+
+tbody tr:hover td { background: color-mix(in srgb, var(--bg-muted) 70%, transparent); }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.55rem;
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+}
+
+.chip-pass, .chip.pass { color: var(--chip-pass-fg); background: var(--chip-pass-bg); }
+.chip-fail { color: var(--chip-fail-fg); background: var(--chip-fail-bg); }
+.chip-warn { color: var(--chip-warn-fg); background: var(--chip-warn-bg); }
+.chip-muted { color: var(--chip-muted-fg); background: var(--chip-muted-bg); }
+
+.chips {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.evidence ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.evidence li {
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.55rem;
+  background: var(--bg-muted);
+}
+
+details summary {
+  list-style: none;
+  cursor: pointer;
+  margin: 0;
+}
+
+details summary::-webkit-details-marker { display: none; }
+
+details summary::after {
+  content: "Show";
+  float: right;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+  color: var(--teal);
+}
+
+details[open] summary::after { content: "Hide"; }
+
+details[open] summary { margin-bottom: 1rem; }
+
+pre {
+  margin: 0;
+  padding: 1.1rem 1.2rem;
+  border-radius: 0.75rem;
+  background: var(--pre-bg);
+  color: var(--pre-text);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .masthead-inner, .wrap, main { width: min(76rem, 100% - 1.5rem); }
+  .masthead-inner { padding-top: 1.25rem; }
+  .masthead-top { align-items: flex-start; }
+  .card { padding: 1.2rem 1.15rem 1.3rem; border-radius: 0.85rem; }
+  dl { grid-template-columns: 1fr; gap: 0.15rem 0; }
+  dt { padding-top: 0.55rem; }
+  .grades { justify-content: flex-start; }
+  th, td { padding: 0.7rem 0.7rem; }
+}
+
+@media print {
+  :root, html:has(#theme-dark:checked) {
+    color-scheme: light;
+    --text: #0f172a;
+    --text-muted: #475569;
+    --bg: #fff;
+    --bg-muted: #f1f5f9;
+    --surface: #fff;
+    --border: #cbd5e1;
+    --shadow: none;
+    --chip-pass-fg: #0f5f5c;
+    --chip-pass-bg: #d7f3ef;
+    --chip-fail-fg: #9f1239;
+    --chip-fail-bg: #ffe4e6;
+    --chip-warn-fg: #92400e;
+    --chip-warn-bg: #fef3c7;
+    --chip-muted-fg: #334155;
+    --chip-muted-bg: #e2e8f0;
+  }
+  .theme { display: none; }
+  .masthead { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .card { box-shadow: none; break-inside: avoid; }
+  details[open] summary::after, details summary::after { content: none; }
+  pre { background: #f8fafc; color: #0f172a; border: 1px solid var(--border); }
+}</style><body><header class='masthead'><div class='masthead-inner'><div class='masthead-top'><p class='eyebrow'>Living Proof Labs</p><fieldset class='theme'><legend>Colour theme</legend><label><input type='radio' name='theme' id='theme-system' value='system' checked> System</label><label><input type='radio' name='theme' id='theme-light' value='light'> Light</label><label><input type='radio' name='theme' id='theme-dark' value='dark'> Dark</label></fieldset></div><div class='hero'><div><h1>Living Proof Labs capability report</h1><p class='lede'>Fixture evidence, not robot safety certification. Stored decisions; no regrading. Incompatible environments and revisions remain separate.</p></div><div class='grades'><div class='grade'>
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024' role='img' aria-label='0 of 20 trials passed; overall FAIL' width='104' height='104'>
+<title>0 of 20 trials passed; overall FAIL</title>
+<circle cx='510.5' cy='505.75' r='381.1' fill='none' stroke='#0B4F4D' stroke-width='42'/>
+<circle cx='510.5' cy='505.75' r='381.1' fill='none' stroke='#0E8785' stroke-width='42' stroke-linecap='round' pathLength='100' stroke-dasharray='100 100' stroke-dashoffset='100' opacity='0' transform='rotate(-90 510.5 505.75)'/>
+<path d='M 401 306 L 487.25 392.25 L 635 244.5' fill='none' stroke='#0E8785' stroke-width='47' stroke-linecap='round' stroke-linejoin='round' pathLength='100' stroke-dasharray='100 100' stroke-dashoffset='100' visibility='hidden'/>
+<g fill='#FFFFFF' font-family='DM Sans, system-ui, sans-serif' font-weight='700' text-anchor='middle' style='display:block' aria-hidden='true'>
+<text x='386.66' y='366' font-size='172'>0</text>
+<text x='510.50' y='366' font-size='172'>0</text>
+<text x='634.34' y='366' font-size='134.16'>%</text>
+</g>
+<g fill='#FFFFFF' stroke='none'>
+<rect x='252' y='509' width='31' height='109' rx='15.5'/>
+<rect x='738' y='509' width='31' height='109' rx='15.5'/>
+</g>
+<rect x='305.625' y='428.25' width='408.75' height='273.25' rx='88.5' fill='none' stroke='#FFFFFF' stroke-width='33'/>
+<g fill='#FFFFFF' stroke='none'>
+<circle cx='427.2' cy='547.9' r='33.2'/>
+<circle cx='591.8' cy='547.9' r='33.2'/>
+<rect x='448' y='620' width='114' height='22' rx='11'/>
+</g>
+</svg>
+<div class='meta'><p class='caption'>0 of 20 trials passed</p><span class='chip chip-fail'>FAIL</span></div>
+</div></div></div></div></header><main class='wrap'><div class='card'><section class='verdict' data-grade='FAIL'><p class='robot'>booster-t1 · stock 1.0.0 — Walk the hallway in the Open hallway</p><p class='grade'><strong>FAIL</strong></p><ul class='facts'><li>0 of 20 trials passed; overall FAIL</li><li>18 of 20 required</li><li>95% interval 0–16% (Wilson, stored, rounded to whole percent)</li></ul><p><strong>Expected:</strong> The robot starts at the hallway entrance and is commanded to walk straight ahead at 0.5 m/s. It must reach the exit, 5.5 m along the route, within 27 s, staying upright, never touching either wall, and staying within its lateral limit of the centreline.</p><p><strong>Actual:</strong> 20 of 20 trials failed; primary failure: lateral limit exceeded in 20 (seeds 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20).</p></section></div><div class='card'><section id='summary'><h2>Summary</h2><section class='run'><h3>booster-t1/stock@1.0.0 FAIL</h3><dl><dt>Robot</dt><dd>booster-t1/stock@1.0.0</dd><dt>Run</dt><dd>walk-hallway-booster-t1-stock-local-sim-mujoco-v1.8.3</dd><dt>Overall status</dt><dd>FAIL</dd><dt>Observed</dt><dd>0 of 20 trials passed; overall FAIL</dd><dt>Threshold</dt><dd>18 of 20 trials required</dd><dt>Wilson 95% (stored)</dt><dd>0–16%</dd><dt>Capability</dt><dd>walk-hallway</dd><dt>Spec</dt><dd>v1.9.0 revision 0.1.0 d677bd9770e60a6d42ea597966799e119dc7dd18</dd><dt>Environment</dt><dd>hallway-open@0.1.0</dd></dl></section><h3>Provenance</h3><dl><dt>Policy</dt><dd>all-required-v1@1.0.0</dd><dt>Grade revision</dt><dd>1</dd><dt>Aggregation</dt><dd>k-of-n-wilson95@1.0.0</dd><dt>Assessment format</dt><dd>livingproof-run-assessment/0.1</dd><dt>Assessed by</dt><dd>capability-verifier@1.12.0 34d33230cdc142f87a10f7d43ff740e9c9b4052f</dd><dt>Bundle</dt><dd>schema 1.1.0</dd></dl></section></div><div class='card'><section class='run-detail'><section class='context'><h3>Test context</h3><dl><dt>Mission</dt><dd>Walk the hallway — The robot starts at the hallway entrance and is commanded to walk straight ahead at 0.5 m/s. It must reach the exit, 5.5 m along the route, within 27 s, staying upright, never touching either wall, and staying within its lateral limit of the centreline.</dd><dt>Success criteria</dt><dd><ul><li>Reaches the exit, 5.5 m along the route, within 27 s, crossing it inside the exit segment.<br><span class='limit'>time limit: 27 s = 2 * route_length / command_speed + 5 s (command_speed 0.5, route_length 5.5)</span><br><span class='limit'>exit segment: 0.75 m = |y| &lt;= clear_width / 2 (clear_width 1.5)</span></li><li>Never touches a side wall.</li><li>Stays upright: the base never drops below the fall height.<br><span class='limit'>fall height: 0.44 m = configuration.profile.locomotion.fall_base_height</span></li><li>Stays within its lateral limit of the hallway centreline.<br><span class='limit'>lateral limit: 0.4795 m = clear_width / 2 - robot_width / 2 (clear_width 1.5, robot_width 0.541)</span></li></ul></dd><dt>Grading</dt><dd>20 runs (seeds 1 to 20), no retries. A configuration passes when at least 18 of 20 runs pass. Results show k/20 with a Wilson 95% interval.</dd><dt>Time limit</dt><dd>27 s is twice the time the route takes at the commanded speed, plus 5 s (2 × 5.5 m ÷ 0.5 m/s + 5 s).</dd><dt>World</dt><dd>Open hallway — A straight, empty hallway 1.50 m wide between the walls and 6.00 m long, with 2.50 m-high walls. Nothing else is in it: the test is whether the robot can hold a straight line.<br><span class='limit'>clear width 1.5 m, length 6 m, wall height 2.5 m, wall thickness 0.15 m</span></dd><dt>Robot and configuration</dt><dd>booster-t1 · stock 1.0.0</dd><dt>Lateral limit</dt><dd>booster-t1 · stock may drift up to 0.4795 m either side of the centreline: half the 1.5 m hallway, minus half its 0.541 m width. Robot width from robot.profile.dimensions.width.</dd><dt>Fits the hallway</dt><dd>0.541 + 2 x 0.05 = 0.641 m &lt;= 1.5 m (recomputed by the verifier)</dd></dl><p class='note'><strong>Note:</strong> The hallway walls in the MuJoCo simulation are visual only: they do not collide, so a robot that drifts can pass into and through them. Touching or entering a wall is a failed check. From livingproof-sim-mujoco v1.8.3, a trial ends <code>left_hallway</code> as soon as any robot part reaches past a wall's outer face, and that trial does not reach the exit.</p></section><section class='failures'><h3>Why trials failed</h3><p>20 of 20 trials failed. Each failed trial is counted once, under the primary failure the verifier stored; its other failures are listed with it below.</p><table class='primary'><thead><tr><th>Primary failure</th><th>Trials</th><th>Seeds</th></tr></thead><tbody><tr><td>lateral limit exceeded</td><td>20</td><td>1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20</td></tr></tbody></table><h4>Worst value per check (all trials, as stored)</h4><table class='worst'><thead><tr><th>Check</th><th>Worst is</th><th>Value</th><th>Seed</th><th>Time</th><th>Limit</th></tr></thead><tbody><tr><td>Lateral drift</td><td>highest</td><td>0.7047 m</td><td>8</td><td>7.62 s</td><td>0.4795 m</td></tr><tr><td>Wall contact</td><td>highest</td><td>0.1615 m (right wall)</td><td>20</td><td>7.28 s</td><td>any contact fails</td></tr><tr><td>Base height (fall)</td><td>lowest</td><td>0.6389 m</td><td>1</td><td>0.66 s</td><td>0.44 m</td></tr><tr><td>Exit reached</td><td>highest</td><td>no exit time in 20 of 20 trials</td><td></td><td></td><td>27 s</td></tr></tbody></table></section><section class='trials'><h3>Trials · booster-t1 · stock</h3><table class='failed'><thead><tr><th>Trial</th><th>Status</th><th>Primary failure, then the others</th><th>Evidence</th></tr></thead><tbody><tr><td title='stock-seed-01'>seed 1</td><td>FAIL</td><td>drifted 0.67 m &gt; 0.4795 m from the centreline at 6.56 s<br><span class='muted'>then touched the right wall at 7.08 s (0.150 m in); then left the hallway through the right wall at 7.86 s</span></td><td></td></tr><tr><td title='stock-seed-02'>seed 2</td><td>FAIL</td><td>drifted 0.66 m &gt; 0.4795 m from the centreline at 7.26 s<br><span class='muted'>then touched the right wall at 7.80 s (0.152 m in); then left the hallway through the right wall at 8.56 s</span></td><td></td></tr><tr><td title='stock-seed-03'>seed 3</td><td>FAIL</td><td>drifted 0.68 m &gt; 0.4795 m from the centreline at 6.76 s<br><span class='muted'>then touched the right wall at 7.24 s (0.156 m in); then left the hallway through the right wall at 8.50 s</span></td><td></td></tr><tr><td title='stock-seed-04'>seed 4</td><td>FAIL</td><td>drifted 0.68 m &gt; 0.4795 m from the centreline at 8.12 s<br><span class='muted'>then touched the right wall at 8.58 s (0.152 m in); then left the hallway through the right wall at 9.84 s</span></td><td></td></tr><tr><td title='stock-seed-05'>seed 5</td><td>FAIL</td><td>drifted 0.70 m &gt; 0.4795 m from the centreline at 6.72 s<br><span class='muted'>then touched the right wall at 7.20 s (0.154 m in); then left the hallway through the right wall at 8.44 s</span></td><td></td></tr><tr><td title='stock-seed-06'>seed 6</td><td>FAIL</td><td>drifted 0.69 m &gt; 0.4795 m from the centreline at 6.08 s<br><span class='muted'>then touched the right wall at 6.56 s (0.150 m in); then left the hallway through the right wall at 7.80 s</span></td><td></td></tr><tr><td title='stock-seed-07'>seed 7</td><td>FAIL</td><td>drifted 0.69 m &gt; 0.4795 m from the centreline at 7.38 s<br><span class='muted'>then touched the right wall at 7.88 s (0.156 m in); then left the hallway through the right wall at 9.14 s</span></td><td></td></tr><tr><td title='stock-seed-08'>seed 8</td><td>FAIL</td><td>drifted 0.70 m &gt; 0.4795 m from the centreline at 6.04 s<br><span class='muted'>then touched the right wall at 6.54 s (0.151 m in); then left the hallway through the right wall at 7.74 s</span></td><td></td></tr><tr><td title='stock-seed-09'>seed 9</td><td>FAIL</td><td>drifted 0.69 m &gt; 0.4795 m from the centreline at 8.06 s<br><span class='muted'>then touched the right wall at 8.56 s (0.151 m in); then left the hallway through the right wall at 9.80 s</span></td><td></td></tr><tr><td title='stock-seed-10'>seed 10</td><td>FAIL</td><td>drifted 0.67 m &gt; 0.4795 m from the centreline at 7.16 s<br><span class='muted'>then touched the right wall at 7.28 s (0.159 m in); then left the hallway through the right wall at 8.54 s</span></td><td></td></tr><tr><td title='stock-seed-11'>seed 11</td><td>FAIL</td><td>drifted 0.66 m &gt; 0.4795 m from the centreline at 7.28 s<br><span class='muted'>then touched the right wall at 7.80 s (0.152 m in); then left the hallway through the right wall at 8.56 s</span></td><td></td></tr><tr><td title='stock-seed-12'>seed 12</td><td>FAIL</td><td>drifted 0.65 m &gt; 0.4795 m from the centreline at 7.98 s<br><span class='muted'>then touched the right wall at 8.50 s (0.155 m in); then left the hallway through the right wall at 9.26 s</span></td><td></td></tr><tr><td title='stock-seed-13'>seed 13</td><td>FAIL</td><td>drifted 0.67 m &gt; 0.4795 m from the centreline at 7.26 s<br><span class='muted'>then touched the right wall at 7.78 s (0.161 m in); then left the hallway through the right wall at 8.56 s</span></td><td></td></tr><tr><td title='stock-seed-14'>seed 14</td><td>FAIL</td><td>drifted 0.66 m &gt; 0.4795 m from the centreline at 7.90 s<br><span class='muted'>then touched the right wall at 8.46 s (0.161 m in); then left the hallway through the right wall at 9.24 s</span></td><td></td></tr><tr><td title='stock-seed-15'>seed 15</td><td>FAIL</td><td>drifted 0.65 m &gt; 0.4795 m from the centreline at 6.66 s<br><span class='muted'>then touched the right wall at 7.16 s (0.151 m in); then left the hallway through the right wall at 7.92 s</span></td><td></td></tr><tr><td title='stock-seed-16'>seed 16</td><td>FAIL</td><td>drifted 0.65 m &gt; 0.4795 m from the centreline at 7.28 s<br><span class='muted'>then touched the right wall at 7.82 s (0.151 m in); then left the hallway through the right wall at 8.58 s</span></td><td></td></tr><tr><td title='stock-seed-17'>seed 17</td><td>FAIL</td><td>drifted 0.66 m &gt; 0.4795 m from the centreline at 7.24 s<br><span class='muted'>then touched the right wall at 7.78 s (0.157 m in); then left the hallway through the right wall at 8.56 s</span></td><td></td></tr><tr><td title='stock-seed-18'>seed 18</td><td>FAIL</td><td>drifted 0.66 m &gt; 0.4795 m from the centreline at 6.62 s<br><span class='muted'>then touched the right wall at 7.16 s (0.158 m in); then left the hallway through the right wall at 7.92 s</span></td><td></td></tr><tr><td title='stock-seed-19'>seed 19</td><td>FAIL</td><td>drifted 0.67 m &gt; 0.4795 m from the centreline at 6.54 s<br><span class='muted'>then touched the right wall at 6.64 s (0.001 m in); then touched the right wall at 6.86 s (0.155 m in); then left the hallway through the right wall at 7.86 s</span></td><td></td></tr><tr><td title='stock-seed-20'>seed 20</td><td>FAIL</td><td>drifted 0.67 m &gt; 0.4795 m from the centreline at 7.18 s<br><span class='muted'>then touched the right wall at 7.28 s (0.162 m in); then left the hallway through the right wall at 8.54 s</span></td><td></td></tr></tbody></table></section></section></div><div class='card'>
