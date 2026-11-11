@@ -265,16 +265,17 @@ def render(report, format="json", links=None):
     evidence = ""
     stored = report.get("evidence_links")
     if stored:
+
+        def link_text(entry):
+            if "seed" not in entry:
+                return entry["label"]
+            suffix = f"-seed-{entry['seed']:02d}"
+            result = next((r for r in bundle["results"] if r["id"].endswith(suffix)), None)
+            name = hallway.repeat_name(result)
+            return f"{name} {entry['seed']} ({entry['status']}): {entry['label']}"
+
         items = [("CI run", stored["run"])] if stored.get("run") else []
-        items += [
-            (
-                e["label"]
-                if "seed" not in e
-                else f"seed {e['seed']} ({e['status']}): {e['label']}",
-                e["url"],
-            )
-            for e in stored["links"]
-        ]
+        items += [(link_text(e), e["url"]) for e in stored["links"]]
         evidence = (
             "<h2>Evidence</h2><ul>"
             + "".join(f"<li><a href='{escape(u)}'>{escape(t)}</a></li>" for t, u in items)

@@ -1,8 +1,10 @@
 """Walk-hallway rendering: the markdown report from stored decisions and run assessments.
 
-Each result is one seeded trial. Its status, failures and the run's k of N, interval and
-grade are the capability verifier's (bundle 1.1.0); nothing here grades. Failed checks
-carry structured fields {check, observed, limit, unit, t, seed, wall}.
+Each result is one trial. Evidence 1.0.0 numbers it by seed; evidence 2.0.0 numbers
+identical trials by index and stores that index in the same ``seed`` fields. Status,
+failures and the run's k of N, interval and grade are the capability verifier's
+(bundle 1.1.0); nothing here grades. Failed checks carry structured fields
+{check, observed, limit, unit, t, seed, wall}.
 """
 
 PASS, FAIL, INSUFFICIENT, INCOMPATIBLE = "PASS", "FAIL", "INSUFFICIENT_EVIDENCE", "INCOMPATIBLE"
@@ -59,6 +61,36 @@ def _robot(system):
     return f"{robot} · {conf}" if conf else robot
 
 
+def repeat_name(result=None, *, report=None, result_ids=(), plural=False, capital=False):
+    """``trial`` for evidence 2.0.0, ``seed`` for the earlier run model.
+
+    2.0.0 is the result that stores ``original_result.index``, or whose
+    ``provenance.plan.trials`` is a dict with ``count`` (1.0.0 stores an int plus
+    ``plan.seeds``). ``original_result.seed`` equals the index on 2.0.0, so the
+    number is not a signal. Either marker selects ``trial``.
+    """
+    if result is None and isinstance(report, dict):
+        results = {
+            item["id"]: item
+            for item in (report.get("source_bundle") or {}).get("results") or []
+            if isinstance(item, dict) and "id" in item
+        }
+        result = next((results[i] for i in result_ids if i in results), None)
+    original, plan = {}, {}
+    if isinstance(result, dict):
+        if isinstance(result.get("original_result"), dict):
+            original = result["original_result"]
+        provenance = result.get("provenance")
+        if isinstance(provenance, dict) and isinstance(provenance.get("plan"), dict):
+            plan = provenance["plan"]
+    word = "trial" if "index" in original or isinstance(plan.get("trials"), dict) else "seed"
+    if plural:
+        word += "s"
+    if capital:
+        word = word.capitalize()
+    return word
+
+
 def _worse(a, b):
     """The worse of two failures of one check."""
     if a["check"] == "hallway-fall":
@@ -68,8 +100,8 @@ def _worse(a, b):
     return a if a["observed"] > b["observed"] else b
 
 
-def _describe(f):
-    s = f" (seed {f['seed']})" if f["seed"] is not None else ""
+def _describe(f, result=None):
+    s = f" ({repeat_name(result)} {f['seed']})" if f["seed"] is not None else ""
     if f["check"] == "hallway-wall-contact":
         return f"touched {_wall(f.get('wall'))} at {_fmt(f['t'])} s{s}"
     if f["observed"] is None:
@@ -80,8 +112,8 @@ def _describe(f):
     return f"{obs} {op} {lim} {f['unit']}{at}{s}"
 
 
-def why_failed(run, limit=3):
-    """Each failing seed counted once, under its first failure (earliest t, then check order)."""
+def why_failed(run, limit=3, result=None):
+    """Each failed result counted once, under its first failure (earliest t, then check order)."""
     first = {}
     for f in run["failures"]:
         key = (f["t"] if f["t"] is not None else float("inf"), ORDER.index(f["check"]))
@@ -96,10 +128,10 @@ def why_failed(run, limit=3):
         worst = items[0]
         for f in items[1:]:
             worst = _worse(worst, f)
-        lines.append(f"- {len(items)}× {WHAT[check]} — worst: {_describe(worst)}")
+        lines.append(f"- {len(items)}× {WHAT[check]} — worst: {_describe(worst, result)}")
     rest = sum(len(items) for _, items in ranked[limit:])
     if rest:
-        lines.append(f"- {rest}× other first failures; see the per-seed details")
+        lines.append(f"- {rest}× other first failures; see the per-{repeat_name(result)} details")
     return lines
 
 
@@ -148,9 +180,10 @@ def markdown(report, links=None):
                 f"{s['k']}/{s['n']} | {_interval(s['wilson95'])} | {s['required_passes']} |"
             )
         for s in runs:
+            sample = results[s["result_ids"][0]]
             why = sections.why_lines(report, s)
             if why is None:  # bundles before capability-verifier v1.12.0
-                why = why_failed(s)
+                why = why_failed(s, result=sample)
             if why:
                 lines += ["", f"**Why runs failed · {_robot(s['system'])}**", *why]
         for s in runs:
@@ -187,9 +220,12 @@ def markdown(report, links=None):
             if row:
                 lines += ["", " · ".join(row)]
         for s in runs:
+            sample = results[s["result_ids"][0]]
+            name = repeat_name(sample)
+            head = repeat_name(sample, capital=True)
             lines += [
                 "",
-                f"<details><summary>Per-seed failures · {_robot(s['system'])}</summary>",
+                f"<details><summary>Per-{name} failures · {_robot(s['system'])}</summary>",
                 "",
             ]
             if not s["failures"]:
@@ -203,7 +239,7 @@ def markdown(report, links=None):
                 )
                 lines += [f"**{check}**", ""]
                 if check == "hallway-wall-contact":
-                    lines += ["| Seed | Contact |", "|---|---|"]
+                    lines += [f"| {head} | Contact |", "|---|---|"]
                     lines += [
                         f"| {f['seed']} | touched {_wall(f.get('wall'))} at {_fmt(f['t'])} s |"
                         for f in items
@@ -211,7 +247,7 @@ def markdown(report, links=None):
                 else:
                     unit = items[0]["unit"]
                     lines += [
-                        f"| Seed | Observed ({unit}) | Limit ({unit}) | t (s) |",
+                        f"| {head} | Observed ({unit}) | Limit ({unit}) | t (s) |",
                         "|---|---|---|---|",
                     ]
                     lines += [
@@ -252,11 +288,14 @@ def canonical_plan(result):
     prov = result["provenance"]
     plan = prov.get("plan") or {}
     spec = result["spec"]
-    parts = [f"{spec['capability']}@{spec['revision']}", f"N={plan.get('trials', '?')}"]
+    # 1.0.0 stores an int. 2.0.0 stores {"count": N}, which must not render as a dict.
+    trials = plan.get("trials", "?")
+    count = trials["count"] if isinstance(trials, dict) else trials
+    parts = [f"{spec['capability']}@{spec['revision']}", f"N={count}"]
     if "command_speed" in plan:
         parts.append(f"{_fmt(plan['command_speed'])} m/s")
     if "required_passes" in plan:
-        parts.append(f"pass bar {plan['required_passes']}/{plan.get('trials', '?')}")
+        parts.append(f"pass bar {plan['required_passes']}/{count}")
     lock = prov.get("lock")
     if isinstance(lock, dict) and isinstance(lock.get("sha256"), str):
         parts.append(f"`{lock.get('path', 'verification.lock.json')} @ {lock['sha256'][:7]}`")
