@@ -67,6 +67,22 @@ def test_html_embeds_dm_sans_and_keeps_body_text_above_the_contrast_floor():
     assert "summary::after" in page and "color: var(--link)" in page
 
 
+def test_test_context_scroll_region_is_keyboard_focusable():
+    """The card that holds Test context can scroll at a narrow width, so it is a named region."""
+    page = render(report(bundle("g1")), "html")
+    region = "<div class='card' tabindex='0' role='region' aria-label='Test context'>"
+    assert page.count(region) == 1
+    assert (
+        region + "<section class='run-detail'><section class='context'><h3>Test context</h3>"
+        in page
+    )
+    assert page.count("tabindex='0'") == 1
+    assert "<script" not in page
+    assert '.card[role="region"]:focus-visible' in page
+    assert "outline: 3px solid var(--focus)" in page
+    assert "outline-offset: 3px" in page
+
+
 def test_g1_header_context_failures_and_grid():
     page = top(render(report(bundle("g1")), "html"))
     verdict = page[page.index("<section class='verdict'") : page.index("<section id='summary'>")]

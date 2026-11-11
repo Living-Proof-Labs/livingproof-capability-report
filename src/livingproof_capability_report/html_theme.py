@@ -140,7 +140,8 @@ a {
 
 a:hover { color: var(--link-hover); }
 
-a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visible {
+a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visible,
+.card[role="region"]:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 3px;
 }
@@ -667,11 +668,16 @@ def stylesheet():
     return _STYLESHEET
 
 
-def _card(inner, extra=""):
+def _card(inner, extra="", label=""):
+    """One surface card. ``label`` marks a scrollable region for keyboard access."""
     if not inner:
         return ""
     cls = "card" if not extra else f"card {extra}"
-    return f"<div class='{cls}'>{inner}</div>"
+    # The test-context card scrolls horizontally at a narrow viewport. It has no
+    # single heading of its own (the inner "Test context" heading names one section),
+    # so the region carries an explicit name and stays in the tab order. No script.
+    attrs = f" tabindex='0' role='region' aria-label='{label}'" if label else ""
+    return f"<div class='{cls}'{attrs}>{inner}</div>"
 
 
 def page(*, title, lede, summary, table, evidence, full, header_badge, headers="", detail=""):
@@ -699,7 +705,7 @@ def page(*, title, lede, summary, table, evidence, full, header_badge, headers="
         "<main class='wrap'>"
         + _card(headers)
         + _card(summary)
-        + _card(detail)
+        + _card(detail, label="Test context")
         + table_card
         + _card(evidence, "evidence")
         + _card(full)
