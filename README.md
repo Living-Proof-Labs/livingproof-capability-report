@@ -21,8 +21,8 @@ No server, simulator, source checkout or Task installation is needed by consumer
 Download the wheel or Debian package and `SHA256SUMS` from
 [Releases](https://github.com/Living-Proof-Labs/livingproof-capability-report/releases).
 The Debian package is `Architecture: all`: it ships only pure-Python reporter
-files and metadata. Apt installs architecture-appropriate `python3-click` and
-`python3-jsonschema` dependencies. All files are managed by dpkg; no pip writes
+files and metadata. Apt installs architecture-appropriate `python3-click`,
+`python3-jsonschema`, and `python3-defusedxml` dependencies. All files are managed by dpkg; no pip writes
 into system Python, private interpreter, native wheel or vendored virtual
 environment is included. The native support matrix is documented below.
 
