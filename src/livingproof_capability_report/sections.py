@@ -169,8 +169,8 @@ def _limit_line(name, limit):
 
 
 def header(report, summary, description):
-    """#39 verdict header: robot/config/mission in words, grade, k of N, bar, interval,
-    the expected sentence (spec) and the actual summary (verifier)."""
+    """#39 verdict header: robot/config/mission in words, grade, k of N and the stored
+    acceptance count, the expected sentence (spec) and the actual summary (verifier)."""
     grade = summary["grade"]
     mission = _dict(_dict(description).get("mission"))
     world = _dict(_dict(description).get("world"))
@@ -180,15 +180,12 @@ def header(report, summary, description):
     title = f"{robot} {summary['system'].get('version', '')}".strip() + f" — {what}"
     if where:
         title += f" in the {where}" if world.get("title") else f" on {where}"
-    interval = summary.get("wilson95")
+    # The stored Wilson interval is not a headline. The run card shows it, when present,
+    # as muted text under the success rate.
     facts = [
         f"{summary['k']} of {summary['n']} trials passed; overall {grade}",
         f"{summary['required_passes']} of {summary['n']} required",
     ]
-    if isinstance(interval, list) and len(interval) == 2:
-        facts.append(
-            f"95% interval {hallway._interval(interval)} (Wilson, stored, rounded to whole percent)"
-        )
     out = [
         f"<section class='verdict' data-grade='{esc(grade)}'>",
         f"<p class='robot'>{esc(title)}</p>",

@@ -37,7 +37,7 @@ def report(data):
 
 def top(page):
     """The visible page: everything before the collapsed lossless report."""
-    return page[: page.index("<details>")]
+    return page[: page.index("<details class='lossless'>")]
 
 
 @pytest.mark.parametrize("name", ["g1", "go1", "t1"])
@@ -91,14 +91,14 @@ def test_g1_header_context_failures_and_grid():
         "<strong>FAIL</strong>",
         "12 of 20 trials passed; overall FAIL",
         "18 of 20 required",
-        "95% interval 39–78% (Wilson, stored, rounded to whole percent)",
         "<strong>Expected:</strong> The robot starts at the hallway entrance",
         "<strong>Actual:</strong> 8 of 20 trials failed; primary failure: lateral limit "
         "exceeded in 8 (seeds 4, 5, 7, 9, 12, 14, 15, 18).",
     ):
         assert escape(text, quote=False) in verdict or text in verdict, text
     assert "PASS" not in verdict  # #39: no PASS wording on a FAIL result
-    assert verdict and page.index("<section class='verdict'") < page.index("<table")
+    assert "Wilson" not in verdict and "95% interval" not in verdict
+    assert verdict and page.index("<section class='verdict'") < page.index("<table class='failed'")
     # Context card: stored limits, unrounded, with their formulas and inputs.
     assert (
         "unitree-g1 · stock may drift up to 0.49 m either side of the centreline: half the "

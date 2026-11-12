@@ -159,7 +159,7 @@ def check_grade(grade):
     return grade
 
 
-def render(report, format="json", links=None):
+def render(report, format="json", links=None, *, observations=None):
     """Render stored decisions, never invoke grading or apply a current policy.
 
     Every format refuses the same stored reports: an unknown, null or non-string summary
@@ -243,6 +243,7 @@ def render(report, format="json", links=None):
         return html.escape(str(value), quote=True)
 
     from . import sections
+    from .steps import scenario_steps
 
     runs = [s for s in report.get("summaries") or [] if isinstance(s, dict)]
     in_runs = {r for s in runs for r in s.get("result_ids", [])}
@@ -318,7 +319,12 @@ def render(report, format="json", links=None):
         detail=detail,
         table=others,
         evidence=evidence,
-        full=("<details><summary>Full lossless report</summary><pre>" + full + "</pre></details>"),
+        full=(
+            "<details class='lossless'><summary>Full lossless report</summary><pre>"
+            + full
+            + "</pre></details>"
+        ),
+        steps=scenario_steps(report, observations),
         header_badge=f"<div class='grades'>{''.join(badges)}</div>" if badges else "",
     )
 
@@ -352,7 +358,6 @@ def html_summary(report, bundle, escape):
             if s.get("k") is not None and s.get("n") is not None and s.get("grade")
             else None
         )
-        interval = s.get("wilson95")
         title = " ".join(x for x in (ref(s.get("system")), s.get("grade")) if x)
         parts.append(
             f"<section class='run'><h3>{escape(title or 'Run')}</h3><dl>"
@@ -367,12 +372,6 @@ def html_summary(report, bundle, escape):
                         None
                         if s.get("required_passes") is None
                         else f"{s['required_passes']} of {s.get('n', '?')} trials required",
-                    ),
-                    (
-                        "Wilson 95% (stored)",
-                        f"{round(interval[0] * 100)}–{round(interval[1] * 100)}%"
-                        if isinstance(interval, list) and len(interval) == 2
-                        else None,
                     ),
                     ("Capability", s.get("capability")),
                     (

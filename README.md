@@ -165,11 +165,15 @@ What changes for callers:
 
 ## What the HTML report shows
 
-`--format html` opens with a **Summary** section above the trial table, so a reader can
-see the outcome with the full report collapsed. For each stored run summary it lists the
-robot (system and version), run id, overall status (the stored grade), observed k/N PASS,
-the threshold ("18/20 PASS required"), the stored Wilson 95% interval, the capability,
-the spec (tag, revision, commit) and the environment. A **Provenance** list follows: the
+`--format html` opens with the run's success rate and one ring per scenario step (the
+share of trials whose stored assessment passed), then a **Summary** section above the
+trial table. The rings state a percentage. The stored Wilson 95% interval is not shown
+in the headline or on a ring. When a run carries one, it appears once as muted text
+under that run's success rate ("95% confidence range for the success rate"). For each
+stored run summary the Summary lists the robot (system and version), run id, overall
+status (the stored grade), observed k/N PASS, the threshold when `required_passes` is
+present ("18 of 20 trials required"), the capability, the spec (tag, revision, commit)
+and the environment. A **Provenance** list follows: the
 grading policy (for example `Policy: all-required-v1@1.0.0`), the grade revision, the
 aggregation and assessment format of a 1.1.0 bundle, the producer that assessed it
 (id@version and commit) and the bundle schema version.

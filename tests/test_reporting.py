@@ -127,11 +127,11 @@ def test_html_shows_policy_and_grade_revision_before_details(tmp_path):
     saved["policy"] = "all-required-v1@1.0.0"
     saved["grade_revision"] = 3
     html = render(saved, "html")
-    head = html[: html.index("<details>")]
+    head = html[: html.index("<details class='lossless'>")]
     assert "<dt>Policy</dt><dd>all-required-v1@1.0.0</dd>" in head
     assert "<dt>Grade revision</dt><dd>3</dd>" in head
     saved["policy"] = "<b>p</b>"
-    assert "&lt;b&gt;p&lt;/b&gt;" in render(saved, "html").split("<details>")[0]
+    assert "&lt;b&gt;p&lt;/b&gt;" in render(saved, "html").split("<details class='lossless'>")[0]
 
 
 def test_cli_and_no_overwrite(bundle, tmp_path):

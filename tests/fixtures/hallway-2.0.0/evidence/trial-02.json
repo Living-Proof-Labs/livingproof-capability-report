@@ -1,7 +1,7 @@
 {
   "format": "livingproof-hallway-observation/2.0.0",
   "end": "crossed_exit",
-  "duration_s": 12.0,
+  "duration_s": 13.25,
   "exit_time": 12.0,
   "max_abs_lateral": {
     "value": 0.62,
