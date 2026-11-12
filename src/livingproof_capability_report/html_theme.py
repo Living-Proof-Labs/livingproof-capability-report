@@ -41,6 +41,8 @@ CSS = """
   --pre-text: #e2e8f0;
   --link: #0b6e6c;
   --link-hover: #08524f;
+  --speak: #8a6a32;
+  --speak-text: #6b5428;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -64,6 +66,8 @@ CSS = """
     --chip-muted-bg: #1e293b;
     --link: #64dfc7;
     --link-hover: #8ef3e4;
+    --speak: #c4a46a;
+    --speak-text: #e0c48a;
   }
 }
 
@@ -87,6 +91,8 @@ html:has(#theme-light:checked) {
   --chip-muted-bg: #e2e8f0;
   --link: #0b6e6c;
   --link-hover: #08524f;
+  --speak: #8a6a32;
+  --speak-text: #6b5428;
 }
 
 html:has(#theme-dark:checked) {
@@ -109,6 +115,8 @@ html:has(#theme-dark:checked) {
   --chip-muted-bg: #1e293b;
   --link: #64dfc7;
   --link-hover: #8ef3e4;
+  --speak: #c4a46a;
+  --speak-text: #e0c48a;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -527,6 +535,10 @@ pre {
 .split { display: grid; gap: 1.1rem; }
 @media (min-width: 800px) {
   .split { grid-template-columns: 1.15fr 0.85fr; align-items: start; }
+  .b-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1180px) {
+  .b-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 .locked {
   border: 1px solid var(--border);
@@ -768,6 +780,9 @@ details[open] > .step-summary .disclose-open { display: inline; }
     color: var(--text-muted);
     padding-top: 0.15rem;
   }
+  .eval-mark:has(.eval-name-short) .eval-name-full { display: none; }
+  .eval-name-short { display: block; }
+  .summary-hero .badge svg { width: 5.5rem; height: 5.5rem; }
 }
 
 @media print {
@@ -797,6 +812,181 @@ details[open] > .step-summary .disclose-open { display: inline; }
   details[open] summary::after, details summary::after { content: none; }
   pre { background: #f8fafc; color: #0f172a; border: 1px solid var(--border); }
 }
+
+/* Evaluator summary card. Generic chrome; icons come from the result. */
+.summary-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 1rem 1.1rem 1.05rem;
+  box-shadow: var(--shadow);
+  min-width: 0;
+  margin-bottom: 1.25rem;
+}
+.summary-card.is-compact { padding: 0.8rem 0.85rem 0.85rem; }
+.card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem 0.7rem;
+  margin-bottom: 0.7rem;
+}
+.state-kicker {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.example-tag {
+  margin: 0;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--chip-muted-bg);
+  color: var(--chip-muted-fg);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+.summary-hero {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem 1rem;
+  min-width: 0;
+}
+.summary-hero .badge svg { width: 6.5rem; height: 6.5rem; display: block; }
+.summary-card.is-compact .summary-hero .badge svg { width: 4.5rem; height: 4.5rem; }
+.summary-hero .run-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+.summary-hero .pct { margin: 0.1rem 0 0; font-size: 1.35rem; font-weight: 650; }
+.summary-hero .count, .summary-hero .stored-status { margin: 0.1rem 0 0; color: var(--text-muted); }
+.evaluators {
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  container-type: inline-size;
+  container-name: evaluators;
+}
+.evaluators-label {
+  margin: 0 0 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.eval-row {
+  --eval-gap: 0.3rem;
+  display: grid;
+  grid-template-columns: repeat(var(--eval-count, 1), minmax(0, 1fr));
+  justify-items: center;
+  align-items: start;
+  gap: var(--eval-gap);
+  margin: 0;
+  padding: 0;
+}
+.eval-mark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.28rem;
+  text-align: center;
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0.3rem 0.25rem;
+  border-radius: 0.65rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+.eval-mark .eval-face {
+  position: relative;
+  width: 2.35rem;
+  height: 2.35rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-muted) 80%, var(--surface));
+  color: var(--link);
+}
+.eval-mark .mark-svg svg { width: 1.2rem; height: 1.2rem; display: block; }
+.eval-mark .eval-face .mini-ring { width: 2.7rem; height: 2.7rem; display: block; }
+.eval-mark .eval-face .mini-ring svg { width: 2.7rem; height: 2.7rem; }
+.eval-mark.is-graded .eval-face { width: 2.85rem; height: 2.85rem; background: transparent; }
+.eval-name { font-size: 0.72rem; line-height: 1.25; color: var(--text-muted); }
+.eval-name-short { display: none; }
+.eval-mark .pip {
+  position: absolute;
+  right: -0.15rem;
+  bottom: -0.15rem;
+  width: 0.95rem;
+  height: 0.95rem;
+  border-radius: 999px;
+  background: var(--navy);
+  color: var(--teal-bright);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.eval-mark .pip svg { width: 0.62rem; height: 0.62rem; display: block; }
+.eval-mark.is-speaking {
+  background: color-mix(in srgb, var(--speak) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--speak) 45%, var(--border));
+}
+.eval-mark.is-speaking .eval-face {
+  color: var(--speak-text);
+  background: color-mix(in srgb, var(--speak) 16%, var(--surface));
+}
+.eval-mark.is-speaking .eval-name { color: var(--text); font-weight: 650; }
+.eval-fallback { font-weight: 700; font-size: 0.95rem; line-height: 1; }
+.eval-disclosure { min-width: 0; width: 100%; }
+.eval-disclosure > summary.eval-mark { list-style: none; cursor: pointer; }
+.eval-disclosure > summary.eval-mark::-webkit-details-marker,
+.eval-disclosure > summary.eval-mark::marker { content: ""; }
+.eval-disclosure > summary.eval-mark::after,
+.eval-disclosure[open] > summary.eval-mark::after { content: none; float: none; }
+.eval-disclosure[open] > summary.eval-mark { margin-bottom: 0; }
+.eval-panel, .stored-run {
+  box-sizing: border-box;
+  width: 100cqw;
+  margin-top: 0.45rem;
+  margin-left: calc((1 - var(--col, 1)) * (100cqw + var(--eval-gap, 0.3rem)) / var(--eval-count, 1));
+}
+.eval-panel {
+  padding: 0.75rem 0.85rem 0.8rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-muted) 55%, var(--surface));
+}
+.eval-panel h4 { margin: 0 0 0.2rem; font-size: 0.95rem; }
+.eval-panel .purpose, .eval-panel .more { margin: 0.35rem 0 0; }
+.eval-panel .meta, .descriptor-note { margin: 0.2rem 0 0; color: var(--text-muted); font-size: 0.86rem; }
+.callout-ok, .callout-headline { margin: 0.75rem 0 0; }
+.callout-headline { font-weight: 650; }
+.callouts { list-style: none; margin: 0.55rem 0 0; padding: 0; display: grid; gap: 0.35rem; }
+.callouts li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.5rem;
+  border-left: 3px solid var(--speak);
+  background: color-mix(in srgb, var(--speak) 8%, var(--surface));
+}
+.callout-icon { width: 1.15rem; height: 1.15rem; flex: none; color: var(--speak-text); }
+.callout-icon svg { width: 1.15rem; height: 1.15rem; display: block; }
+.callout-body .finding-text, .callout-body .finding-meta { margin: 0; }
+.callout-body .finding-meta { color: var(--text-muted); font-size: 0.78rem; }
+.b-grid { display: grid; gap: 0.85rem; }
 """.strip()
 
 CHIP = {
@@ -971,6 +1161,20 @@ def _card(inner, extra="", label=""):
     return f"<div class='{cls}'{attrs}>{inner}</div>"
 
 
+def body_markup(*, steps, headers, summary, detail, table, evidence, full):
+    """The report sections, in their existing order, without the page shell."""
+    table_card = f"<div class='card'><div class='table-wrap'>{table}</div></div>" if table else ""
+    return (
+        steps
+        + _card(headers)
+        + _card(summary)
+        + _card(detail, label="Test context")
+        + table_card
+        + _card(evidence, "evidence")
+        + _card(full)
+    )
+
+
 def page(
     *,
     title,
@@ -985,7 +1189,6 @@ def page(
     steps="",
 ):
     """Assemble a self-contained report. Callers keep tested markup snippets intact."""
-    table_card = f"<div class='card'><div class='table-wrap'>{table}</div></div>" if table else ""
     return (
         "<!doctype html><html lang='en'><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
@@ -1006,12 +1209,14 @@ def page(
         f"</div>{header_badge}</div>"
         "</div></header>"
         "<main class='wrap'>"
-        + steps
-        + _card(headers)
-        + _card(summary)
-        + _card(detail, label="Test context")
-        + table_card
-        + _card(evidence, "evidence")
-        + _card(full)
+        + body_markup(
+            steps=steps,
+            headers=headers,
+            summary=summary,
+            detail=detail,
+            table=table,
+            evidence=evidence,
+            full=full,
+        )
         + "</main></body></html>\n"
     )

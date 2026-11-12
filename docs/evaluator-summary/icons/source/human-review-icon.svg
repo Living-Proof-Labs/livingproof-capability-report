@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" role="img" aria-labelledby="title">
+  <title id="title">Human review</title>
+  <circle cx="9" cy="8" r="2.5" stroke="currentColor" stroke-width="2"/>
+  <path d="M4.4 18c.5-3.1 2.4-4.8 4.6-4.8s4.1 1.7 4.6 4.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="16.2" cy="8.4" r="2.15" stroke="currentColor" stroke-width="2"/>
+  <path d="M13.2 18c.35-2.35 1.6-3.6 3-3.6 1.7 0 3.1 1.4 3.4 3.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg>

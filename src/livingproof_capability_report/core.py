@@ -159,7 +159,7 @@ def check_grade(grade):
     return grade
 
 
-def render(report, format="json", links=None, *, observations=None):
+def render(report, format="json", links=None, *, observations=None, evaluator_results=None):
     """Render stored decisions, never invoke grading or apply a current policy.
 
     Every format refuses the same stored reports: an unknown, null or non-string summary
@@ -308,6 +308,38 @@ def render(report, format="json", links=None, *, observations=None):
         )
         if badge:
             badges.append(badge)
+    sections_body = html_theme.body_markup(
+        steps=scenario_steps(report, observations),
+        headers=headers,
+        summary=summary,
+        detail=detail,
+        table=others,
+        evidence=evidence,
+        full=(
+            "<details class='lossless'><summary>Full lossless report</summary><pre>"
+            + full
+            + "</pre></details>"
+        ),
+    )
+    if runs:
+        from .evaluators import summary_front
+
+        front = summary_front(report, sections_body, evaluator_results)
+        return html_theme.page(
+            title="Living Proof Labs capability report",
+            lede=(
+                "Fixture evidence, not robot safety certification. Stored decisions; "
+                "no regrading. Incompatible environments and revisions remain separate."
+            ),
+            headers="",
+            summary="",
+            detail="",
+            table="",
+            evidence="",
+            full="",
+            steps=front,
+            header_badge=f"<div class='grades'>{''.join(badges)}</div>" if badges else "",
+        )
     return html_theme.page(
         title="Living Proof Labs capability report",
         lede=(

@@ -15,14 +15,14 @@ from . import hallway
 from . import html_theme
 from .core import safe_relative
 
-# Display order is the tie-break when two steps succeed equally often.
-STEPS = (
-    {"id": "hallway-lateral-limit", "name": "Stay near centreline", "kind": "lateral"},
-    {"id": "hallway-wall-contact", "name": "No wall contact", "kind": "wall"},
-    {"id": "hallway-exit-reached", "name": "Exit reached", "kind": "exit"},
-    {"id": "hallway-fall", "name": "Stay upright", "kind": "fall"},
-)
-_BY_ID = {step["id"]: step for step in STEPS}
+# How a known check's stored details are read. The visible name comes from the
+# feature spec's success_criteria text, not from this table.
+_KIND = {
+    "hallway-lateral-limit": "lateral",
+    "hallway-wall-contact": "wall",
+    "hallway-exit-reached": "exit",
+    "hallway-fall": "fall",
+}
 _LIMIT_KEY = {"lateral": "lateral_limit", "exit": "time_limit", "fall": "fall_height"}
 _DEFAULT_UNIT = {"lateral": "m", "exit": "s", "fall": "m"}
 _TIME_KIND = {
@@ -40,14 +40,21 @@ CHECK = (
     "focusable='false'><path d='M3.2 8.2 6.1 11.1 12.8 4.4' fill='none' stroke='currentColor' "
     "stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/></svg>"
 )
-EVAL_ICON = (
-    "<svg class='eval-icon' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' "
-    "aria-hidden='true' focusable='false' width='16' height='16'>"
-    "<rect x='2.2' y='1.4' width='11.6' height='13.2' rx='1.4' fill='none' "
-    "stroke='currentColor' stroke-width='1.4'/>"
-    "<path d='M4.6 8.1 6.7 10.2 11.4 5.5' fill='none' stroke='currentColor' "
-    "stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>"
-)
+
+
+def criterion_names(description):
+    """Step labels from the feature spec. Missing criteria are omitted, not invented."""
+    mission = description.get("mission") if isinstance(description, dict) else None
+    names = {}
+    if not isinstance(mission, dict):
+        return names
+    for item in mission.get("success_criteria") or []:
+        if not isinstance(item, dict):
+            continue
+        ident, text = item.get("evaluator"), item.get("text")
+        if isinstance(ident, str) and ident and isinstance(text, str) and text.strip():
+            names[ident] = text.strip()
+    return names
 
 
 def esc(value):
@@ -336,19 +343,19 @@ def describe_success(passed, total):
     return {"face": face, "phrase": f"{face} success", "complete": complete, "fill": exact}
 
 
-def _catalog(trials):
-    """Known scenario steps that this run assessed, then any other stored evaluator."""
+def _catalog(trials, names):
+    """Assessed steps. Spec criteria order is the tie-break; the label is the spec text."""
     present = []
     for _, assessments in trials:
         for evaluator in assessments:
             if evaluator not in present:
                 present.append(evaluator)
-    known = [dict(step) for step in STEPS if step["id"] in present]
-    extra = [
-        {"id": evaluator, "name": evaluator, "kind": "other"}
-        for evaluator in sorted(item for item in present if item not in _BY_ID)
+    ordered = [ident for ident in names if ident in present]
+    ordered += sorted(ident for ident in present if ident not in ordered)
+    return [
+        {"id": ident, "name": names.get(ident, ident), "kind": _KIND.get(ident, "other")}
+        for ident in ordered
     ]
-    return known + extra
 
 
 def _ranked(catalog, trials):
@@ -399,8 +406,12 @@ def _confidence(summary):
     )
 
 
-def _acceptance(results):
-    """The plan's k-of-n figure, only when every trial's plan records the same one."""
+def _acceptance(results, summary):
+    """Plan acceptance only when it matches this assessment's n and required_passes.
+
+    A plan copied from another run (for example 18 of 20 on a 3-trial assessment)
+    is omitted rather than shown.
+    """
     plans = []
     for result in results:
         plan = _dict(_dict(result.get("provenance")).get("plan"))
@@ -414,10 +425,16 @@ def _acceptance(results):
         return ""
     trials = first.get("trials")
     count = trials.get("count") if isinstance(trials, dict) else trials
+    if count != summary.get("n"):
+        return ""
+    if summary.get("required_passes") is not None and first.get("required_passes") != summary.get(
+        "required_passes"
+    ):
+        return ""
     needed = esc(first.get("required_passes"))
     return (
-        "<p class='plan-note'><strong>Spec acceptance (from this stored run's plan).</strong> "
-        "The plan recorded <code>required_passes</code> "
+        "<p class='plan-note'><strong>Acceptance recorded on this run's plan.</strong> "
+        "<code>required_passes</code> "
         f"<span class='nowrap'>{needed} of {esc(count)}</span>.</p>"
     )
 
@@ -477,7 +494,7 @@ def _article(step, place, tied, close, trials, durations):
     place_label = f"={place}" if tied else str(place)
     place_class = "place tie" if tied else "place"
     version = f"v{step['version']}" if step.get("version") else ""
-    eval_line = " · ".join(part for part in ("Scenario evaluator", step["id"], version) if part)
+    eval_line = " · ".join(part for part in (step["id"], version) if part)
     chip = "<span class='chip chip-muted'>Close</span>" if close else ""
     complete = (
         "<span class='complete'>Stored as complete success for every trial.</span>"
@@ -495,7 +512,7 @@ def _article(step, place, tied, close, trials, durations):
         "<span class='step-meta'>"
         f"<span class='count'>{esc(step['passed'])} of {esc(step['total'])} trials</span>"
         f"{chip}"
-        f"<span class='eval-line'>{EVAL_ICON}{esc(eval_line)}</span>"
+        f"<span class='eval-line'>{esc(eval_line)}</span>"
         "<span class='disclose'><span class='chevron' aria-hidden='true'></span>"
         "<span class='disclose-closed'>Show trials</span>"
         "<span class='disclose-open'>Hide trials</span></span>"
@@ -520,7 +537,7 @@ def _run_cards(report, summary, durations):
     if not results:
         return ""
     trials = [(result, _assessments(result)) for result in results]
-    catalog = _catalog(trials)
+    catalog = _catalog(trials, criterion_names(report["source_bundle"].get("description")))
     if not catalog:
         return ""
     k, n = summary.get("k"), summary.get("n")
@@ -552,18 +569,14 @@ def _run_cards(report, summary, durations):
         f"<div class='badge'>{badge}</div><div>"
         f"<p class='pct'>{esc(rate)}</p>{count}{status}</div></div>"
         f"<div class='success-bar' style='--p:{_bar(fill)}' aria-hidden='true'><i></i></div>"
-        f"{_confidence(summary)}{_acceptance(results)}</div>"
+        f"{_confidence(summary)}{_acceptance(results, summary)}</div>"
         f"{_constants(report, summary, results[0])}</div></div>"
-        "<div class='card scenario-steps'><h2>Scenario steps, by success</h2>"
-        "<p class='step-intro'>Every trial in a run is the same scenario, so trials are not "
-        "ranked against one another. What we can compare inside the run is how often each "
-        "required step succeeded. Open a step for the per-trial table.</p>"
+        "<div class='card scenario-steps'><h2>Steps, by success</h2>"
         f"<div class='step-list'>{''.join(pieces)}</div>"
-        f"<p class='foot'>{EVAL_ICON}<span>Each step is graded by the Living Proof Labs "
-        "Scenario evaluator, attributed with its evaluator id and version.</span></p>"
-        "<p class='sources'>Observed values, limits, times, margins and evaluator versions are "
-        "the stored assessments. Duration is <code>duration_s</code> from the trial observation "
-        "when that file is available to the report.</p></div>"
+        "<p class='sources'>Observed values, limits, times and margins are the stored "
+        "assessments. The step name is the feature spec's success criterion for that "
+        "check. Duration is <code>duration_s</code> from the trial observation when that "
+        "file is available to the report.</p></div>"
     )
 
 
