@@ -14,7 +14,8 @@ from click.testing import CliRunner
 from livingproof_capability_report.cli import report as cli
 from livingproof_capability_report.core import render
 from livingproof_capability_report.hallway import _interval
-from livingproof_capability_report.steps import durations_by_result
+from livingproof_capability_report.html_theme import success_badge
+from livingproof_capability_report.steps import describe_success, durations_by_result, esc
 from test_sections import bundle, report
 from test_trial_labels import BUNDLE, stored, visible_html
 
@@ -135,11 +136,13 @@ def test_wall_margin_is_clearance_on_a_pass_and_penetration_on_a_fail():
     assert "Closest clearance" not in capped
     assert "clearance" not in capped.lower()
     assert "Closest clearance 0.0861 m" in real
-    assert "Penetration depth 0.0361 m" in failed
+    assert "Deepest penetration 0.0361 m at 11.10 s" in failed
+    assert "Penetration depth" not in failed
     assert "clearance" not in failed.lower()
+    # The time column stays the first contact, which is not the deepest one.
+    assert "10.62 s" in failed and "First contact" in failed
     assert "Not met" in failed
     assert "2 contacts (limit 0)" in failed
-    assert "First contact" in failed
     lateral = _row(_step(page, "Stay near centreline"), 1)
     assert "0.2535 m (limit 0.49 m)" in lateral
     assert "Largest offset" in lateral
@@ -160,13 +163,21 @@ def test_trial_number_is_the_stored_seed_and_duration_comes_from_the_observation
     durations = durations_by_result(
         __import__("json").loads((BUNDLE / "manifest.json").read_text()), BUNDLE
     )
-    assert set(durations.values()) == {12.0}
-    cell = "<td data-label='Duration'><span class='cell-value'>12.00 s</span>"
+    assert durations == {
+        "stock-seed-01": 11.5,
+        "stock-seed-02": 13.25,
+        "stock-seed-03": 8.75,
+    }
     observed = render(stored(), "html", observations=durations)
-    assert observed.count(cell) == 12
+    for text, count in (("11.50 s", 4), ("13.25 s", 4), ("8.75 s", 4)):
+        cell = f"<td data-label='Duration'><span class='cell-value'>{text}</span>"
+        assert observed.count(cell) == count
+    assert "<td data-label='Duration'><span class='cell-value'>12.00 s</span>" not in observed
     rendered = CliRunner().invoke(cli, ["render", str(BUNDLE / "manifest.json"), "--format", "html"])
     assert rendered.exit_code == 0, rendered.output
-    assert rendered.output.count(cell) == 12
+    assert rendered.output.count("<td data-label='Duration'><span class='cell-value'>11.50 s</span>") == 4
+    assert rendered.output.count("<td data-label='Duration'><span class='cell-value'>13.25 s</span>") == 4
+    assert rendered.output.count("<td data-label='Duration'><span class='cell-value'>8.75 s</span>") == 4
     assert "<script" not in rendered.output
 
 
@@ -203,3 +214,86 @@ def test_no_pass_bar_without_required_passes_and_markdown_snapshots_stay():
         assert "| 95% interval |" in markdown
     # Evidence 2.0.0 still must not say "seed" in reader-visible HTML.
     assert "seed" not in visible_html(render(stored(), "html")).lower()
+
+
+def _face(passed, total):
+    shown = describe_success(passed, total)
+    badge = success_badge(
+        shown["face"], shown["phrase"], esc, complete=shown["complete"], fill=shown["fill"]
+    )
+    text = re.search(r"<text[^>]*>([^<]*)</text>", badge).group(1)
+    return shown, badge, text
+
+
+def test_percent_text_is_not_zero_padded_and_a_check_needs_every_trial():
+    """0 and 5 are not 00 and 05. 199/200 is not a complete 100."""
+    zero, zero_badge, zero_text = _face(0, 20)
+    five, five_badge, five_text = _face(1, 20)
+    full, full_badge, _full_text = _face(20, 20)
+    almost, almost_badge, almost_text = _face(199, 200)
+    rare, _rare_badge, rare_text = _face(1, 200)
+    assert (zero["face"], zero_text) == ("0%", "0%")
+    assert "00%" not in zero_badge and ">00</text>" not in zero_badge
+    assert (five["face"], five_text) == ("5%", "5%")
+    assert "05%" not in five_badge
+    assert full["complete"] and "visibility='visible'" in full_badge
+    assert "100% success" == full["phrase"]
+    assert almost["face"] == ">99%" and not almost["complete"]
+    assert almost_text == "&gt;99%"
+    assert "visibility='hidden'" in almost_badge
+    assert rare["face"] == "<1%" and rare_text == "&lt;1%"
+    # The same words are what the report draws, including the run ring.
+    stored_report = report(bundle("g1"))
+    stored_report["summaries"][0]["k"] = 199
+    stored_report["summaries"][0]["n"] = 200
+    page = render(stored_report, "html")
+    hero = page[page.index("<div class='run-hero'>") : page.index("<h2>Scenario steps")]
+    assert "&gt;99% success" in hero
+    assert "199 of 200 trials" in hero
+    assert "visibility='visible'" not in hero
+    assert "complete success" not in hero
+    from livingproof_capability_report.steps import _article
+
+    step = {
+        "id": "hallway-fall",
+        "name": "Stay upright",
+        "kind": "fall",
+        "passed": 199,
+        "total": 200,
+        "version": "1.0.0",
+    }
+    partial = _article(step, 1, False, False, [], {})
+    assert "&gt;99% success" in partial
+    assert "199 of 200 trials" in partial
+    assert "visibility='visible'" not in partial
+    assert "Stored as complete success" not in partial
+    done = _article({**step, "passed": 20, "total": 20}, 1, False, False, [], {})
+    assert "100% success" in done
+    assert "visibility='visible'" in done
+    assert "Stored as complete success for every trial." in done
+    # A rendered 0% step does not pad the ring.
+    quiet = _step(render(report(bundle("t1")), "html"), "Stay near centreline")
+    assert ">0%</text>" in quiet and ">00</text>" not in quiet and "0% success" in quiet
+
+
+def test_a_missing_step_says_not_assessed_and_depth_omits_an_unknown_time():
+    data = bundle("g1")
+    data["results"][0]["assessments"] = [
+        item for item in data["results"][0]["assessments"] if item["evaluator"] != "hallway-lateral-limit"
+    ]
+    missing = _row(_step(render(report(data), "html"), "Stay near centreline"), 1)
+    assert "Not assessed" in missing
+    assert "step-result-neutral'>—</span>" not in missing
+    data = bundle("g1")
+    for result in data["results"]:
+        if result["original_result"]["seed"] != 4:
+            continue
+        for assessment in result["assessments"]:
+            if assessment["evaluator"] != "hallway-wall-contact":
+                continue
+            for failure in assessment["provenance"]["details"].get("failures") or []:
+                failure.pop("t", None)
+    untimed = _row(_step(render(report(data), "html"), "No wall contact"), 4)
+    assert "Deepest penetration 0.0361 m" in untimed
+    assert "at 11.10 s" not in untimed
+    assert "First contact" in untimed

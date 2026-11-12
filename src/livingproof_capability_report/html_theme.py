@@ -867,17 +867,25 @@ def grade_badge(k, n, grade, escape):
 </div>"""
 
 
-def success_badge(percent, label, escape, size=88):
-    """Success ring. 100% is a check. The label is a percentage, not an interval."""
-    pct = 0 if percent is None else max(0, min(100, int(percent)))
-    done = pct == 100
-    digits = "100" if done else f"{pct:02d}"
-    fill_op = "0" if pct == 0 else "1"
-    fill_off = 100 - pct
-    check_vis = "visible" if done else "hidden"
-    check_off = "0" if done else "100"
-    d0, d1 = ("", "") if done else (digits[0], digits[1])
-    pct_vis = "none" if done else "block"
+def _ring_number(value):
+    text = f"{float(value):.4f}".rstrip("0").rstrip(".")
+    return text if text not in ("", "-0") else "0"
+
+
+def success_badge(face, label, escape, *, complete=False, fill=0, size=88):
+    """Success ring. The check is only for a complete success, never a rounded 100.
+
+    ``face`` is the ring text, such as ``60%``, ``0%``, ``5%``, ``>99%`` or ``<1%``.
+    It is not zero-padded.
+    """
+    portion = 100.0 if complete else max(0.0, min(100.0, float(fill or 0)))
+    fill_op = "0" if portion <= 0 else "1"
+    fill_off = _ring_number(100 - portion)
+    check_vis = "visible" if complete else "hidden"
+    check_off = "0" if complete else "100"
+    pct_vis = "none" if complete else "block"
+    # Shorter faces stay large; ">99%" still fits above the mark.
+    face_size = 168 if len(face) <= 2 else 128 if len(face) == 3 else 104
     return f"""<svg class='success-ring' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024' role='img' aria-label='{escape(label)}' width='{int(size)}' height='{int(size)}'>
 <title>{escape(label)}</title>
 <circle cx='512' cy='512' r='512' fill='#01152D'/>
@@ -885,9 +893,7 @@ def success_badge(percent, label, escape, size=88):
 <circle cx='{_CX}' cy='{_CY}' r='{_R}' fill='none' stroke='#0E8785' stroke-width='42' stroke-linecap='round' pathLength='100' stroke-dasharray='100 100' stroke-dashoffset='{fill_off}' opacity='{fill_op}' transform='rotate(-90 {_CX} {_CY})'/>
 <path d='M 401 306 L 487.25 392.25 L 635 244.5' fill='none' stroke='#0E8785' stroke-width='47' stroke-linecap='round' stroke-linejoin='round' pathLength='100' stroke-dasharray='100 100' stroke-dashoffset='{check_off}' visibility='{check_vis}'/>
 <g fill='#FFFFFF' font-family='DM Sans, system-ui, sans-serif' font-weight='700' text-anchor='middle' style='display:{pct_vis}' aria-hidden='true'>
-<text x='386.66' y='366' font-size='172'>{d0}</text>
-<text x='510.50' y='366' font-size='172'>{d1}</text>
-<text x='634.34' y='366' font-size='134.16'>%</text>
+<text x='512' y='372' font-size='{face_size}'>{escape(face)}</text>
 </g>
 <g fill='#FFFFFF' stroke='none'>
 <rect x='252' y='509' width='31' height='109' rx='15.5'/>

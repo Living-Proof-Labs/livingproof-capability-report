@@ -206,6 +206,22 @@ def _observed(step, details, status, limits):
     return f"{_measure(kind, observed, unit)} (limit {_measure(kind, limit, unit)})"
 
 
+def _deepest_time(details, depth):
+    """Time of the deepest recorded contact, only when that contact stores one."""
+    best = None
+    moment = None
+    for failure in details.get("failures") or []:
+        if not isinstance(failure, dict) or not _number(failure.get("observed")):
+            continue
+        observed = abs(float(failure["observed"]))
+        if best is None or observed > best:
+            best = observed
+            moment = failure.get("t") if _number(failure.get("t")) else None
+    if best is None or abs(best - depth) > 1e-4:
+        return None
+    return moment
+
+
 def _wall_observed(details, status, limits, observed, limit, margin):
     if observed is None:
         body = "—"
@@ -222,9 +238,13 @@ def _wall_observed(details, status, limits, observed, limit, margin):
     elif status == "PASS" and _number(margin) and float(margin) >= 0:
         body += f"<span class='margin-note'>Closest clearance {esc(fmt_m(margin))} {unit}</span>"
     elif status != "PASS" and _number(margin):
-        # On a failure the stored margin is penetration depth, often negative.
-        depth = fmt_m(abs(float(margin)))
-        body += f"<span class='margin-note'>Penetration depth {esc(depth)} {unit}</span>"
+        # The stored margin is the deepest penetration, not the first contact.
+        depth = abs(float(margin))
+        text = f"Deepest penetration {esc(fmt_m(depth))} {unit}"
+        moment = _deepest_time(details, depth)
+        if moment is not None:
+            text += f" at {esc(fmt_s(moment))}"
+        body += f"<span class='margin-note'>{text}</span>"
     return body
 
 
@@ -285,12 +305,35 @@ def _empty_row(label, duration_cell):
     return (
         "<tr>"
         f"<td data-label='Trial'>{label}</td>"
-        "<td data-label='Result'><span class='step-result step-result-neutral'>—</span></td>"
+        "<td data-label='Result'><span class='step-result step-result-neutral'>Not assessed</span></td>"
         "<td class='obs' data-label='Observed vs limit'><span class='cell-value'>—</span></td>"
         "<td data-label='Time'><span class='cell-value'>—</span></td>"
         f"<td data-label='Duration'><span class='cell-value'>{duration_cell}</span></td>"
         "</tr>"
     )
+
+
+def describe_success(passed, total):
+    """Words and ring fill for a success count.
+
+    The check and the complete-success sentence require every trial to have passed.
+    A rounded 100 with one miss is ">99%"; a rounded 0 with one success is "<1%".
+    """
+    if not _number(passed) or not _number(total) or int(total) <= 0:
+        return None
+    passed, total = int(passed), int(total)
+    exact = 100 * passed / total
+    rounded = int(round(exact))
+    complete = passed == total
+    if complete:
+        face = "100%"
+    elif passed > 0 and rounded == 0:
+        face = "<1%"
+    elif passed < total and rounded == 100:
+        face = ">99%"
+    else:
+        face = f"{rounded}%"
+    return {"face": face, "phrase": f"{face} success", "complete": complete, "fill": exact}
 
 
 def _catalog(trials):
@@ -421,13 +464,16 @@ def _constants(report, summary, result):
     return f"<div class='locked'><h3>This run's constants</h3><dl>{rows}</dl></div>"
 
 
+def _bar(fill):
+    return html_theme._ring_number(fill)
+
+
 def _article(step, place, tied, close, trials, durations):
-    total = step["total"]
-    percent = html_theme.pass_rate(step["passed"], total)
-    if percent is None:
-        percent = 0
-    rate = "100% success" if percent == 100 else f"{percent}% success"
-    badge = html_theme.success_badge(percent, f"{step['name']}: {rate}", esc, size=88)
+    shown = describe_success(step["passed"], step["total"])
+    rate = shown["phrase"]
+    badge = html_theme.success_badge(
+        shown["face"], f"{step['name']}: {rate}", esc, complete=shown["complete"], fill=shown["fill"], size=88
+    )
     place_label = f"={place}" if tied else str(place)
     place_class = "place tie" if tied else "place"
     version = f"v{step['version']}" if step.get("version") else ""
@@ -435,7 +481,7 @@ def _article(step, place, tied, close, trials, durations):
     chip = "<span class='chip chip-muted'>Close</span>" if close else ""
     complete = (
         "<span class='complete'>Stored as complete success for every trial.</span>"
-        if percent == 100
+        if shown["complete"]
         else ""
     )
     return (
@@ -447,14 +493,14 @@ def _article(step, place, tied, close, trials, durations):
         f"<h3 class='step-name'>{esc(step['name'])}"
         f"<span class='colon'>: </span><span class='rate'>{esc(rate)}</span></h3>"
         "<span class='step-meta'>"
-        f"<span class='count'>{esc(step['passed'])} of {esc(total)} trials</span>"
+        f"<span class='count'>{esc(step['passed'])} of {esc(step['total'])} trials</span>"
         f"{chip}"
         f"<span class='eval-line'>{EVAL_ICON}{esc(eval_line)}</span>"
         "<span class='disclose'><span class='chevron' aria-hidden='true'></span>"
         "<span class='disclose-closed'>Show trials</span>"
         "<span class='disclose-open'>Hide trials</span></span>"
         "</span>"
-        f"<span class='success-bar' style='--p:{percent}' aria-hidden='true'><i></i></span>"
+        f"<span class='success-bar' style='--p:{_bar(shown['fill'])}' aria-hidden='true'><i></i></span>"
         f"{complete}</span></summary>"
         "<div class='trial-panel'>"
         "<p class='trial-note'>Each trial for this step. Time is the first moment the step "
@@ -478,16 +524,15 @@ def _run_cards(report, summary, durations):
     if not catalog:
         return ""
     k, n = summary.get("k"), summary.get("n")
-    percent = html_theme.pass_rate(k, n)
-    if percent is None:
-        percent = 0
-        rate = "Success rate not stored"
+    shown = describe_success(k, n)
+    if shown is None:
+        rate, face, complete, fill = "Success rate not stored", "", False, 0
     else:
-        rate = f"{percent}% success"
+        rate, face, complete, fill = shown["phrase"], shown["face"], shown["complete"], shown["fill"]
     grade = summary.get("grade") or ""
     count = f"<p class='count'>{esc(k)} of {esc(n)} trials</p>" if k is not None and n is not None else ""
     status = f"<p class='stored-status'>Stored overall status: {esc(grade)}</p>" if grade else ""
-    badge = html_theme.success_badge(percent, rate, esc, size=128)
+    badge = html_theme.success_badge(face, rate, esc, complete=complete, fill=fill, size=128)
     ranked = _ranked(catalog, trials)
     places, shared = _places(ranked)
     pieces = []
@@ -506,7 +551,7 @@ def _run_cards(report, summary, durations):
         "<div class='run-hero'>"
         f"<div class='badge'>{badge}</div><div>"
         f"<p class='pct'>{esc(rate)}</p>{count}{status}</div></div>"
-        f"<div class='success-bar' style='--p:{percent}' aria-hidden='true'><i></i></div>"
+        f"<div class='success-bar' style='--p:{_bar(fill)}' aria-hidden='true'><i></i></div>"
         f"{_confidence(summary)}{_acceptance(results)}</div>"
         f"{_constants(report, summary, results[0])}</div></div>"
         "<div class='card scenario-steps'><h2>Scenario steps, by success</h2>"

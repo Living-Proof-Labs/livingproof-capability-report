@@ -27,7 +27,7 @@
         {
           "id": "stock-seed-01",
           "path": "evidence/trial-01.json",
-          "sha256": "558e3369e7f1cae87813e4c2de9f2dac352c81ea745960466d48fbb724d6b05f"
+          "sha256": "3ac71744e1f5a18be1538875895030f656d29e6c23500b7ee1e819003ccd1117"
         }
       ],
       "assessments": [
@@ -270,7 +270,7 @@
         {
           "id": "stock-seed-02",
           "path": "evidence/trial-02.json",
-          "sha256": "a8d6d19006c975883a88e2df8539186162c23326242a34ddf0e243b5629dbdcf"
+          "sha256": "68068a29628bde0a1c0d9f71593734b4eab62ee5aff5ad1d6d28a4e1e8cdb0ef"
         }
       ],
       "assessments": [
@@ -569,7 +569,7 @@
         {
           "id": "stock-seed-03",
           "path": "evidence/trial-03.json",
-          "sha256": "e799bd5a199860f8891b0090b3adbbe4f9ebfef6d51cd06f98822f171392e810"
+          "sha256": "0f8a8adf154e193a1799902cf41600fc34565440087aca151fa3da3cb5234064"
         }
       ],
       "assessments": [
