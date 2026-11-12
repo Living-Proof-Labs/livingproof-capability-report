@@ -165,7 +165,8 @@ What changes for callers:
 
 ## What the HTML report shows
 
-`--format html` opens with a summary card: the stored success ring (k of n), the
+`--format html` opens with a summary card: the stored success ring, the success
+count and percentage (for example "12 successes, 60%"), the
 mission title when the feature spec has one, and one mark per evaluator result.
 Finding rows appear only when a result's descriptor lists them. The ring is the
 stored rate. A finding that is not in the verdict tier does not change it. Opening
@@ -174,7 +175,8 @@ detail text) and, for the run record, the sections below. Those sections use the
 feature spec (`description`), the run assessment, and descriptor text. A spec
 sentence that restates a plan, such as `description.mission.grading`, is not
 shown: a stock sentence can still say "20 runs" on a 3-trial assessment. The
-acceptance count is the assessment's `required_passes` and `n`. Step names are
+acceptance line is that required count as a percentage of `n`, for example
+"90% required". Step names are
 the spec's `success_criteria` text. The stored Wilson 95% interval, when the
 assessment has one, is muted text in the run detail, not on the ring. Today's
 bundles do not carry a descriptor yet, so the mark uses the fallback name and

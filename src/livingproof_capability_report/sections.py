@@ -12,6 +12,7 @@ import html
 import re
 
 from . import hallway
+from .steps import failure_count, required_percentage, success_count
 
 PASS, FAIL = hallway.PASS, hallway.FAIL
 
@@ -169,10 +170,13 @@ def header(report, summary, description):
         title += f" in the {where}" if world.get("title") else f" on {where}"
     # The stored Wilson interval is not a headline. The run card shows it, when present,
     # as muted text under the success rate.
+    counted = success_count(summary.get("k"), summary.get("n"))
+    required = required_percentage(summary.get("required_passes"), summary.get("n"))
     facts = [
-        f"{summary['k']} of {summary['n']} trials passed; overall {grade}",
-        f"{summary['required_passes']} of {summary['n']} required",
+        f"{counted}; overall {grade}" if counted else None,
+        required,
     ]
+    facts = [fact for fact in facts if fact]
     out = [
         f"<section class='verdict' data-grade='{esc(grade)}'>",
         f"<p class='robot'>{esc(title)}</p>",
@@ -216,10 +220,14 @@ def html_actual(report, summary):
     """Actual line for HTML. Check names are the stored check ids, not a built-in glossary."""
     fs = _dict(stored_run(report, summary).get("failure_summary"))
     if not fs:
-        return hallway._verdict(summary)
+        counted = success_count(summary.get("k"), summary.get("n"))
+        required = required_percentage(summary.get("required_passes"), summary.get("n"))
+        parts = [part for part in (counted, required) if part]
+        return ". ".join(parts) + ("." if parts else "")
     failed = fs.get("failed_trials")
     if not failed:
-        return f"No trial failed: {summary['k']} of {summary['n']} trials passed."
+        counted = success_count(summary.get("k"), summary.get("n"))
+        return f"No trial failed: {counted}." if counted else "No trial failed."
     many = hallway.repeat_name(
         report=report, result_ids=summary.get("result_ids") or [], plural=True
     )
@@ -229,7 +237,7 @@ def html_actual(report, summary):
             continue
         listed = ", ".join(str(s) for s in _list(b.get("seeds")))
         parts.append(f"{b.get('check')} in {b.get('count')} ({many} {listed})")
-    text = f"{failed} of {summary['n']} trials failed"
+    text = failure_count(failed, summary.get("n")) or f"{failed} failures"
     if parts:
         text += "; primary failure: " + "; ".join(parts)
     return text + "."
@@ -369,7 +377,7 @@ def failures(report, summary):
     out = ["<section class='failures'><h3>Why trials failed</h3>"]
     if fs:
         out.append(
-            f"<p>{esc(fs.get('failed_trials'))} of {esc(summary['n'])} trials failed. "
+            f"<p>{esc(failure_count(fs.get('failed_trials'), summary.get('n')) or fs.get('failed_trials'))}. "
             "Each failed trial is counted once, under the primary failure the verifier "
             "stored; its other failures are listed with it below.</p>"
         )
@@ -394,13 +402,15 @@ def failures(report, summary):
             if w.get("observed") is None:
                 value = "none observed"
                 if check == "hallway-exit-reached" and w.get("missing") is not None:
-                    value = f"no exit time in {w['missing']} of {summary['n']} trials"
+                    missed = failure_count(w["missing"], summary.get("n"))
+                    value = f"no exit time, {missed}" if missed else f"no exit time in {w['missing']} trials"
             else:
                 value = f"{num(w['observed'])} {w.get('unit', '')}".strip()
                 if w.get("wall"):
                     value += f" ({hallway._wall(w['wall'])})"
                 if check == "hallway-exit-reached" and w.get("missing"):
-                    value += f"; no exit time in {w['missing']} of {summary['n']} trials"
+                    missed = failure_count(w["missing"], summary.get("n"))
+                    value += f"; no exit time, {missed}" if missed else ""
             lim = [
                 f"{num(limits[k]['value'])} {limits[k].get('unit', '')}".strip()
                 for k in LIMIT_FOR.get(check, ())[:1]

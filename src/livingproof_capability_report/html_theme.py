@@ -1017,8 +1017,10 @@ def grade_badge(k, n, grade, escape):
         return ""
     done = pct == 100
     digits = "100" if done else f"{pct:02d}"
-    label = f"{k} of {n} trials passed"
-    if grade:
+    from .steps import success_count
+
+    label = success_count(k, n) or ""
+    if grade and label:
         label = f"{label}; overall {grade}"
     fill_op = "0" if pct == 0 else "1"
     fill_off = 100 - pct
@@ -1053,7 +1055,7 @@ def grade_badge(k, n, grade, escape):
 <rect x='448' y='620' width='114' height='22' rx='11'/>
 </g>
 </svg>
-<div class='meta'><p class='caption'>{escape(f"{k} of {n} trials passed")}</p>{chip}</div>
+<div class='meta'><p class='caption'>{escape(success_count(k, n) or "")}</p>{chip}</div>
 </div>"""
 
 

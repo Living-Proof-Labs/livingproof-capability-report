@@ -381,15 +381,15 @@ def html_summary(report, bundle, escape):
             f"<dt>{escape(k)}</dt><dd>{escape(v)}</dd>" for k, v in pairs if v not in (None, "")
         )
 
+    from .steps import required_percentage, success_count
+
     parts = []
     for s in report.get("summaries") or []:
         check_grade(s.get("grade"))
         spec = s.get("spec") if isinstance(s.get("spec"), dict) else {}
-        observed = (
-            f"{s['k']} of {s['n']} trials passed; overall {s['grade']}"
-            if s.get("k") is not None and s.get("n") is not None and s.get("grade")
-            else None
-        )
+        counted = success_count(s.get("k"), s.get("n"))
+        observed = f"{counted}; overall {s['grade']}" if counted and s.get("grade") else counted
+        required = required_percentage(s.get("required_passes"), s.get("n"))
         title = " ".join(x for x in (ref(s.get("system")), s.get("grade")) if x)
         parts.append(
             f"<section class='run'><h3>{escape(title or 'Run')}</h3><dl>"
@@ -399,12 +399,7 @@ def html_summary(report, bundle, escape):
                     ("Run", s.get("run_id")),
                     ("Overall status", s.get("grade")),
                     ("Observed", observed),
-                    (
-                        "Threshold",
-                        None
-                        if s.get("required_passes") is None
-                        else f"{s['required_passes']} of {s.get('n', '?')} trials required",
-                    ),
+                    ("Threshold", required),
                     ("Capability", s.get("capability")),
                     (
                         "Spec",

@@ -16,7 +16,7 @@ import re
 from pathlib import Path
 
 from . import html_theme
-from .steps import describe_success
+from .steps import describe_success, success_count
 from .svg_icon import acceptable_icon
 
 FALLBACK_TITLE = "Evaluator"
@@ -418,7 +418,8 @@ def _hero(report, summary):
     else:
         phrase = shown["phrase"]
         face, complete, fill = shown["face"], shown["complete"], shown["fill"]
-        count = f"<p class='count'>{esc(summary.get('k'))} of {esc(summary.get('n'))} trials</p>"
+        counted = success_count(summary.get("k"), summary.get("n"))
+        count = f"<p class='count'>{esc(counted)}</p>" if counted else ""
     grade = summary.get("grade") if isinstance(summary.get("grade"), str) else ""
     status = (
         f"<p class='stored-status'>Stored overall status: {esc(grade)}</p>" if grade else ""
@@ -580,7 +581,7 @@ def render_example_card(
         size=72 if compact else 104,
     )
     if count is None and shown:
-        count = f"{passed} of {total} trials"
+        count = success_count(passed, total)
     views = []
     for item in outputs:
         view = resolve_one(item)

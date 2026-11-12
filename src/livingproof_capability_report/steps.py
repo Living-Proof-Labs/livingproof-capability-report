@@ -343,6 +343,33 @@ def describe_success(passed, total):
     return {"face": face, "phrase": f"{face} success", "complete": complete, "fill": exact}
 
 
+def _counted(count, total, singular):
+    """'{count} successes, 60%'. Never a k-of-n fraction."""
+    shown = describe_success(count, total)
+    if shown is None:
+        return None
+    number = int(count)
+    plural = {"success": "successes", "failure": "failures"}.get(singular, f"{singular}s")
+    word = singular if number == 1 else plural
+    return f"{number} {word}, {shown['face']}"
+
+
+def success_count(passed, total):
+    return _counted(passed, total, "success")
+
+
+def failure_count(failed, total):
+    return _counted(failed, total, "failure")
+
+
+def required_percentage(required, total):
+    """Acceptance as a percentage of the stored trial count."""
+    shown = describe_success(required, total)
+    if shown is None:
+        return None
+    return f"{shown['face']} required"
+
+
 def _catalog(trials, names):
     """Assessed steps. Spec criteria order is the tie-break; the label is the spec text."""
     present = []
@@ -431,11 +458,12 @@ def _acceptance(results, summary):
         "required_passes"
     ):
         return ""
-    needed = esc(first.get("required_passes"))
+    acceptance = required_percentage(first.get("required_passes"), count)
+    if not acceptance:
+        return ""
     return (
         "<p class='plan-note'><strong>Acceptance recorded on this run's plan.</strong> "
-        "<code>required_passes</code> "
-        f"<span class='nowrap'>{needed} of {esc(count)}</span>.</p>"
+        f"<span class='nowrap'>{esc(acceptance)}</span>.</p>"
     )
 
 
@@ -510,7 +538,7 @@ def _article(step, place, tied, close, trials, durations):
         f"<h3 class='step-name'>{esc(step['name'])}"
         f"<span class='colon'>: </span><span class='rate'>{esc(rate)}</span></h3>"
         "<span class='step-meta'>"
-        f"<span class='count'>{esc(step['passed'])} of {esc(step['total'])} trials</span>"
+        f"<span class='count'>{esc(success_count(step['passed'], step['total']))}</span>"
         f"{chip}"
         f"<span class='eval-line'>{esc(eval_line)}</span>"
         "<span class='disclose'><span class='chevron' aria-hidden='true'></span>"
@@ -547,7 +575,8 @@ def _run_cards(report, summary, durations):
     else:
         rate, face, complete, fill = shown["phrase"], shown["face"], shown["complete"], shown["fill"]
     grade = summary.get("grade") or ""
-    count = f"<p class='count'>{esc(k)} of {esc(n)} trials</p>" if k is not None and n is not None else ""
+    counted = success_count(k, n)
+    count = f"<p class='count'>{esc(counted)}</p>" if counted else ""
     status = f"<p class='stored-status'>Stored overall status: {esc(grade)}</p>" if grade else ""
     badge = html_theme.success_badge(face, rate, esc, complete=complete, fill=fill, size=128)
     ranked = _ranked(catalog, trials)

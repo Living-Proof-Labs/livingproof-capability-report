@@ -73,10 +73,10 @@ def test_g1_fixture_step_rates_are_60_65_95_and_100():
         for item in data["description"]["mission"]["success_criteria"]
     }
     order = [
-        (criteria["hallway-lateral-limit"], "60% success", "12 of 20 trials"),
-        (criteria["hallway-wall-contact"], "65% success", "13 of 20 trials"),
-        (criteria["hallway-exit-reached"], "95% success", "19 of 20 trials"),
-        (criteria["hallway-fall"], "100% success", "20 of 20 trials"),
+        (criteria["hallway-lateral-limit"], "60% success", "12 successes, 60%"),
+        (criteria["hallway-wall-contact"], "65% success", "13 successes, 65%"),
+        (criteria["hallway-exit-reached"], "95% success", "19 successes, 95%"),
+        (criteria["hallway-fall"], "100% success", "20 successes, 100%"),
     ]
     positions = []
     for title, rate, count in order:
@@ -91,7 +91,7 @@ def test_g1_fixture_step_rates_are_60_65_95_and_100():
     assert "Stored as complete success for every trial." in upright
     assert "visibility='hidden'" in _step(page, criteria["hallway-lateral-limit"])
     assert "<p class='pct'>60% success</p>" in page
-    assert "12 of 20 trials" in page
+    assert "12 successes, 60%" in page
     assert "Stored overall status: FAIL" in page
 
 
@@ -230,7 +230,7 @@ def test_no_pass_bar_without_required_passes_and_markdown_snapshots_stay():
     assert "k-of-n" not in block
     assert "<p class='pct'>60% success</p>" in block
     full = render(report(bundle("g1")), "html")
-    assert "<span class='nowrap'>18 of 20</span>" in full
+    assert "<span class='nowrap'>90% required</span>" in full
     assert "required_passes" in full
     for name in ("g1", "go1", "t1"):
         markdown = render(report(bundle(name)), "markdown")
@@ -273,7 +273,7 @@ def test_percent_text_is_not_zero_padded_and_a_check_needs_every_trial():
     page = render(stored_report, "html")
     hero = page[page.index("<div class='run-hero'>") : page.index("<h2>Steps, by success")]
     assert "&gt;99% success" in hero
-    assert "199 of 200 trials" in hero
+    assert "199 successes, &gt;99%" in hero
     assert "visibility='visible'" not in hero
     assert "complete success" not in hero
     from livingproof_capability_report.steps import _article
@@ -288,7 +288,7 @@ def test_percent_text_is_not_zero_padded_and_a_check_needs_every_trial():
     }
     partial = _article(step, 1, False, False, [], {})
     assert "&gt;99% success" in partial
-    assert "199 of 200 trials" in partial
+    assert "199 successes, &gt;99%" in partial
     assert "visibility='visible'" not in partial
     assert "Stored as complete success" not in partial
     done = _article({**step, "passed": 20, "total": 20}, 1, False, False, [], {})

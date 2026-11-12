@@ -1,6 +1,7 @@
 """Generic evaluator summary: chrome, ordering, escaping, and sourced details."""
 
 import json
+import re
 from pathlib import Path
 
 from livingproof_capability_report.assessed import report_from_bundle
@@ -190,12 +191,16 @@ def test_g1_shows_one_fallback_mark_and_keeps_the_ring_visible():
     assert "seeds 1 to 20" not in visible
     assert "at least 18 of 20" not in visible
     # The stored assessment acceptance is still the structured fields.
-    assert "18 of 20" in visible
+    assert "90% required" in visible
+    assert "12 successes, 60%" in visible
     details = visible.index("<details class='eval-disclosure'")
     assert "<svg class='success-ring'" in visible[:details]
     assert "Walk the hallway" in visible[:details]
     assert "open" not in visible[details : details + 80]
     assert visible.index("<h2>Steps, by success</h2>") > details
+    card = visible[visible.index("<article class='summary-card'") :]
+    card_text = re.sub(r"<[^>]+>", " ", card)
+    assert not re.search(r"\b\d+ of \d+\b", card_text)
 
 
 def test_detail_values_trace_to_the_spec_and_the_assessment():
@@ -214,8 +219,7 @@ def test_detail_values_trace_to_the_spec_and_the_assessment():
     assert data["results"][0]["provenance"]["limits"]["lateral_limit"]["value"] == 0.49
     for source, value in facts.items():
         assert value in page, source
-    k, n = data["assessment"]["runs"][0]["k"], data["assessment"]["runs"][0]["n"]
-    assert f"{k} of {n} trials" in page
+    assert "12 successes, 60%" in page
     # The spec's grading sentence is stored, and it is not rendered as a fact.
     assert "20 runs" in json.dumps(data["description"])
     assert "20 runs" not in page
@@ -227,5 +231,8 @@ def test_three_trial_run_does_not_show_the_stock_twenty_run_sentence():
     page = _visible(render(report_from_bundle(loaded), "html"))
     for stale in ("20 runs", "seeds 1 to 20", "at least 18 of 20", "18 of 20"):
         assert stale not in page, stale
-    assert "1 of 3 trials" in page
-    assert "3 of 3" in page
+    assert "1 success, 33%" in page
+    assert "100% required" in page
+    card = page[page.index("<article class='summary-card'") :]
+    visible_card = re.sub(r"<[^>]+>", " ", card)
+    assert not re.search(r"\b\d+ of \d+\b", visible_card)

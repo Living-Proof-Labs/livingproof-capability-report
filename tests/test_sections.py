@@ -89,10 +89,10 @@ def test_g1_header_context_failures_and_grid():
     for text in (
         "unitree-g1 · stock 1.1.0 — Walk the hallway in the Open hallway",
         "<strong>FAIL</strong>",
-        "12 of 20 trials passed; overall FAIL",
-        "18 of 20 required",
+        "12 successes, 60%; overall FAIL",
+        "90% required",
         "<strong>Expected:</strong> The robot starts at the hallway entrance",
-        "<strong>Actual:</strong> 8 of 20 trials failed; primary failure: "
+        "<strong>Actual:</strong> 8 failures, 40%; primary failure: "
         "hallway-lateral-limit in 8 (seeds 4, 5, 7, 9, 12, 14, 15, 18).",
     ):
         assert escape(text, quote=False) in verdict or text in verdict, text
@@ -129,12 +129,12 @@ def test_g1_header_context_failures_and_grid():
 
 def test_t1_failures_are_shown_in_full():
     page = top(render(report(bundle("t1")), "html"))
-    assert "0 of 20 trials passed; overall FAIL" in page
+    assert "0 successes, 0%; overall FAIL" in page
     assert "hallway-lateral-limit</td><td>20</td>" in page
     assert page.count("then left the hallway through the right wall") == 20
     assert "&gt; 0.4795 m from the centreline" in page  # stored limit, unrounded
     assert "half its 0.541 m width" in page
-    assert "no exit time in 20 of 20 trials" in page
+    assert "no exit time, 20 failures, 100%" in page
     assert "chip pass" not in page
 
 
@@ -142,7 +142,7 @@ def test_go1_limits_come_from_the_bundle():
     page = top(render(report(bundle("go1")), "html"))
     assert "may drift up to 0.609 m" in page and "half its 0.282 m width" in page
     assert "0.282 + 2 x 0.1" in page  # quadruped clearance, as the verifier stored it
-    assert "15 of 20 trials passed; overall FAIL" in page
+    assert "15 successes, 75%; overall FAIL" in page
 
 
 def test_stored_values_are_shown_not_recomputed():
@@ -175,14 +175,15 @@ def test_older_bundle_without_the_new_fields_still_renders(tmp_path):
     stored = assessed.report_from_bundle(load_bundle(dest / "manifest.json"))
     assert "description" not in stored["source_bundle"]
     page = top(render(stored, "html"))
-    assert "12 of 20 trials passed; overall FAIL" in page
+    assert "12 successes, 60%; overall FAIL" in page
     assert "no scenario description stored in this bundle" not in page
     assert "No resolved limits stored for this run" not in page
     assert "No failure summary stored in this bundle" not in page
     assert "no primary failure stored" not in page
     assert "visual only" not in page
     assert "20 runs" not in page and "seeds 1 to 20" not in page
-    assert "does not pass walk-hallway" in page
+    assert "12 successes, 60%" in page
+    assert "90% required" in page
     for fmt in ("markdown", "table", "csv", "json"):
         render(stored, fmt)
 
@@ -200,7 +201,8 @@ def test_each_new_field_can_be_missing_alone():
         data = copy.deepcopy(base)
         cut(data)
         stored = report(data)
-        for fmt in ("html", "markdown", "table"):
+        assert "0 successes, 0%" in render(stored, "html"), cut
+        for fmt in ("markdown", "table"):
             assert "0 of 20 trials passed" in render(stored, fmt), (cut, fmt)
 
 
