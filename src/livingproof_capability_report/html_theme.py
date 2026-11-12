@@ -520,6 +520,256 @@ pre {
   th, td { padding: 0.7rem 0.7rem; }
 }
 
+/* Scenario-step success rings. The rate bar is the share of successes, not a k-of-n marker. */
+
+.scenario-steps h2 { margin-bottom: 1rem; }
+
+.split { display: grid; gap: 1.1rem; }
+@media (min-width: 800px) {
+  .split { grid-template-columns: 1.15fr 0.85fr; align-items: start; }
+}
+.locked {
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  padding: 1.05rem 1.15rem 1.15rem;
+  min-width: 0;
+}
+.locked h3 {
+  margin: 0 0 0.85rem;
+  font-size: 0.74rem;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.run-hero { display: flex; flex-wrap: wrap; align-items: center; gap: 1.15rem 1.4rem; }
+.run-hero .badge svg { display: block; width: 8rem; height: 8rem; }
+.run-hero .pct {
+  margin: 0;
+  font-size: clamp(1.55rem, 3vw, 2rem);
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+.run-hero .count, .run-hero .stored-status, .confidence {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted);
+}
+.run-hero .count { font-size: 0.85rem; }
+.run-hero .stored-status, .confidence { font-size: 0.78rem; }
+.plan-note {
+  margin: 1.05rem 0 0;
+  padding: 0.7rem 0 0.15rem 0.95rem;
+  border-left: 2px solid var(--border-strong);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  max-width: 36rem;
+}
+.plan-note strong { font-weight: 650; color: var(--text); }
+.success-bar {
+  display: block;
+  height: 0.5rem;
+  margin: 0.85rem 0 0.1rem;
+  max-width: 28rem;
+  background: var(--bg-muted);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.rank-body .success-bar { margin-top: 0.45rem; max-width: 22rem; }
+.success-bar > i {
+  display: block;
+  height: 100%;
+  width: calc(var(--p) * 1%);
+  background: var(--teal);
+  border-radius: 999px;
+}
+.step-intro, .close-note, .sources, .foot {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+.step-intro { margin: -0.4rem 0 0.9rem; }
+.close-note { margin: 0.15rem 0 0.35rem; }
+.sources { margin-top: 0.8rem; font-size: 0.75rem; line-height: 1.5; max-width: 52rem; }
+.sources code { font-size: 0.92em; }
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 0.85rem;
+  margin-top: 1rem;
+  font-size: 0.85rem;
+}
+.step-list { display: grid; }
+.step { border-bottom: 1px solid var(--border); }
+.step:last-of-type { border-bottom: 0; }
+.step-summary {
+  display: grid;
+  grid-template-columns: 2.1rem 5.5rem minmax(0, 1fr);
+  gap: 0.85rem 1rem;
+  align-items: center;
+  padding: 0.95rem 0;
+  cursor: pointer;
+  list-style: none;
+  margin: 0;
+  color: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+}
+.step-summary::-webkit-details-marker, .step-summary::marker { content: ""; }
+.step-summary::after { content: none; float: none; }
+details[open] > .step-summary { margin-bottom: 0; }
+details[open] > .step-summary::after { content: none; }
+.step-summary .badge svg { width: 5.5rem; height: 5.5rem; display: block; }
+.step-name {
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  text-transform: none;
+  color: var(--text);
+}
+.step-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.7rem;
+  margin: 0.3rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+.step-meta .count { margin: 0; font-size: 0.82rem; color: var(--text-muted); }
+.eval-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+.eval-icon { width: 1rem; height: 1rem; flex: none; color: var(--link); }
+.disclose {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+  color: var(--link);
+  font-weight: 650;
+  font-size: 0.78rem;
+}
+.disclose .chevron {
+  display: inline-block;
+  width: 0.42rem;
+  height: 0.42rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+details[open] > .step-summary .chevron { transform: rotate(-135deg) translate(-1px, -1px); }
+.disclose-open { display: none; }
+details[open] > .step-summary .disclose-closed { display: none; }
+details[open] > .step-summary .disclose-open { display: inline; }
+.complete {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.trial-panel { padding: 0 0 1.15rem; min-width: 0; }
+@media (min-width: 801px) {
+  .trial-panel { padding-left: calc(2.1rem + 5.5rem + 2rem); }
+}
+.trial-note { margin: 0 0 0.65rem; color: var(--text-muted); font-size: 0.8rem; }
+.trial-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.trial-table th, .trial-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.55rem 0.7rem;
+  border-bottom: 1px solid var(--border);
+}
+.trial-table thead th {
+  position: static;
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: var(--bg-muted);
+  border-bottom: 1px solid var(--border-strong);
+  white-space: nowrap;
+}
+.trial-table tbody tr:last-child td { border-bottom: 0; }
+.trial-table tbody tr.is-success td {
+  background: color-mix(in srgb, var(--teal) 5%, transparent);
+}
+.trial-table .time-kind, .trial-table .margin-note {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.step-result {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 650;
+  font-size: 0.86rem;
+}
+.step-result-success { color: var(--link); }
+.step-result-success svg { width: 0.85rem; height: 0.85rem; flex: none; }
+.step-result-quiet, .step-result-neutral { color: var(--text-muted); font-weight: 550; }
+.place {
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: -0.03em;
+  color: var(--text-muted);
+}
+.place.tie { font-size: 0.95rem; letter-spacing: 0; }
+.nowrap { white-space: nowrap; }
+
+@media (max-width: 700px) {
+  .run-hero .badge svg { width: 6.25rem; height: 6.25rem; }
+  .step-summary {
+    grid-template-columns: 1.6rem 4.4rem minmax(0, 1fr);
+    gap: 0.55rem 0.7rem;
+    align-items: start;
+  }
+  .step-summary .badge svg { width: 4.4rem; height: 4.4rem; }
+  .step-summary .place { padding-top: 1.15rem; }
+  .step-name { font-size: 0.98rem; }
+  .step-name .colon { display: none; }
+  .step-name .rate { display: block; margin-top: 0.1rem; }
+  .trial-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .trial-table, .trial-table tbody, .trial-table tr, .trial-table td { display: block; width: 100%; }
+  .trial-table tr { padding: 0.7rem 0.15rem; border-bottom: 1px solid var(--border); }
+  .trial-table tbody tr:last-child { border-bottom: 0; }
+  .trial-table td {
+    display: grid;
+    grid-template-columns: 8.2rem minmax(0, 1fr);
+    gap: 0.35rem 0.75rem;
+    padding: 0.15rem 0;
+    border: 0;
+  }
+  .trial-table td::before {
+    content: attr(data-label);
+    font-size: 0.68rem;
+    font-weight: 650;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding-top: 0.15rem;
+  }
+}
+
 @media print {
   :root, html:has(#theme-dark:checked) {
     color-scheme: light;
@@ -617,6 +867,41 @@ def grade_badge(k, n, grade, escape):
 </div>"""
 
 
+def success_badge(percent, label, escape, size=88):
+    """Success ring. 100% is a check. The label is a percentage, not an interval."""
+    pct = 0 if percent is None else max(0, min(100, int(percent)))
+    done = pct == 100
+    digits = "100" if done else f"{pct:02d}"
+    fill_op = "0" if pct == 0 else "1"
+    fill_off = 100 - pct
+    check_vis = "visible" if done else "hidden"
+    check_off = "0" if done else "100"
+    d0, d1 = ("", "") if done else (digits[0], digits[1])
+    pct_vis = "none" if done else "block"
+    return f"""<svg class='success-ring' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024' role='img' aria-label='{escape(label)}' width='{int(size)}' height='{int(size)}'>
+<title>{escape(label)}</title>
+<circle cx='512' cy='512' r='512' fill='#01152D'/>
+<circle cx='{_CX}' cy='{_CY}' r='{_R}' fill='none' stroke='#0B4F4D' stroke-width='42'/>
+<circle cx='{_CX}' cy='{_CY}' r='{_R}' fill='none' stroke='#0E8785' stroke-width='42' stroke-linecap='round' pathLength='100' stroke-dasharray='100 100' stroke-dashoffset='{fill_off}' opacity='{fill_op}' transform='rotate(-90 {_CX} {_CY})'/>
+<path d='M 401 306 L 487.25 392.25 L 635 244.5' fill='none' stroke='#0E8785' stroke-width='47' stroke-linecap='round' stroke-linejoin='round' pathLength='100' stroke-dasharray='100 100' stroke-dashoffset='{check_off}' visibility='{check_vis}'/>
+<g fill='#FFFFFF' font-family='DM Sans, system-ui, sans-serif' font-weight='700' text-anchor='middle' style='display:{pct_vis}' aria-hidden='true'>
+<text x='386.66' y='366' font-size='172'>{d0}</text>
+<text x='510.50' y='366' font-size='172'>{d1}</text>
+<text x='634.34' y='366' font-size='134.16'>%</text>
+</g>
+<g fill='#FFFFFF' stroke='none'>
+<rect x='252' y='509' width='31' height='109' rx='15.5'/>
+<rect x='738' y='509' width='31' height='109' rx='15.5'/>
+</g>
+<rect x='305.625' y='428.25' width='408.75' height='273.25' rx='88.5' fill='none' stroke='#FFFFFF' stroke-width='33'/>
+<g fill='#FFFFFF' stroke='none'>
+<circle cx='427.2' cy='547.9' r='33.2'/>
+<circle cx='591.8' cy='547.9' r='33.2'/>
+<rect x='448' y='620' width='114' height='22' rx='11'/>
+</g>
+</svg>"""
+
+
 _LATIN_EXT = (
     "U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, "
     "U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, "
@@ -680,7 +965,19 @@ def _card(inner, extra="", label=""):
     return f"<div class='{cls}'{attrs}>{inner}</div>"
 
 
-def page(*, title, lede, summary, table, evidence, full, header_badge, headers="", detail=""):
+def page(
+    *,
+    title,
+    lede,
+    summary,
+    table,
+    evidence,
+    full,
+    header_badge,
+    headers="",
+    detail="",
+    steps="",
+):
     """Assemble a self-contained report. Callers keep tested markup snippets intact."""
     table_card = f"<div class='card'><div class='table-wrap'>{table}</div></div>" if table else ""
     return (
@@ -703,6 +1000,7 @@ def page(*, title, lede, summary, table, evidence, full, header_badge, headers="
         f"</div>{header_badge}</div>"
         "</div></header>"
         "<main class='wrap'>"
+        + steps
         + _card(headers)
         + _card(summary)
         + _card(detail, label="Test context")

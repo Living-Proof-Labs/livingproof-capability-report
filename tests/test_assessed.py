@@ -259,10 +259,14 @@ def test_a_malformed_grade_in_a_stored_report_fails_clearly(pair, tmp_path, grad
 
 
 def _html_summary(html):
-    """The HTML before the trial table, and before the collapsed full report."""
-    assert html.index("<section id='summary'>") < html.index("<table") < html.index("<details>")
+    """The summary section, still outside the collapsed lossless report."""
+    start = html.index("<section id='summary'>")
+    end = html.index("</section></div>", start) + len("</section>")
+    lossless = "<details class='lossless'>"
+    assert start < html.index(lossless)
+    assert "<details class='lossless' open" not in html
     assert "<details open" not in html
-    return html[html.index("<section id='summary'>") : html.index("<table")]
+    return html[start:end]
 
 
 def test_html_shows_the_stored_run_summary_above_the_trials(pair):
@@ -278,15 +282,15 @@ def test_html_shows_the_stored_run_summary_above_the_trials(pair):
         "<dt>Overall status</dt><dd>FAIL</dd>",
         "<dt>Observed</dt><dd>12 of 20 trials passed; overall FAIL</dd>",
         "<dt>Threshold</dt><dd>18 of 20 trials required</dd>",
-        "<dt>Wilson 95% (stored)</dt><dd>39–78%</dd>",
         "<dt>Policy</dt><dd>all-required-v1@1.0.0</dd>",
         "<dt>Aggregation</dt><dd>k-of-n-wilson95@1.0.0</dd>",
         "<dt>Assessed by</dt><dd>capability-verifier@",
     ):
         assert text in top, text
-    # The lossless JSON is unchanged, and still only inside <details>.
+    assert "Wilson" not in top
+    # The lossless JSON is unchanged, and still only inside the collapsed report.
     assert render(json.loads(render(stored, "json")), "json") == render(stored, "json")
-    full = html[html.index("<details>") :]
+    full = html[html.index("<details class='lossless'>") :]
     assert html_escape(render(stored, "json").rstrip("\n")) in full
 
 
@@ -310,8 +314,10 @@ def test_html_summary_wording_is_n_of_m_without_pass_on_a_fail(pair):
     manifest.write_text(json.dumps(data))
     top = _html_summary(render(assessed.report_from_bundle(load_bundle(manifest)), "html"))
     assert "<dt>Observed</dt><dd>3 of 7 trials passed; overall FAIL</dd>" in top
-    assert "<dt>Wilson 95% (stored)</dt><dd>10–71%</dd>" in top
+    assert "Wilson" not in top
     assert "PASS" not in top.replace("all-required", "")
+    page = render(assessed.report_from_bundle(load_bundle(manifest)), "html")
+    assert "95% confidence range for the success rate: 10–71%" in page
 
 
 def test_html_summary_escapes_every_value(pair):

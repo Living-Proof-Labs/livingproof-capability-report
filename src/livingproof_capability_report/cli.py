@@ -140,11 +140,16 @@ def render_command(
 
     stored = decode(report_file.read_text(encoding="utf-8"))
     require_decisions(stored)
+    observations = None
     if assessed.is_assessed(stored):
+        loaded = load_bundle(report_file)
         stored = assessed.report_from_bundle(
-            load_bundle(report_file),
+            loaded,
             [decode(p.read_text(encoding="utf-8")) for p in evidence_links] or None,
         )
+        from .steps import durations_by_result
+
+        observations = durations_by_result(loaded["bundle"], report_file.parent)
     elif evidence_links:
         raise ValueError("--evidence-links applies to a bundle 1.1.0 manifest only")
     selected_format = format or ("html" if output is not None else "table")
@@ -153,6 +158,7 @@ def render_command(
         stored,
         selected_format,
         links if any(links.values()) else None,
+        observations=observations,
     )
     if output is None:
         click.echo(content, nl=False, color=False)
