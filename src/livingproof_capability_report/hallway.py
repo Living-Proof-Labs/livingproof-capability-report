@@ -140,12 +140,14 @@ def _interval(w):
 
 
 def _verdict(run):
+    from .steps import success_summary
+
     subject = f"{_robot(run['system'])} {'passes' if run['grade'] == PASS else 'does not pass'}"
     if run["grade"] in (PASS, FAIL):
-        return (
-            f"{subject} {run['spec']['capability']}: {run['k']} of {run['n']} trials passed, "
-            f"{run['required_passes']} needed."
+        summary = success_summary(
+            run.get("k"), run.get("n"), run.get("grade"), run.get("required_passes")
         )
+        return f"{subject} {run['spec']['capability']}: {summary}"
     return f"{_robot(run['system'])} cannot be graded on {run['spec']['capability']}: {_label(run['grade'], 'summary grade')}."
 
 
@@ -169,15 +171,19 @@ def markdown(report, links=None):
             lines += [""] + [
                 f"**Actual · {_robot(s['system'])}:** {sections.actual(report, s)}" for s in runs
             ]
+        from .steps import required_percentage, success_count
+
         lines += [
             "",
-            "| Robot · configuration | Grade | Passed | 95% interval | Needs |",
-            "|---|---|---|---|---|",
+            "| Robot · configuration | Grade | Passed | Needs |",
+            "|---|---|---|---|",
         ]
         for s in runs:
+            passed = success_count(s.get("k"), s.get("n")) or "—"
+            needs = required_percentage(s.get("required_passes"), s.get("n")) or "—"
             lines.append(
-                f"| {_robot(s['system'])} {s['system']['version']} | **{_label(s['grade'], 'summary grade')}** | "
-                f"{s['k']}/{s['n']} | {_interval(s['wilson95'])} | {s['required_passes']} |"
+                f"| {_robot(s['system'])} {s['system']['version']} | "
+                f"**{_label(s['grade'], 'summary grade')}** | {passed} | {needs} |"
             )
         for s in runs:
             sample = results[s["result_ids"][0]]

@@ -370,6 +370,28 @@ def required_percentage(required, total):
     return f"{shown['face']} required"
 
 
+def success_summary(passed, total, grade=None, required=None):
+    """'12 successes, 60%; overall FAIL. 90% required.'
+
+    The percentage words come from ``success_count`` and ``required_percentage``.
+    A trial total of zero, or a count that is not a number, adds no percentage.
+    """
+    counted = success_count(passed, total)
+    needed = required_percentage(required, total)
+    if counted and grade:
+        observed = f"{counted}; overall {grade}"
+    elif counted:
+        observed = counted
+    elif grade:
+        observed = f"overall {grade}"
+    else:
+        observed = None
+    parts = [part for part in (observed, needed) if part]
+    if not parts:
+        return ""
+    return ". ".join(parts) + "."
+
+
 def _catalog(trials, names):
     """Assessed steps. Spec criteria order is the tie-break; the label is the spec text."""
     present = []

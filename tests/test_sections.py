@@ -12,6 +12,7 @@ import copy
 import gzip
 import json
 import os
+import re
 import shutil
 from html import escape
 from pathlib import Path
@@ -19,7 +20,7 @@ from pathlib import Path
 import pytest
 
 from livingproof_capability_report import assessed
-from livingproof_capability_report.core import load_bundle, render
+from livingproof_capability_report.core import digest, load_bundle, render
 
 HERE = Path(__file__).parent
 ROBOTS = HERE / "fixtures/robots"
@@ -203,22 +204,75 @@ def test_each_new_field_can_be_missing_alone():
         stored = report(data)
         assert "0 successes, 0%" in render(stored, "html"), cut
         for fmt in ("markdown", "table"):
-            assert "0 of 20 trials passed" in render(stored, fmt), (cut, fmt)
+            text = render(stored, fmt)
+            assert "0 successes, 0%" in text, (cut, fmt)
+            assert "0 of 20" not in text, (cut, fmt)
 
 
 def test_terminal_wording():
     text = render(report(bundle("g1")), "table")
-    assert (
-        "Run unitree-g1/stock: 12 of 20 trials passed; overall FAIL. 18 of 20 required; "
-        "95% interval 39–78% (Wilson, stored [0.3866, 0.7812])" in text
-    )
-    assert "  Actual: 8 of 20 trials failed; primary failure: lateral limit exceeded in 8" in text
+    assert "Run unitree-g1/stock: 12 successes, 60%; overall FAIL. 90% required." in text
+    assert "  Actual: 8 failures, 40%; primary failure: lateral limit exceeded in 8" in text
+    assert "95% interval" not in text
     assert "12/20 PASS" not in text
 
 
 def test_markdown_header_is_above_the_table():
     md = render(report(bundle("t1")), "markdown")
     assert md.index("**Expected:**") < md.index("| Robot · configuration |")
-    assert md.index("**Actual · booster-t1 · stock:** 20 of 20 trials failed") < md.index("|---|")
+    assert md.index("**Actual · booster-t1 · stock:** 20 failures, 100%") < md.index("|---|")
     assert "- 20× lateral limit exceeded (primary) — seeds 1, 2," in md
     assert "visual only (no collision)" in md
+
+
+_OF_N = re.compile(r"\b\d+ of \d+\b")
+
+
+def test_text_summaries_never_say_k_of_n_or_quote_the_interval(tmp_path):
+    """Markdown, the terminal run line and the PR-comment body share these words.
+
+    A rounded 100% is not written as complete success. Zero trials add no percentage.
+    """
+    from livingproof_capability_report import comment
+    from test_hallway import example, stored
+
+    reports = [report(bundle(name)) for name in ("g1", "go1", "t1")]
+    reports.append(stored(example(tmp_path)))
+    for stored_report in reports:
+        markdown = render(stored_report, "markdown")
+        terminal = render(stored_report, "table")
+        posted = comment.body([markdown])
+        for label, text in (("markdown", markdown), ("terminal", terminal), ("comment", posted)):
+            assert _OF_N.search(text) is None, label
+        assert "95% interval" not in markdown
+        assert "95% interval" not in terminal
+
+    almost = report(bundle("g1"))
+    almost["summaries"][0]["k"] = 199
+    almost["summaries"][0]["n"] = 200
+    for fmt in ("markdown", "table"):
+        text = render(almost, fmt)
+        assert "199 successes, >99%" in text
+        assert "199 successes, 100%" not in text
+        assert _OF_N.search(text) is None
+
+    zero = report(bundle("g1"))
+    summary = zero["summaries"][0]
+    summary["k"] = 0
+    summary["n"] = 0
+    summary["required_passes"] = 0
+    for fmt in ("markdown", "table"):
+        text = render(zero, fmt)
+        assert _OF_N.search(text) is None, fmt
+        assert "95% interval" not in text
+        assert "%" not in text
+        assert "0 successes" not in text
+
+    clear = report(bundle("g1"))
+    run = clear["source_bundle"]["assessment"]["runs"][0]
+    run["failure_summary"]["failed_trials"] = 0
+    clear["source_bundle_sha256"] = digest(clear["source_bundle"])
+    for fmt in ("markdown", "table"):
+        text = render(clear, fmt)
+        assert "No trial failed: 12 successes, 60%." in text
+        assert _OF_N.search(text) is None

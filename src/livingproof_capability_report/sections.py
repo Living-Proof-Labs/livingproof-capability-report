@@ -249,7 +249,8 @@ def actual(report, summary):
         return hallway._verdict(summary)
     failed = fs.get("failed_trials")
     if not failed:
-        return f"No trial failed: {summary['k']} of {summary['n']} trials passed."
+        counted = success_count(summary.get("k"), summary.get("n"))
+        return f"No trial failed: {counted}." if counted else "No trial failed."
     ids = summary.get("result_ids") or []
     parts = []
     for b in _list(fs.get("by_primary")):
@@ -261,7 +262,7 @@ def actual(report, summary):
             f"{hallway.WHAT.get(b['check'], b['check'])} in {b['count']} "
             f"({name} {', '.join(str(s) for s in listed)})"
         )
-    text = f"{failed} of {summary['n']} trials failed"
+    text = failure_count(failed, summary.get("n")) or f"{failed} failures"
     if parts:
         text += "; primary failure: " + "; ".join(parts)
     return text + "."
