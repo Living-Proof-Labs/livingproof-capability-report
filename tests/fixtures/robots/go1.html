@@ -1051,8 +1051,14 @@ details[open] > .step-summary .disclose-open { display: inline; }
 .eval-panel h4 { margin: 0 0 0.2rem; font-size: 0.95rem; }
 .eval-panel .purpose, .eval-panel .more { margin: 0.35rem 0 0; }
 .eval-panel .meta, .descriptor-note { margin: 0.2rem 0 0; color: var(--text-muted); font-size: 0.86rem; }
-.callout-ok, .callout-headline { margin: 0.75rem 0 0; }
-.callout-headline { font-weight: 650; }
+.callout-ok, .callout-headline, .assessment-failure { margin: 0.75rem 0 0; }
+.callout-headline, .assessment-failure { font-weight: 650; }
+.assessment-failure {
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.5rem;
+  border-left: 3px solid var(--speak);
+  background: color-mix(in srgb, var(--speak) 8%, var(--surface));
+}
 .callouts { list-style: none; margin: 0.55rem 0 0; padding: 0; display: grid; gap: 0.35rem; }
 .callouts li {
   display: flex;
@@ -1110,7 +1116,7 @@ details[open] > .step-summary .disclose-open { display: inline; }
 <circle cx='591.8' cy='547.9' r='33.2'/>
 <rect x='448' y='620' width='114' height='22' rx='11'/>
 </g>
-</svg></div><div><h2 class='run-title'>Walk the hallway</h2><p class='pct'>75% success</p><p class='count'>15 successes, 75%</p><p class='stored-status'>Stored overall status: FAIL</p></div></div><div class='evaluators'><p class='evaluators-label'>Evaluators</p><div class='eval-row' style='--eval-count:1'><details class='eval-disclosure' name='run-evaluators' style='--col:1'><summary class='eval-mark is-speaking'><span class='eval-face' role='img' aria-label='Evaluator'><span class='eval-fallback' aria-hidden='true'>E</span></span><span class='eval-name eval-name-full'>Evaluator</span></summary><div class='eval-panel'><h4>Evaluator</h4><p class='meta'>Tier: Verdict</p><p class='descriptor-note'>No descriptor was stored with this result. The mark uses the evaluator display name and icon, or the letter mark when that icon cannot be shown.</p></div><div class='stored-run' style='--eval-count:1'><div class='card scenario-steps'><h2>This run</h2><div class='split'><div><div class='run-hero'><div class='badge'><svg class='success-ring' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024' role='img' aria-label='75% success' width='128' height='128'>
+</svg></div><div><h2 class='run-title'>Walk the hallway</h2><p class='pct'>75% success</p><p class='count'>15 successes, 75%</p><p class='stored-status'>Stored overall status: FAIL</p></div></div><p class='assessment-failure'>15 successes, 75%; overall FAIL.</p><div class='evaluators'><p class='evaluators-label'>Evaluators</p><div class='eval-row' style='--eval-count:1'><details class='eval-disclosure' name='run-evaluators' style='--col:1'><summary class='eval-mark is-speaking'><span class='eval-face' role='img' aria-label='Evaluator'><span class='eval-fallback' aria-hidden='true'>E</span></span><span class='eval-name eval-name-full'>Evaluator</span></summary><div class='eval-panel'><h4>Evaluator</h4><p class='descriptor-note'>No evaluator descriptor was stored.</p></div><div class='stored-run' style='--eval-count:1'><div class='card scenario-steps'><h2>This run</h2><div class='split'><div><div class='run-hero'><div class='badge'><svg class='success-ring' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024' role='img' aria-label='75% success' width='128' height='128'>
 <title>75% success</title>
 <circle cx='512' cy='512' r='512' fill='#01152D'/>
 <circle cx='510.5' cy='505.75' r='381.1' fill='none' stroke='#0B4F4D' stroke-width='42'/>

@@ -35,10 +35,7 @@ TIER_LABEL = {
     "observation": "Observation",
 }
 RESULT_FORMAT = re.compile(r"^livingproof-evaluator-result/1\.\d+\.\d+$")
-NO_DESCRIPTOR = (
-    "No descriptor was stored with this result. The mark uses the evaluator "
-    "display name and icon, or the letter mark when that icon cannot be shown."
-)
+NO_DESCRIPTOR = "No evaluator descriptor was stored."
 _CHECK = (
     "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' aria-hidden='true' "
     "focusable='false'><path d='M3.2 8.2 6.1 11.1 12.8 4.4' fill='none' stroke='currentColor' "
@@ -100,6 +97,8 @@ def grouping_headline(n, m):
 
 
 def all_quiet_line(n):
+    if n == 1:
+        return "1 evaluator is satisfied."
     return f"All {n} evaluators are satisfied."
 
 
@@ -399,10 +398,30 @@ def _run_failed(summary):
 
 
 def _fallback_view():
-    view = resolve_one({"tier": "verdict"})
+    view = resolve_one({})
     view["missing_descriptor"] = True
+    view["tier"] = ""
     view["identity"] = FALLBACK_TITLE
     return view
+
+
+def assessment_failure_line(summary):
+    """One plain callout from the assessment when it failed and no finding was stored.
+
+    Successes and the percentage only. No fraction, and no reason the assessment
+    did not record.
+    """
+    if not _run_failed(summary):
+        return ""
+    counted = success_count(summary.get("k"), summary.get("n"))
+    grade = summary.get("grade") if isinstance(summary.get("grade"), str) else ""
+    if counted and grade and grade != "PASS":
+        return f"{counted}; overall {grade}."
+    if counted:
+        return f"{counted}."
+    if grade and grade != "PASS":
+        return f"Overall {grade}."
+    return ""
 
 
 def _hero(report, summary):
@@ -627,7 +646,13 @@ def summary_front(report, stored_body, evidence_results=None):
         view["findings"] or view.get("force_speaking") for view in views
     )
     heroes = "".join(_hero(report, summary) for summary in runs)
+    failure = ""
+    if not any(view["findings"] for view in views):
+        lines = [assessment_failure_line(summary) for summary in runs]
+        failure = "".join(
+            f"<p class='assessment-failure'>{esc(line)}</p>" for line in lines if line
+        )
     return (
         "<article class='summary-card'>"
-        f"{heroes}{render_marks(views, group='run-evaluators', quiet=quiet)}</article>"
+        f"{heroes}{failure}{render_marks(views, group='run-evaluators', quiet=quiet)}</article>"
     )

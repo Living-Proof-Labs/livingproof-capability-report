@@ -969,8 +969,14 @@ details[open] > .step-summary .disclose-open { display: inline; }
 .eval-panel h4 { margin: 0 0 0.2rem; font-size: 0.95rem; }
 .eval-panel .purpose, .eval-panel .more { margin: 0.35rem 0 0; }
 .eval-panel .meta, .descriptor-note { margin: 0.2rem 0 0; color: var(--text-muted); font-size: 0.86rem; }
-.callout-ok, .callout-headline { margin: 0.75rem 0 0; }
-.callout-headline { font-weight: 650; }
+.callout-ok, .callout-headline, .assessment-failure { margin: 0.75rem 0 0; }
+.callout-headline, .assessment-failure { font-weight: 650; }
+.assessment-failure {
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.5rem;
+  border-left: 3px solid var(--speak);
+  background: color-mix(in srgb, var(--speak) 8%, var(--surface));
+}
 .callouts { list-style: none; margin: 0.55rem 0 0; padding: 0; display: grid; gap: 0.35rem; }
 .callouts li {
   display: flex;

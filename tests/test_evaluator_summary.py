@@ -123,8 +123,9 @@ def test_ordering_headline_plurals_and_all_quiet():
     assert grouping_headline(1, 1) == "1 evaluator reported 1 problem"
     assert grouping_headline(3, 3) == "3 evaluators reported 3 problems"
     assert grouping_headline(5, 7) == "5 evaluators reported 7 problems"
-    assert all_quiet_line(1) == "All 1 evaluators are satisfied."
+    assert all_quiet_line(1) == "1 evaluator is satisfied."
     assert all_quiet_line(5) == "All 5 evaluators are satisfied."
+    assert "evaluators" not in all_quiet_line(1)
     views = views_from(
         [
             _output("beta", tier="observation", findings=[{"text": "b0"}, {"text": "b1", "tier": "verdict"}]),
@@ -150,6 +151,9 @@ def test_ordering_headline_plurals_and_all_quiet():
         ]
     )
     assert "3 evaluators reported 4 problems" in three
+    quiet_one = _card(outputs=[_output("Alpha", tier="verdict")])
+    assert "1 evaluator is satisfied." in quiet_one
+    assert "evaluators are satisfied" not in quiet_one
     quiet = _card(outputs=[_output("Alpha", tier="verdict"), _output("Beta", tier="review")])
     assert "All 2 evaluators are satisfied." in quiet
     assert "evaluators reported" not in quiet
@@ -180,10 +184,29 @@ def test_non_verdict_findings_do_not_change_the_stored_ring():
     assert ring(verdict) != ring(quiet)
 
 
-def test_g1_shows_one_fallback_mark_and_keeps_the_ring_visible():
+def test_a_failing_assessment_with_no_findings_is_called_out_and_a_pass_is_not():
+    failed = _visible(render(report(bundle("g1")), "html"))
+    line = "<p class='assessment-failure'>12 successes, 60%; overall FAIL.</p>"
+    assert line in failed
+    assert failed.index(line) < failed.index("<details class='eval-disclosure'")
+    panel = failed[failed.index("<div class='eval-panel'>") : failed.index("<div class='stored-run'")]
+    assert "Tier:" not in panel
+    assert panel.count("No evaluator descriptor was stored.") == 1
+    assert "display name" not in panel and "icon" not in panel
+    passed = report(bundle("g1"))
+    passed["summaries"][0]["grade"] = "PASS"
+    passed["summaries"][0]["k"] = passed["summaries"][0]["n"]
+    quiet = render(passed, "html")
+    assert "<p class='assessment-failure'" not in quiet
+    assert "1 evaluator is satisfied." in quiet
+    assert "evaluators are satisfied" not in quiet
     page = render(report(bundle("g1")), "html")
     visible = _visible(page)
-    assert "No descriptor was stored with this result." in visible
+    assert "No evaluator descriptor was stored." in visible
+    assert "display name" not in visible[visible.index("<div class='eval-panel'>"):visible.index("<div class='stored-run'")]
+    panel = visible[visible.index("<div class='eval-panel'>") : visible.index("<div class='stored-run'")]
+    assert "Tier:" not in panel
+    assert "icon" not in panel
     assert "eval-name-full'>Evaluator</span>" in visible
     assert ">E</span>" in visible
     assert "Scenario evaluator" not in visible
@@ -196,6 +219,7 @@ def test_g1_shows_one_fallback_mark_and_keeps_the_ring_visible():
     details = visible.index("<details class='eval-disclosure'")
     assert "<svg class='success-ring'" in visible[:details]
     assert "Walk the hallway" in visible[:details]
+    assert "<p class='assessment-failure'>12 successes, 60%; overall FAIL.</p>" in visible[:details]
     assert "open" not in visible[details : details + 80]
     assert visible.index("<h2>Steps, by success</h2>") > details
     card = visible[visible.index("<article class='summary-card'") :]
