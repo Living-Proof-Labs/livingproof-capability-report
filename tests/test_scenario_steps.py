@@ -23,6 +23,14 @@ ROBOTS = Path(__file__).parent / "fixtures/robots"
 LOSSLESS = "<details class='lossless'>"
 
 
+def _label(name, check):
+    data = bundle(name)
+    for item in data["description"]["mission"]["success_criteria"]:
+        if item["evaluator"] == check:
+            return item["text"]
+    raise KeyError(check)
+
+
 def _visible(page):
     return page[: page.index(LOSSLESS)]
 
@@ -59,11 +67,16 @@ def test_g1_fixture_step_rates_are_60_65_95_and_100():
         "hallway-fall": (20, 100),
     }
     page = _visible(render(report(data), "html"))
+    # Step names are the feature spec's success_criteria text, not a built-in glossary.
+    criteria = {
+        item["evaluator"]: item["text"]
+        for item in data["description"]["mission"]["success_criteria"]
+    }
     order = [
-        ("Stay near centreline", "60% success", "12 of 20 trials"),
-        ("No wall contact", "65% success", "13 of 20 trials"),
-        ("Exit reached", "95% success", "19 of 20 trials"),
-        ("Stay upright", "100% success", "20 of 20 trials"),
+        (criteria["hallway-lateral-limit"], "60% success", "12 successes, 60%"),
+        (criteria["hallway-wall-contact"], "65% success", "13 successes, 65%"),
+        (criteria["hallway-exit-reached"], "95% success", "19 successes, 95%"),
+        (criteria["hallway-fall"], "100% success", "20 successes, 100%"),
     ]
     positions = []
     for title, rate, count in order:
@@ -73,12 +86,12 @@ def test_g1_fixture_step_rates_are_60_65_95_and_100():
         positions.append(page.index(title))
         assert f"aria-label='{title}: {rate}'" in block
     assert positions == sorted(positions)
-    upright = _step(page, "Stay upright")
+    upright = _step(page, criteria["hallway-fall"])
     assert "visibility='visible'" in upright
     assert "Stored as complete success for every trial." in upright
-    assert "visibility='hidden'" in _step(page, "Stay near centreline")
+    assert "visibility='hidden'" in _step(page, criteria["hallway-lateral-limit"])
     assert "<p class='pct'>60% success</p>" in page
-    assert "12 of 20 trials" in page
+    assert "12 successes, 60%" in page
     assert "Stored overall status: FAIL" in page
 
 
@@ -109,25 +122,36 @@ def test_headline_and_rings_do_not_carry_the_wilson_interval():
 
 def test_close_labels_mark_steps_one_trial_apart_and_ties_share_a_place():
     page = _visible(render(report(bundle("g1")), "html"))
-    for title in ("Stay near centreline", "No wall contact", "Exit reached", "Stay upright"):
+    data = bundle("g1")
+    criteria = {
+        item["evaluator"]: item["text"]
+        for item in data["description"]["mission"]["success_criteria"]
+    }
+    for title in criteria.values():
         assert "<span class='chip chip-muted'>Close</span>" in _step(page, title)
+    lateral, wall = criteria["hallway-lateral-limit"], criteria["hallway-wall-contact"]
+    exit_name, fall = criteria["hallway-exit-reached"], criteria["hallway-fall"]
     assert (
-        "Stay near centreline and No wall contact are one trial apart, "
+        f"{lateral} and {wall} are one trial apart, "
         "so they are not distinguishable from each other." in page
     )
     assert (
-        "Exit reached and Stay upright are one trial apart, "
+        f"{exit_name} and {fall} are one trial apart, "
         "so they are not distinguishable from each other." in page
     )
     small = _visible(render(stored(), "html"))
     assert "<span class='place tie'>=3</span>" in small
-    assert "required_passes" not in small[small.index("scenario-steps") : small.index("Scenario steps")]
+    assert "required_passes" not in small[small.index("scenario-steps") : small.index("Steps, by success")]
     assert "pass bar" not in small.lower()
 
 
 def test_wall_margin_is_clearance_on_a_pass_and_penetration_on_a_fail():
     page = render(report(bundle("g1")), "html")
-    wall = _step(page, "No wall contact")
+    criteria = {
+        item["evaluator"]: item["text"]
+        for item in bundle("g1")["description"]["mission"]["success_criteria"]
+    }
+    wall = _step(page, criteria["hallway-wall-contact"])
     capped = _row(wall, 1)
     real = _row(wall, 6)
     failed = _row(wall, 4)
@@ -143,11 +167,11 @@ def test_wall_margin_is_clearance_on_a_pass_and_penetration_on_a_fail():
     assert "10.62 s" in failed and "First contact" in failed
     assert "Not met" in failed
     assert "2 contacts (limit 0)" in failed
-    lateral = _row(_step(page, "Stay near centreline"), 1)
+    lateral = _row(_step(page, criteria["hallway-lateral-limit"]), 1)
     assert "0.2535 m (limit 0.49 m)" in lateral
     assert "Largest offset" in lateral
     assert "Success" in lateral
-    missed = _row(_step(page, "Exit reached"), 15)
+    missed = _row(_step(page, criteria["hallway-exit-reached"]), 15)
     assert "Not met" in missed
     assert "— (limit 27.00 s)" in missed
     assert "10.44 s" in missed
@@ -158,7 +182,7 @@ def test_trial_number_is_the_stored_seed_and_duration_comes_from_the_observation
     data = bundle("g1")
     data["results"][0]["original_result"]["seed"] = 41
     page = render(report(data), "html")
-    assert "<td data-label='Trial'>41</td>" in _step(page, "Stay near centreline")
+    assert "<td data-label='Trial'>41</td>" in _step(page, _label("g1", "hallway-lateral-limit"))
     assert page.count("<td data-label='Duration'><span class='cell-value'>—</span>") == 80
     durations = durations_by_result(
         __import__("json").loads((BUNDLE / "manifest.json").read_text()), BUNDLE
@@ -186,7 +210,7 @@ def test_insufficient_evidence_is_named_and_values_are_escaped():
     data["results"][0]["assessments"][1]["status"] = "INSUFFICIENT_EVIDENCE"
     data["results"][0]["assessments"][1]["evaluator"] = "hallway-lateral-limit"
     page = render(report(data), "html")
-    row = _row(_step(page, "Stay near centreline"), 1)
+    row = _row(_step(page, _label("g1", "hallway-lateral-limit")), 1)
     assert "Insufficient evidence" in row
     assert "Not met" not in row
     data = bundle("g1")
@@ -206,7 +230,7 @@ def test_no_pass_bar_without_required_passes_and_markdown_snapshots_stay():
     assert "k-of-n" not in block
     assert "<p class='pct'>60% success</p>" in block
     full = render(report(bundle("g1")), "html")
-    assert "<span class='nowrap'>18 of 20</span>" in full
+    assert "<span class='nowrap'>90% required</span>" in full
     assert "required_passes" in full
     for name in ("g1", "go1", "t1"):
         markdown = render(report(bundle(name)), "markdown")
@@ -247,9 +271,9 @@ def test_percent_text_is_not_zero_padded_and_a_check_needs_every_trial():
     stored_report["summaries"][0]["k"] = 199
     stored_report["summaries"][0]["n"] = 200
     page = render(stored_report, "html")
-    hero = page[page.index("<div class='run-hero'>") : page.index("<h2>Scenario steps")]
+    hero = page[page.index("<div class='run-hero'>") : page.index("<h2>Steps, by success")]
     assert "&gt;99% success" in hero
-    assert "199 of 200 trials" in hero
+    assert "199 successes, &gt;99%" in hero
     assert "visibility='visible'" not in hero
     assert "complete success" not in hero
     from livingproof_capability_report.steps import _article
@@ -264,7 +288,7 @@ def test_percent_text_is_not_zero_padded_and_a_check_needs_every_trial():
     }
     partial = _article(step, 1, False, False, [], {})
     assert "&gt;99% success" in partial
-    assert "199 of 200 trials" in partial
+    assert "199 successes, &gt;99%" in partial
     assert "visibility='visible'" not in partial
     assert "Stored as complete success" not in partial
     done = _article({**step, "passed": 20, "total": 20}, 1, False, False, [], {})
@@ -272,7 +296,7 @@ def test_percent_text_is_not_zero_padded_and_a_check_needs_every_trial():
     assert "visibility='visible'" in done
     assert "Stored as complete success for every trial." in done
     # A rendered 0% step does not pad the ring.
-    quiet = _step(render(report(bundle("t1")), "html"), "Stay near centreline")
+    quiet = _step(render(report(bundle("t1")), "html"), _label("t1", "hallway-lateral-limit"))
     assert ">0%</text>" in quiet and ">00</text>" not in quiet and "0% success" in quiet
 
 
@@ -281,7 +305,7 @@ def test_a_missing_step_says_not_assessed_and_depth_omits_an_unknown_time():
     data["results"][0]["assessments"] = [
         item for item in data["results"][0]["assessments"] if item["evaluator"] != "hallway-lateral-limit"
     ]
-    missing = _row(_step(render(report(data), "html"), "Stay near centreline"), 1)
+    missing = _row(_step(render(report(data), "html"), _label("g1", "hallway-lateral-limit")), 1)
     assert "Not assessed" in missing
     assert "step-result-neutral'>—</span>" not in missing
     data = bundle("g1")
@@ -293,7 +317,7 @@ def test_a_missing_step_says_not_assessed_and_depth_omits_an_unknown_time():
                 continue
             for failure in assessment["provenance"]["details"].get("failures") or []:
                 failure.pop("t", None)
-    untimed = _row(_step(render(report(data), "html"), "No wall contact"), 4)
+    untimed = _row(_step(render(report(data), "html"), _label("g1", "hallway-wall-contact")), 4)
     assert "Deepest penetration 0.0361 m" in untimed
     assert "at 11.10 s" not in untimed
     assert "First contact" in untimed

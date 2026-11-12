@@ -12,6 +12,7 @@ import html
 import re
 
 from . import hallway
+from .steps import failure_count, required_percentage, success_count
 
 PASS, FAIL = hallway.PASS, hallway.FAIL
 
@@ -22,20 +23,7 @@ LIMIT_FOR = {
     "hallway-fall": ("fall_height",),
     "hallway-wall-contact": (),
 }
-CHECK_NAME = {
-    "hallway-exit-reached": "Exit reached",
-    "hallway-lateral-limit": "Lateral drift",
-    "hallway-wall-contact": "Wall contact",
-    "hallway-fall": "Base height (fall)",
-}
 WORST = {"max": "highest", "min": "lowest"}
-WALLS_NOTE = (
-    "The hallway walls in the MuJoCo simulation are visual only: they do not collide, so "
-    "a robot that drifts can pass into and through them. Touching or entering a wall is a "
-    "failed check. From livingproof-sim-mujoco v1.8.3, a trial ends "
-    "<code>left_hallway</code> as soon as any robot part reaches past a wall's outer face, "
-    "and that trial does not reach the exit."
-)
 WALLS_SHORT = (
     "MuJoCo hallway walls are visual only (no collision); from sim-mujoco v1.8.3 a trial "
     "ends left_hallway past a wall's outer face"
@@ -182,10 +170,13 @@ def header(report, summary, description):
         title += f" in the {where}" if world.get("title") else f" on {where}"
     # The stored Wilson interval is not a headline. The run card shows it, when present,
     # as muted text under the success rate.
+    counted = success_count(summary.get("k"), summary.get("n"))
+    required = required_percentage(summary.get("required_passes"), summary.get("n"))
     facts = [
-        f"{summary['k']} of {summary['n']} trials passed; overall {grade}",
-        f"{summary['required_passes']} of {summary['n']} required",
+        f"{counted}; overall {grade}" if counted else None,
+        required,
     ]
+    facts = [fact for fact in facts if fact]
     out = [
         f"<section class='verdict' data-grade='{esc(grade)}'>",
         f"<p class='robot'>{esc(title)}</p>",
@@ -194,12 +185,7 @@ def header(report, summary, description):
     ]
     if mission.get("description"):
         out.append(f"<p><strong>Expected:</strong> {esc(mission['description'])}</p>")
-    else:
-        out.append(
-            "<p class='muted'>Expected: no scenario description stored in this bundle "
-            "(capability-verifier v1.12.0 with specs v1.9.0 adds it).</p>"
-        )
-    out.append(f"<p><strong>Actual:</strong> {esc(actual(report, summary))}</p>")
+    out.append(f"<p><strong>Actual:</strong> {esc(html_actual(report, summary))}</p>")
     out.append("</section>")
     return "".join(out)
 
@@ -228,6 +214,33 @@ def why_lines(report, summary):
             f"(primary) — {many} {seeds}{tail}"
         )
     return lines
+
+
+def html_actual(report, summary):
+    """Actual line for HTML. Check names are the stored check ids, not a built-in glossary."""
+    fs = _dict(stored_run(report, summary).get("failure_summary"))
+    if not fs:
+        counted = success_count(summary.get("k"), summary.get("n"))
+        required = required_percentage(summary.get("required_passes"), summary.get("n"))
+        parts = [part for part in (counted, required) if part]
+        return ". ".join(parts) + ("." if parts else "")
+    failed = fs.get("failed_trials")
+    if not failed:
+        counted = success_count(summary.get("k"), summary.get("n"))
+        return f"No trial failed: {counted}." if counted else "No trial failed."
+    many = hallway.repeat_name(
+        report=report, result_ids=summary.get("result_ids") or [], plural=True
+    )
+    parts = []
+    for b in _list(fs.get("by_primary")):
+        if not isinstance(b, dict):
+            continue
+        listed = ", ".join(str(s) for s in _list(b.get("seeds")))
+        parts.append(f"{b.get('check')} in {b.get('count')} ({many} {listed})")
+    text = failure_count(failed, summary.get("n")) or f"{failed} failures"
+    if parts:
+        text += "; primary failure: " + "; ".join(parts)
+    return text + "."
 
 
 def actual(report, summary):
@@ -261,12 +274,6 @@ def context(report, summary, description):
     limits = run_limits(report, summary)
     robot = hallway._robot(summary["system"])
     out = ["<section class='context'><h3>Test context</h3>"]
-    if not d:
-        out.append(
-            "<p class='muted'>This bundle carries no scenario description "
-            "(capability-verifier v1.12.0 with specs v1.9.0 adds the mission and world "
-            "text).</p>"
-        )
     items = []
     if mission:
         items.append(
@@ -293,8 +300,9 @@ def context(report, summary, description):
     out += [f"<dt>{esc(k)}</dt><dd>{esc(v)}</dd>" for k, v in items if v]
     if criteria:
         out.append("<dt>Success criteria</dt><dd><ul>" + "".join(criteria) + "</ul></dd>")
-    if mission.get("grading"):
-        out.append(f"<dt>Grading</dt><dd>{esc(mission['grading'])}</dd>")
+    # mission.grading is free prose and can describe a different plan than this
+    # assessment (the stock sentence says 20 runs on a 3-trial run). The
+    # acceptance count is the assessment's required_passes and n.
     if mission.get("time_limit_explained"):
         out.append(f"<dt>Time limit</dt><dd>{esc(mission['time_limit_explained'])}</dd>")
     if world:
@@ -350,14 +358,7 @@ def context(report, summary, description):
             "<dt>Limits</dt><dd class='muted'>The trials in this run store different "
             "limits; see each result's provenance.limits in the full report.</dd>"
         )
-    else:
-        out.append(
-            "<dt>Limits</dt><dd class='muted'>No resolved limits stored for this run "
-            "(capability-verifier v1.12.0 adds provenance.limits).</dd>"
-        )
     out.append("</dl>")
-    if visual_walls(report, summary):
-        out.append(f"<p class='note'><strong>Note:</strong> {WALLS_NOTE}</p>")
     out.append("</section>")
     return "".join(out)
 
@@ -371,15 +372,17 @@ def failures(report, summary):
     ids = summary.get("result_ids") or []
     many = hallway.repeat_name(report=report, result_ids=ids, plural=True, capital=True)
     one = hallway.repeat_name(report=report, result_ids=ids, capital=True)
+    if not fs and not worst:
+        return ""
     out = ["<section class='failures'><h3>Why trials failed</h3>"]
     if fs:
         out.append(
-            f"<p>{esc(fs.get('failed_trials'))} of {esc(summary['n'])} trials failed. "
+            f"<p>{esc(failure_count(fs.get('failed_trials'), summary.get('n')) or fs.get('failed_trials'))}. "
             "Each failed trial is counted once, under the primary failure the verifier "
             "stored; its other failures are listed with it below.</p>"
         )
         rows = [
-            f"<tr><td>{esc(hallway.WHAT.get(b.get('check'), b.get('check')))}</td>"
+            f"<tr><td>{esc(b.get('check'))}</td>"
             f"<td>{esc(b.get('count'))}</td>"
             f"<td>{esc(', '.join(str(s) for s in _list(b.get('seeds'))))}</td></tr>"
             for b in _list(fs.get("by_primary"))
@@ -390,12 +393,6 @@ def failures(report, summary):
                 "<table class='primary'><thead><tr><th>Primary failure</th><th>Trials</th>"
                 f"<th>{many}</th></tr></thead><tbody>" + "".join(rows) + "</tbody></table>"
             )
-    else:
-        out.append(
-            "<p class='muted'>No failure summary stored in this bundle "
-            "(capability-verifier v1.12.0 adds failure_summary); each trial's stored "
-            "reason is shown in the trial grid.</p>"
-        )
     if worst:
         rows = []
         for w in worst:
@@ -405,22 +402,22 @@ def failures(report, summary):
             if w.get("observed") is None:
                 value = "none observed"
                 if check == "hallway-exit-reached" and w.get("missing") is not None:
-                    value = f"no exit time in {w['missing']} of {summary['n']} trials"
+                    missed = failure_count(w["missing"], summary.get("n"))
+                    value = f"no exit time, {missed}" if missed else f"no exit time in {w['missing']} trials"
             else:
                 value = f"{num(w['observed'])} {w.get('unit', '')}".strip()
                 if w.get("wall"):
                     value += f" ({hallway._wall(w['wall'])})"
                 if check == "hallway-exit-reached" and w.get("missing"):
-                    value += f"; no exit time in {w['missing']} of {summary['n']} trials"
+                    missed = failure_count(w["missing"], summary.get("n"))
+                    value += f"; no exit time, {missed}" if missed else ""
             lim = [
                 f"{num(limits[k]['value'])} {limits[k].get('unit', '')}".strip()
                 for k in LIMIT_FOR.get(check, ())[:1]
                 if isinstance(limits.get(k), dict) and "value" in limits[k]
             ]
-            if check == "hallway-wall-contact":
-                lim = ["any contact fails"]
             rows.append(
-                f"<tr><td>{esc(CHECK_NAME.get(check, check))}</td>"
+                f"<tr><td>{esc(check)}</td>"
                 f"<td>{esc(WORST.get(w.get('worst'), w.get('worst', '')))}</td><td>{esc(value)}</td>"
                 f"<td>{esc('' if w.get('seed') is None else w['seed'])}</td>"
                 f"<td>{esc('' if w.get('t') is None else hallway._fmt(w['t']) + ' s')}</td>"
@@ -471,7 +468,7 @@ def trials(report, summary):
             then = ("then " + "; then ".join(rest)) if rest else ""
         else:
             main = decision.get("reason", "")
-            then = "no primary failure stored (capability-verifier v1.12.0 adds it)"
+            then = ""
         rows.append(
             f"<tr><td title='{esc(rid)}'>{esc(label)}</td><td>{esc(decision.get('status', ''))}</td>"
             f"<td>{esc(main)}<br><span class='muted'>{esc(then)}</span></td>"

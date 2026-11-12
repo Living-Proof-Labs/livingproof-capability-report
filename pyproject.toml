@@ -9,7 +9,12 @@ description = "Portable evidence and capability reports for Living Proof Labs"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
-dependencies = ["livingproof-common==1.0.0", "click>=8.1,<9", "jsonschema>=4.10,<5"]
+dependencies = [
+    "livingproof-common==1.0.0",
+    "click>=8.1,<9",
+    "jsonschema>=4.10,<5",
+    "defusedxml>=0.7.1,<1",
+]
 
 [project.scripts]
 livingproof-capability-report = "livingproof_capability_report.cli:report"

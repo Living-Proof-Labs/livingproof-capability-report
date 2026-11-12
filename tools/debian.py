@@ -40,7 +40,7 @@ Version: {version}
 Section: python
 Priority: optional
 Architecture: all
-Depends: python3-livingproof-common (= 1.0.0), python3 (>= 3.11), python3-click (>= 8.1), python3-jsonschema (>= 4.10)
+Depends: python3-livingproof-common (= 1.0.0), python3 (>= 3.11), python3-click (>= 8.1), python3-jsonschema (>= 4.10), python3-defusedxml (>= 0.7.1)
 Maintainer: Living Proof Labs <rivet@rollerbot.ai>
 Description: Portable capability reports using distribution-managed Python dependencies
 """)

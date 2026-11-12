@@ -21,8 +21,8 @@ No server, simulator, source checkout or Task installation is needed by consumer
 Download the wheel or Debian package and `SHA256SUMS` from
 [Releases](https://github.com/Living-Proof-Labs/livingproof-capability-report/releases).
 The Debian package is `Architecture: all`: it ships only pure-Python reporter
-files and metadata. Apt installs architecture-appropriate `python3-click` and
-`python3-jsonschema` dependencies. All files are managed by dpkg; no pip writes
+files and metadata. Apt installs architecture-appropriate `python3-click`,
+`python3-jsonschema`, and `python3-defusedxml` dependencies. All files are managed by dpkg; no pip writes
 into system Python, private interpreter, native wheel or vendored virtual
 environment is included. The native support matrix is documented below.
 
@@ -165,18 +165,22 @@ What changes for callers:
 
 ## What the HTML report shows
 
-`--format html` opens with the run's success rate and one ring per scenario step (the
-share of trials whose stored assessment passed), then a **Summary** section above the
-trial table. The rings state a percentage. The stored Wilson 95% interval is not shown
-in the headline or on a ring. When a run carries one, it appears once as muted text
-under that run's success rate ("95% confidence range for the success rate"). For each
-stored run summary the Summary lists the robot (system and version), run id, overall
-status (the stored grade), observed k/N PASS, the threshold when `required_passes` is
-present ("18 of 20 trials required"), the capability, the spec (tag, revision, commit)
-and the environment. A **Provenance** list follows: the
-grading policy (for example `Policy: all-required-v1@1.0.0`), the grade revision, the
-aggregation and assessment format of a 1.1.0 bundle, the producer that assessed it
-(id@version and commit) and the bundle schema version.
+`--format html` opens with a summary card: the stored success ring, the success
+count and percentage (for example "12 successes, 60%"), the
+mission title when the feature spec has one, and one mark per evaluator result.
+Finding rows appear only when a result's descriptor lists them. The ring is the
+stored rate. A finding that is not in the verdict tier does not change it. Opening
+a mark shows that result's descriptor (title, version, purpose, source, tier, and
+detail text) and, for the run record, the sections below. Those sections use the
+feature spec (`description`), the run assessment, and descriptor text. A spec
+sentence that restates a plan, such as `description.mission.grading`, is not
+shown: a stock sentence can still say "20 runs" on a 3-trial assessment. The
+acceptance line is that required count as a percentage of `n`, for example
+"90% required". Step names are
+the spec's `success_criteria` text. The stored Wilson 95% interval, when the
+assessment has one, is muted text in the run detail, not on the ring. Today's
+bundles do not carry a descriptor yet, so the mark uses the fallback name and
+the letter disc and says so.
 
 Every value is read from the stored report and its source bundle and HTML-escaped;
 nothing is regraded or recomputed, and a field the report does not carry is left out.
