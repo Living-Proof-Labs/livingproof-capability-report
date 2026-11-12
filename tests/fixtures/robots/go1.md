@@ -1,5 +1,5 @@
 <!-- livingproof-verification -->
-## walk-hallway@0.1.0 · N=20 · 0.50 m/s · pass bar 18/20 · `verification.lock.json @ 2fe5d4f`
+## walk-hallway@0.1.0 · N=20 · 0.50 m/s · pass bar 90% · `verification.lock.json @ 2fe5d4f`
 
 unitree-go1 · playground does not pass walk-hallway: 15 successes, 75%; overall FAIL. 90% required.
 

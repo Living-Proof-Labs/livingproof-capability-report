@@ -43,7 +43,7 @@ def test_markdown_follows_arts_layout(tmp_path):
     assert lines[0] == "<!-- livingproof-verification -->"  # 1: stable marker
     assert "draft" not in md.lower()
     assert lines[1] == (
-        "## walk-hallway@0.1.0 · N=20 · 0.50 m/s · pass bar 18/20 · "
+        "## walk-hallway@0.1.0 · N=20 · 0.50 m/s · pass bar 90% · "
         "`verification.lock.json @ abcdef1`"
     )  # 2: header
     assert "| Robot · configuration | Grade | Passed | Needs |" in md  # 3

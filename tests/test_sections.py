@@ -265,8 +265,15 @@ def test_text_summaries_never_say_k_of_n_or_quote_the_interval(tmp_path):
         text = render(zero, fmt)
         assert _OF_N.search(text) is None, fmt
         assert "95% interval" not in text
-        assert "%" not in text
         assert "0 successes" not in text
+        # The assessment has no rate. The plan header may still state its own bar.
+        if fmt == "markdown":
+            verdict = next(line for line in text.splitlines() if "walk-hallway:" in line)
+            assert "%" not in verdict
+            assert "| — | — |" in text
+        else:
+            run_line = next(line for line in text.splitlines() if line.startswith("Run "))
+            assert "%" not in run_line
 
     clear = report(bundle("g1"))
     run = clear["source_bundle"]["assessment"]["runs"][0]

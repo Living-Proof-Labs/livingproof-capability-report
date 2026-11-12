@@ -291,6 +291,8 @@ def markdown(report, links=None):
 
 def canonical_plan(result):
     """Header: scenario, N, command speed, pass bar and the lock it came from."""
+    from .steps import required_percentage
+
     prov = result["provenance"]
     plan = prov.get("plan") or {}
     spec = result["spec"]
@@ -301,7 +303,10 @@ def canonical_plan(result):
     if "command_speed" in plan:
         parts.append(f"{_fmt(plan['command_speed'])} m/s")
     if "required_passes" in plan:
-        parts.append(f"pass bar {plan['required_passes']}/{count}")
+        # "90% required" from the shared helper; the header already says pass bar.
+        acceptance = required_percentage(plan.get("required_passes"), count)
+        if acceptance:
+            parts.append(f"pass bar {acceptance.removesuffix(' required')}")
     lock = prov.get("lock")
     if isinstance(lock, dict) and isinstance(lock.get("sha256"), str):
         parts.append(f"`{lock.get('path', 'verification.lock.json')} @ {lock['sha256'][:7]}`")

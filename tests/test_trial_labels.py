@@ -64,6 +64,7 @@ def test_repeat_name_uses_index_or_a_trials_dict_not_the_seed_number():
 def test_plan_count_renders_for_a_trials_dict():
     result = stored()["source_bundle"]["results"][0]
     assert hallway.canonical_plan(result) == "walk-hallway@0.1.0 · N=3 · 0.50 m/s"
+    assert "pass bar" not in hallway.canonical_plan(result)
     copied = {
         **result,
         "provenance": {
@@ -72,8 +73,17 @@ def test_plan_count_renders_for_a_trials_dict():
         },
     }
     assert hallway.canonical_plan(copied) == (
-        "walk-hallway@0.1.0 · N=3 · 0.50 m/s · pass bar 3/3"
+        "walk-hallway@0.1.0 · N=3 · 0.50 m/s · pass bar 100%"
     )
+    uncomputable = {
+        **result,
+        "provenance": {
+            **result["provenance"],
+            "plan": {**result["provenance"]["plan"], "required_passes": 3, "trials": 0},
+        },
+    }
+    assert hallway.canonical_plan(uncomputable) == "walk-hallway@0.1.0 · N=0 · 0.50 m/s"
+    assert "pass bar" not in hallway.canonical_plan(uncomputable)
 
 
 def test_evidence_2_report_says_trial_and_keeps_seed_contracts():
