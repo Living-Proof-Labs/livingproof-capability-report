@@ -140,12 +140,14 @@ def _interval(w):
 
 
 def _verdict(run):
+    from .steps import success_summary
+
     subject = f"{_robot(run['system'])} {'passes' if run['grade'] == PASS else 'does not pass'}"
     if run["grade"] in (PASS, FAIL):
-        return (
-            f"{subject} {run['spec']['capability']}: {run['k']} of {run['n']} trials passed, "
-            f"{run['required_passes']} needed."
+        summary = success_summary(
+            run.get("k"), run.get("n"), run.get("grade"), run.get("required_passes")
         )
+        return f"{subject} {run['spec']['capability']}: {summary}"
     return f"{_robot(run['system'])} cannot be graded on {run['spec']['capability']}: {_label(run['grade'], 'summary grade')}."
 
 
@@ -169,15 +171,19 @@ def markdown(report, links=None):
             lines += [""] + [
                 f"**Actual · {_robot(s['system'])}:** {sections.actual(report, s)}" for s in runs
             ]
+        from .steps import required_percentage, success_count
+
         lines += [
             "",
-            "| Robot · configuration | Grade | Passed | 95% interval | Needs |",
-            "|---|---|---|---|---|",
+            "| Robot · configuration | Grade | Passed | Needs |",
+            "|---|---|---|---|",
         ]
         for s in runs:
+            passed = success_count(s.get("k"), s.get("n")) or "—"
+            needs = required_percentage(s.get("required_passes"), s.get("n")) or "—"
             lines.append(
-                f"| {_robot(s['system'])} {s['system']['version']} | **{_label(s['grade'], 'summary grade')}** | "
-                f"{s['k']}/{s['n']} | {_interval(s['wilson95'])} | {s['required_passes']} |"
+                f"| {_robot(s['system'])} {s['system']['version']} | "
+                f"**{_label(s['grade'], 'summary grade')}** | {passed} | {needs} |"
             )
         for s in runs:
             sample = results[s["result_ids"][0]]
@@ -285,6 +291,8 @@ def markdown(report, links=None):
 
 def canonical_plan(result):
     """Header: scenario, N, command speed, pass bar and the lock it came from."""
+    from .steps import required_percentage
+
     prov = result["provenance"]
     plan = prov.get("plan") or {}
     spec = result["spec"]
@@ -295,7 +303,10 @@ def canonical_plan(result):
     if "command_speed" in plan:
         parts.append(f"{_fmt(plan['command_speed'])} m/s")
     if "required_passes" in plan:
-        parts.append(f"pass bar {plan['required_passes']}/{count}")
+        # "90% required" from the shared helper; the header already says pass bar.
+        acceptance = required_percentage(plan.get("required_passes"), count)
+        if acceptance:
+            parts.append(f"pass bar {acceptance.removesuffix(' required')}")
     lock = prov.get("lock")
     if isinstance(lock, dict) and isinstance(lock.get("sha256"), str):
         parts.append(f"`{lock.get('path', 'verification.lock.json')} @ {lock['sha256'][:7]}`")

@@ -1,15 +1,15 @@
 <!-- livingproof-verification -->
-## walk-hallway@0.1.0 · N=20 · 0.50 m/s · pass bar 18/20 · `verification.lock.json @ 2fe5d4f`
+## walk-hallway@0.1.0 · N=20 · 0.50 m/s · pass bar 90% · `verification.lock.json @ 2fe5d4f`
 
-unitree-go1 · playground does not pass walk-hallway: 15 of 20 trials passed, 18 needed.
+unitree-go1 · playground does not pass walk-hallway: 15 successes, 75%; overall FAIL. 90% required.
 
 **Expected:** The robot starts at the hallway entrance and is commanded to walk straight ahead at 0.5 m/s. It must reach the exit, 5.5 m along the route, within 27 s, staying upright, never touching either wall, and staying within its lateral limit of the centreline.
 
-**Actual · unitree-go1 · playground:** 5 of 20 trials failed; primary failure: lateral limit exceeded in 5 (seeds 1, 3, 9, 16, 20).
+**Actual · unitree-go1 · playground:** 5 failures, 25%; primary failure: lateral limit exceeded in 5 (seeds 1, 3, 9, 16, 20).
 
-| Robot · configuration | Grade | Passed | 95% interval | Needs |
-|---|---|---|---|---|
-| unitree-go1 · playground 1.0.0 | **❌ FAIL** | 15/20 | 53–89% | 18 |
+| Robot · configuration | Grade | Passed | Needs |
+|---|---|---|---|
+| unitree-go1 · playground 1.0.0 | **❌ FAIL** | 15 successes, 75% | 90% required |
 
 **Why runs failed · unitree-go1 · playground**
 - 5× lateral limit exceeded (primary) — seeds 1, 3, 9, 16, 20 — worst 0.7282 m (seed 16)

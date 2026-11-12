@@ -43,13 +43,15 @@ def test_markdown_follows_arts_layout(tmp_path):
     assert lines[0] == "<!-- livingproof-verification -->"  # 1: stable marker
     assert "draft" not in md.lower()
     assert lines[1] == (
-        "## walk-hallway@0.1.0 · N=20 · 0.50 m/s · pass bar 18/20 · "
+        "## walk-hallway@0.1.0 · N=20 · 0.50 m/s · pass bar 90% · "
         "`verification.lock.json @ abcdef1`"
     )  # 2: header
-    assert "| Robot · configuration | Grade | Passed | 95% interval | Needs |" in md  # 3
-    assert "| unitree-g1 · stock 1.1.0 | **❌ FAIL** | 12/20 | 39–78% | 18 |" in md
+    assert "| Robot · configuration | Grade | Passed | Needs |" in md  # 3
+    assert "95% interval" not in md
+    assert "| unitree-g1 · stock 1.1.0 | **❌ FAIL** | 12 successes, 60% | 90% required |" in md
     assert (
-        "unitree-g1 · stock does not pass walk-hallway: 12 of 20 trials passed, 18 needed." in md
+        "unitree-g1 · stock does not pass walk-hallway: "
+        "12 successes, 60%; overall FAIL. 90% required." in md
     )  # 4
     # 5: each failing seed once, under its first failure. Seed 7 touched the wall at 4.50 s
     # before crossing the lateral limit at 10.26 s, so it counts as a wall contact.

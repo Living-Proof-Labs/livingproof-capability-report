@@ -200,15 +200,15 @@ def render(report, format="json", links=None, *, observations=None, evaluator_re
     if format == "table":
         text = terminal_table(rows, aggregate(bundle["results"]))
         from . import sections
+        from .steps import success_summary
 
         details = []
         for s in report.get("summaries", []):
-            details.append(
-                f"Run {s['system']['id']}: {s['k']} of {s['n']} trials passed; overall "
-                f"{s['grade']}. {s['required_passes']} of {s['n']} required; 95% interval "
-                f"{hallway._interval(s['wilson95'])} (Wilson, stored "
-                f"[{s['wilson95'][0]:.4f}, {s['wilson95'][1]:.4f}])"
+            summary = success_summary(
+                s.get("k"), s.get("n"), s.get("grade"), s.get("required_passes")
             )
+            line = f"Run {s['system']['id']}:"
+            details.append(f"{line} {summary}" if summary else line)
             if sections.stored_run(report, s).get("failure_summary"):
                 details.append("  Actual: " + sections.actual(report, s))
         details += [
