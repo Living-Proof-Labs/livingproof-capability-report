@@ -8,6 +8,7 @@ The SIL Open Font License travels with those bytes.
 """
 
 import base64
+import html
 from importlib.resources import files
 
 CSS = """
@@ -187,6 +188,16 @@ a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visibl
   font-weight: 600;
   color: var(--teal-bright);
 }
+
+.run-history { margin: -0.85rem 0 1.35rem; }
+
+.masthead .run-history a {
+  color: var(--header-text);
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.masthead .run-history a:hover { color: var(--teal-bright); }
 
 .theme {
   position: relative;
@@ -482,6 +493,35 @@ tbody tr:hover td { background: color-mix(in srgb, var(--bg-muted) 70%, transpar
   padding: 0.65rem 0.85rem;
   border-radius: 0.55rem;
   background: var(--bg-muted);
+}
+
+.evidence li.is-kept {
+  color: var(--chip-pass-fg);
+  background: var(--chip-pass-bg);
+}
+
+.evidence-kept-note,
+.evidence-kept {
+  color: var(--chip-pass-fg);
+  font-weight: 650;
+}
+
+.evidence-kept-note { margin: 0 0 0.9rem; }
+
+.evidence-kept { margin: 0.15rem 0 0; }
+
+.evidence-why {
+  margin: 0.25rem 0 0;
+  color: var(--text-muted);
+}
+
+.evidence-video video {
+  display: block;
+  width: 100%;
+  max-width: 40rem;
+  margin-top: 0.55rem;
+  border-radius: 0.55rem;
+  background: var(--navy);
 }
 
 details summary {
@@ -1183,6 +1223,15 @@ def body_markup(*, steps, headers, summary, detail, table, evidence, full):
     )
 
 
+def history_markup(history):
+    """The caller-supplied run-history slot. Empty when the caller passed nothing."""
+    if not history:
+        return ""
+    href = html.escape(history["href"], quote=True)
+    label = html.escape(history["label"], quote=True)
+    return f"<nav class='run-history' aria-label='{label}'><a href='{href}'>{label}</a></nav>"
+
+
 def page(
     *,
     title,
@@ -1195,6 +1244,7 @@ def page(
     headers="",
     detail="",
     steps="",
+    history="",
 ):
     """Assemble a self-contained report. Callers keep tested markup snippets intact."""
     return (
@@ -1211,6 +1261,7 @@ def page(
         "<label><input type='radio' name='theme' id='theme-light' value='light'> Light</label>"
         "<label><input type='radio' name='theme' id='theme-dark' value='dark'> Dark</label>"
         "</fieldset></div>"
+        f"{history}"
         "<div class='hero'><div>"
         f"<h1>{title}</h1>"
         f"<p class='lede'>{lede}</p>"

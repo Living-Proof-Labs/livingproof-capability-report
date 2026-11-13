@@ -270,6 +270,16 @@ a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visibl
   color: var(--teal-bright);
 }
 
+.run-history { margin: -0.85rem 0 1.35rem; }
+
+.masthead .run-history a {
+  color: var(--header-text);
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.masthead .run-history a:hover { color: var(--teal-bright); }
+
 .theme {
   position: relative;
   display: flex;
@@ -564,6 +574,35 @@ tbody tr:hover td { background: color-mix(in srgb, var(--bg-muted) 70%, transpar
   padding: 0.65rem 0.85rem;
   border-radius: 0.55rem;
   background: var(--bg-muted);
+}
+
+.evidence li.is-kept {
+  color: var(--chip-pass-fg);
+  background: var(--chip-pass-bg);
+}
+
+.evidence-kept-note,
+.evidence-kept {
+  color: var(--chip-pass-fg);
+  font-weight: 650;
+}
+
+.evidence-kept-note { margin: 0 0 0.9rem; }
+
+.evidence-kept { margin: 0.15rem 0 0; }
+
+.evidence-why {
+  margin: 0.25rem 0 0;
+  color: var(--text-muted);
+}
+
+.evidence-video video {
+  display: block;
+  width: 100%;
+  max-width: 40rem;
+  margin-top: 0.55rem;
+  border-radius: 0.55rem;
+  background: var(--navy);
 }
 
 details summary {

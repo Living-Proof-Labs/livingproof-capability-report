@@ -133,7 +133,8 @@ def test_evidence_links_stored_in_report_and_rendered(tmp_path):
     assert f"- ▶️ seed 1 (pass): [video]({ART}3) · [MCAP]({ART}4)" in md
     assert md.index("seed 4 (fail)") < md.index("seed 1 (pass)") < md.index("<details>")
     page = render(report, "html")
-    assert f"<a href='{ART}5'>seed 4 (FAIL): video</a>" in page
+    assert "seed 4 (FAIL): video" in page
+    assert ART not in page and "artifact" not in page.lower()
     assert json.loads(render(report, "json"))["evidence_links"] == links
 
 

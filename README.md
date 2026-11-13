@@ -184,8 +184,10 @@ the letter disc and says so.
 
 Every value is read from the stored report and its source bundle and HTML-escaped;
 nothing is regraded or recomputed, and a field the report does not carry is left out.
-The trial table (Result, Catalog, Revision, Environment, Status, Reason) follows, and the
-lossless JSON stays unchanged inside the collapsed `<details>` block. `--format table`
+The trial table (Result, Catalog, Revision, Environment, Status, Reason) follows.
+The collapsed `<details>` block embeds the stored JSON. Addresses that point at a
+GitHub Actions artifact are left out of that public copy; `report.json` still keeps
+them. `--format table`
 prints the policy and grade revision as trailing lines; `--format csv` adds `policy` and
 `grade_revision` columns only when the decisions carry `assessment_details`.
 
@@ -412,19 +414,52 @@ rendered markdown as one pull-request comment under `<!-- livingproof-capability
 updating that comment in place on later runs. It uses `GITHUB_TOKEN` (needs
 `pull-requests: write`) and the REST API directly; `--dry-run` posts nothing.
 
-`render MANIFEST --evidence-links FILE` (repeatable; bundle 1.1.0 manifest only) stores CI
+`render MANIFEST --evidence-links FILE` (repeatable; bundle 1.1.0 manifest only) stores
 evidence links in the report under `evidence_links`, outside the source bundle, so no
-digest or grade changes:
+digest or grade changes. This file is the one caller input for evidence paths:
 
 ```json
 {"run": "https://github.com/OWNER/REPO/actions/runs/1",
- "links": [{"label": "evidence", "url": "https://...", "kind": "artifact"},
-           {"label": "video", "url": "https://...", "kind": "video", "seed": 1, "status": "PASS"}]}
+ "links": [
+   {"label": "logs", "path": "evidence/logs.txt", "kind": "log"},
+   {"label": "MCAP", "path": "evidence/seed-01.mcap", "kind": "mcap", "seed": 1, "status": "PASS"},
+   {"label": "video", "path": "evidence/seed-01.mp4", "poster": "evidence/seed-01.jpg",
+    "why": "Typical pass", "kind": "video", "seed": 1, "status": "PASS"},
+   {"label": "coverage", "path": "evidence/coverage.txt", "kind": "note"},
+   {"label": "video", "path": "evidence/seed-04.mp4", "kind": "video",
+    "seed": 4, "status": "FAIL", "expired": true}]}
 ```
 
-Kinds are `artifact`, `video` and `mcap`; URLs must be https. Entries with an empty URL (an
-upload that was skipped) are dropped. Markdown shows an **Evidence:** row and one line per
-linked trial; HTML lists them under Evidence. Rendering refuses a per-trial link whose status
-disagrees with the stored decision for that seed. The PR comment is the rendered
-`report.md`, so it carries the same links. capability-verifier's walk-hallway workflow
-writes the links file from its `media` job (run URL, MCAP and per-seed video artifacts).
+`path` is a relative site path (or a site-root path such as `/runs/current/evidence/log.txt`).
+The public page copies that string into `href` or, for a live video, into the player
+`src`. It is not joined to a hidden base and it is not rewritten. `poster` and `why`
+are optional and appear only when present; the reporter does not choose which videos
+to feature and does not write a coverage sentence of its own. Kinds are `log`, `mcap`,
+`video`, `note` and `artifact`. An optional https `url` is kept in `report.json`. When
+that url is a GitHub Actions artifact address, the public page does not show it or the
+word artifact. Entries with an empty URL, no path and no expired flag are dropped.
+
+Set `"expired": true` on a file the site has pruned. The page then shows a
+success-framed state, `Evidence kept for N days`, and does not link or play that file.
+Pass the same `N` the site uses to prune, once, with `--evidence-retention N`. The
+reporter has no default and will not render an expired file without it. The same value
+is the note on live evidence. For example, `--evidence-retention 7` reads "Evidence
+kept for 7 days" and `--evidence-retention 30` reads "Evidence kept for 30 days".
+
+`--history-href` and `--history-label` add one navigation slot on the HTML page, so the
+styled report can be published with no wrapper around it. Href is a relative site path
+or an https URL, rendered exactly. Omit both and the page has no slot; the reporter
+does not invent a link. Supplying only one of them is an error.
+
+```
+livingproof-capability-report render bundle/manifest.json --format html -o report.html \
+  --evidence-links links.json --evidence-retention 7 \
+  --history-href ../ --history-label "Run history"
+```
+
+These three flags also apply when rendering a saved `report.json` to HTML, except
+`--evidence-links`, which still applies only while reading a bundle 1.1.0 manifest.
+Absent flags keep the previous render, except that a public page no longer shows a
+GitHub Actions artifact address. Markdown still lists a stored https url when no
+`path` was supplied, so an existing links file keeps its pull-request text. Rendering
+refuses a per-trial link whose status disagrees with the stored decision for that seed.

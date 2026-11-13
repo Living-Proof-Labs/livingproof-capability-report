@@ -114,11 +114,49 @@ def validate_command(manifest):
     "evidence_links",
     multiple=True,
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
-    help="Bundle 1.1.0 input only: JSON file of CI run, artifact and per-trial media links.",
+    help=(
+        "Bundle 1.1.0 input only: JSON file of evidence links. "
+        "Each link may set path to a relative site path, rendered exactly on the public page. "
+        "Set expired true when the site has pruned that file. "
+        "An optional https url is kept in report.json and is omitted from the public page "
+        "when it is a GitHub Actions artifact address. Kinds: artifact, video, mcap, log, note."
+    ),
+)
+@click.option(
+    "--history-href",
+    default=None,
+    help=(
+        "HTML only: address for the run-history slot, a relative site path or https URL. "
+        "Rendered only together with --history-label. Omit both to render no slot."
+    ),
+)
+@click.option(
+    "--history-label",
+    default=None,
+    help="HTML only: visible label for the run-history slot. Required with --history-href.",
+)
+@click.option(
+    "--evidence-retention",
+    type=int,
+    default=None,
+    help=(
+        "Days the site keeps evidence files. The public page says "
+        "'Evidence kept for N days' using this value, for live and pruned files. "
+        "Required when a link is expired. There is no default."
+    ),
 )
 @errors
 def render_command(
-    report_file, format, output, report_url, clips_url, lock_diff_url, evidence_links
+    report_file,
+    format,
+    output,
+    report_url,
+    clips_url,
+    lock_diff_url,
+    evidence_links,
+    history_href,
+    history_label,
+    evidence_retention,
 ):
     """Render stored decisions; never grade or overwrite existing files.
 
@@ -157,12 +195,17 @@ def render_command(
         raise ValueError("--evidence-links applies to a bundle 1.1.0 manifest only")
     selected_format = format or ("html" if output is not None else "table")
     links = {"report": report_url, "clips": clips_url, "lock_diff": lock_diff_url}
+    history = None
+    if history_href or history_label:
+        history = {"href": history_href, "label": history_label}
     content = render(
         stored,
         selected_format,
         links if any(links.values()) else None,
         observations=observations,
         evaluator_results=evaluator_results,
+        history=history,
+        retention=evidence_retention,
     )
     if output is None:
         click.echo(content, nl=False, color=False)
