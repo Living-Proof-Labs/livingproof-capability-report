@@ -9,7 +9,10 @@ The single trial sets ``compared`` false the way ``test_one_trial_is_not_a_compa
 does. ``seeded`` is that commit's 1.0.0 plan from ``test_plan_comes_from_evidence``
 (seeds 4, 5 and 6, seed 5 past the lateral limit). ``pause`` is
 ``Aggregator.aggregate`` on the released pause result plus that evidence record,
-as ``test_compared_repeats_aggregate_for_a_pause_capability`` does. The hallway
+as ``test_compared_repeats_aggregate_for_a_pause_capability`` does. ``robot-fail``
+is that commit's ``test_a_robot_fail_stays_a_robot_fail_beside_the_finding``:
+trial 2's lateral value is 0.62 m and the same reproducibility finding is set,
+so the grade is FAIL. The hallway
 bundles carry robot-capability-specs ``description.json`` at d677bd9
 (sha256 74413a9e7e00d722af5ac63a511d3d7df7619381addf244693af965253eb239c).
 """
@@ -194,3 +197,90 @@ def test_a_pause_run_uses_the_same_statement_and_names_no_scenario():
     for banned in (NOT_STORED, RANGE, "successes,", "% success"):
         assert banned not in visible, banned
     assert RING.search(page[: page.index(LOSSLESS)]) is None
+
+
+def _stored(name):
+    return json.loads((FIXTURES / name / "manifest.json").read_text())
+
+
+def _with_verified_evidence(bundle):
+    state = {
+        result["id"]: {item["id"]: "verified" for item in result["evidence"]}
+        for result in bundle["results"]
+    }
+    return report_from_bundle({"bundle": bundle, "evidence_state": state})
+
+
+def test_every_format_of_a_compared_run_names_the_statement_and_no_rate():
+    """HTML, markdown, JSON and the terminal line carry the statement. CSV is per decision."""
+    report = _report("identical")
+    statement = report["summaries"][0]["reproducibility"]["statement"]
+    rendered = {fmt: render(report, fmt) for fmt in ("html", "markdown", "json", "csv", "table")}
+    visible = _visible(rendered["html"])
+    assert statement in visible
+    assert statement in rendered["markdown"]
+    assert statement in rendered["json"]
+    assert f"PASS. {statement}." in rendered["table"]
+    assert statement not in rendered["csv"]
+    assert "PASS" in rendered["csv"]
+    for fmt, text in rendered.items():
+        body = visible if fmt == "html" else text
+        for banned in (NOT_STORED, RANGE, "3 successes, 100%"):
+            assert banned not in body, (fmt, banned)
+
+
+def test_a_compared_run_stays_beside_a_seeded_rate():
+    """One bundle can hold both. The seeded run keeps its percentage; the repeats do not borrow it."""
+    identical, seeded = _stored("identical"), _stored("seeded")
+    bundle = {
+        "schema_version": "1.1.0",
+        "producer": identical["producer"],
+        "description": identical["description"],
+        "results": identical["results"] + seeded["results"],
+        "assessment": {
+            "format": identical["assessment"]["format"],
+            "policy": identical["assessment"]["policy"],
+            "aggregation": identical["assessment"]["aggregation"],
+            "decisions": identical["assessment"]["decisions"] + seeded["assessment"]["decisions"],
+            "runs": identical["assessment"]["runs"] + seeded["assessment"]["runs"],
+        },
+    }
+    report = _with_verified_evidence(bundle)
+    assert report["summaries"][0]["reproducibility"]["statement"] == "3 of 3 repeats agree"
+    assert "reproducibility" not in report["summaries"][1]
+    assert (report["summaries"][1]["k"], report["summaries"][1]["n"]) == (2, 3)
+    page = render(report, "html")
+    starts = [match.start() for match in re.finditer("<h2>This run</h2>", page)]
+    assert len(starts) == 2
+    compared = page[starts[0] : starts[1]]
+    seeded_card = page[starts[1] : page.index("<section class='verdict'")]
+    assert "3 of 3 repeats agree" in compared and "success-ring" not in compared
+    assert "2 successes, 67%" not in compared and NOT_STORED not in compared
+    assert "2 successes, 67%" in seeded_card and "success-ring" in seeded_card
+    assert "3 of 3 repeats agree" not in seeded_card
+    assert NOT_STORED not in _visible(page)
+
+
+def test_a_robot_fail_stays_a_fail_beside_the_finding():
+    report = _report("robot-fail")
+    summary = report["summaries"][0]
+    detail = summary["reproducibility"]["finding"]["detail"]
+    assert summary["grade"] == "FAIL"
+    assert summary["k"] is None and summary["wilson95"] == [None, None]
+    assert "statement" not in summary["reproducibility"]
+    assert [row["index"] for row in summary["reproducibility"]["differing"]] == [1, 2, 3]
+    page = render(report, "html")
+    face, visible = _face(page), _visible(page)
+    assert f"<p class='assessment-failure'>Overall FAIL. {detail}</p>" in face
+    for row in summary["reproducibility"]["differing"]:
+        assert row["sha256"] not in face
+        assert row["sha256"] in _details(page)
+    for banned in (NOT_STORED, RANGE, "successes,", "% success", "repeats agree"):
+        assert banned not in visible, banned
+    assert RING.search(page[: page.index(LOSSLESS)]) is None
+    markdown = render(report, "markdown")
+    assert detail in markdown and "does not pass" in markdown
+    assert "successes," not in markdown and NOT_STORED not in markdown
+    table = render(report, "table")
+    assert "overall FAIL." in table
+    assert NOT_STORED not in table and "successes," not in table
