@@ -12,6 +12,7 @@ import html
 import re
 
 from . import hallway
+from .links import html_links
 from .steps import failure_count, required_percentage, success_count
 
 PASS, FAIL = hallway.PASS, hallway.FAIL
@@ -437,7 +438,7 @@ def failures(report, summary):
     return "".join(out)
 
 
-def trials(report, summary):
+def trials(report, summary, retention=None):
     """#40 trial grid: one row per non-passing trial, passes as chips; no JSON column."""
     results = {r["id"]: r for r in report["source_bundle"]["results"]}
     decisions = {d["result_id"]: d for d in report["decisions"]}
@@ -452,9 +453,8 @@ def trials(report, summary):
         bundle_decision = _dict(result.get("decision"))
         seed = _seed(result, decision)
         label = f"{hallway.repeat_name(result)} {seed}" if seed is not None else rid
-        links = "".join(
-            f" <a href='{esc(e['url'])}'>{esc(e['label'])}</a>" for e in per_seed.get(seed, [])
-        )
+        linked = html_links(per_seed.get(seed, []), retention)
+        links = f" {linked}" if linked else ""
         if decision.get("status") == PASS:
             chips.append(f"<li class='chip pass' title='{esc(rid)}'>{esc(label)}{links}</li>")
             continue

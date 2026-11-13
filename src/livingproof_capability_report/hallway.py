@@ -151,7 +151,7 @@ def _verdict(run):
     return f"{_robot(run['system'])} cannot be graded on {run['spec']['capability']}: {_label(run['grade'], 'summary grade')}."
 
 
-def markdown(report, links=None):
+def markdown(report, links=None, retention=None):
     """PR-comment summary in Art's layout (review of 2026-11-01); update one comment in place."""
     runs = report.get("summaries", [])
     results = {r["id"]: r for r in report["source_bundle"]["results"]}
@@ -209,7 +209,7 @@ def markdown(report, links=None):
         from . import links as evidence_links
 
         for s in runs:
-            found = evidence_links.lines(report, s)
+            found = evidence_links.lines(report, s, retention)
             if found:
                 head = f"**Evidence links · {_robot(s['system'])}**" if len(runs) > 1 else None
                 lines += ["", *([head] if head else []), *found]

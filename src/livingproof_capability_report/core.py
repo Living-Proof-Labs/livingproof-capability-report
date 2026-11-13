@@ -159,11 +159,23 @@ def check_grade(grade):
     return grade
 
 
-def render(report, format="json", links=None, *, observations=None, evaluator_results=None):
+def render(
+    report,
+    format="json",
+    links=None,
+    *,
+    observations=None,
+    evaluator_results=None,
+    history=None,
+    retention=None,
+):
     """Render stored decisions, never invoke grading or apply a current policy.
 
-    Every format refuses the same stored reports: an unknown, null or non-string summary
-    grade stops JSON, Markdown, HTML, CSV and table output alike.
+    ``history`` is an optional ``{"href", "label"}`` slot on the HTML page. Omit it
+    and the page has no run-history link. ``retention`` is the caller's evidence
+    retention in days, used when HTML or markdown names a pruned file. There is no
+    default. Every format refuses the same stored reports: an unknown, null or
+    non-string summary grade stops JSON, Markdown, HTML, CSV and table output alike.
     """
     if report.get("report_version") != "1.0.0":
         raise ValueError("Unsupported report version")
@@ -181,10 +193,14 @@ def render(report, format="json", links=None, *, observations=None, evaluator_re
         raise ValueError("Invalid stored decisions")
     if "evidence_links" in report:
         elinks.validate(report["evidence_links"])
+    history = elinks.check_history(history)
+    retention = elinks.check_retention(retention)
+    if format in {"html", "markdown"}:
+        retention = elinks.ensure_retention(report, retention)
     if format == "json":
         return json.dumps(report, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
     if format == "markdown":
-        return hallway.markdown(report, links)
+        return hallway.markdown(report, links, retention)
     results = {r["id"]: r for r in bundle["results"]}
     rows = [
         {
@@ -262,33 +278,17 @@ def render(report, format="json", links=None, *, observations=None, evaluator_re
         for row in rows
         if row["result_id"] not in in_runs
     )
-    full = escape(json.dumps(report, indent=2, ensure_ascii=False, allow_nan=False))
-    evidence = ""
-    stored = report.get("evidence_links")
-    if stored:
-
-        def link_text(entry):
-            if "seed" not in entry:
-                return entry["label"]
-            suffix = f"-seed-{entry['seed']:02d}"
-            result = next((r for r in bundle["results"] if r["id"].endswith(suffix)), None)
-            name = hallway.repeat_name(result)
-            return f"{name} {entry['seed']} ({entry['status']}): {entry['label']}"
-
-        items = [("CI run", stored["run"])] if stored.get("run") else []
-        items += [(link_text(e), e["url"]) for e in stored["links"]]
-        evidence = (
-            "<h2>Evidence</h2><ul>"
-            + "".join(f"<li><a href='{escape(u)}'>{escape(t)}</a></li>" for t, u in items)
-            + "</ul>"
-        )
+    public = elinks.scrub_public(report)
+    full = escape(json.dumps(public, indent=2, ensure_ascii=False, allow_nan=False))
+    evidence = elinks.html_block(report, retention)
+    nav = html_theme.history_markup(history)
     headers = "".join(sections.header(report, s, description) for s in runs)
     summary = html_summary(report, bundle, escape)
     detail = "".join(
         "<section class='run-detail'>"
         + sections.context(report, s, description)
         + sections.failures(report, s)
-        + sections.trials(report, s)
+        + sections.trials(report, s, retention)
         + "</section>"
         for s in runs
     )
@@ -339,6 +339,7 @@ def render(report, format="json", links=None, *, observations=None, evaluator_re
             full="",
             steps=front,
             header_badge=f"<div class='grades'>{''.join(badges)}</div>" if badges else "",
+            history=nav,
         )
     return html_theme.page(
         title="Living Proof Labs capability report",
@@ -358,6 +359,7 @@ def render(report, format="json", links=None, *, observations=None, evaluator_re
         ),
         steps=scenario_steps(report, observations),
         header_badge=f"<div class='grades'>{''.join(badges)}</div>" if badges else "",
+        history=nav,
     )
 
 
