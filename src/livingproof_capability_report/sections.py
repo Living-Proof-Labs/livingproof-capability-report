@@ -13,7 +13,7 @@ import re
 
 from . import hallway
 from .links import html_links
-from .steps import failure_count, required_percentage, success_count
+from .steps import compared_block, failure_count, repeat_statement, required_percentage, success_count
 
 PASS, FAIL = hallway.PASS, hallway.FAIL
 
@@ -158,8 +158,9 @@ def _limit_line(name, limit):
 
 
 def header(report, summary, description):
-    """#39 verdict header: robot/config/mission in words, grade, k of N and the stored
-    acceptance count, the expected sentence (spec) and the actual summary (verifier)."""
+    """#39 verdict header: robot/config/mission in words, the grade, and either the
+    stored success count or the compared-repeat statement. Then the expected
+    sentence (spec) and the actual summary (verifier)."""
     grade = summary["grade"]
     mission = _dict(_dict(description).get("mission"))
     world = _dict(_dict(description).get("world"))
@@ -170,19 +171,29 @@ def header(report, summary, description):
     if where:
         title += f" in the {where}" if world.get("title") else f" on {where}"
     # The stored Wilson interval is not a headline. The run card shows it, when present,
-    # as muted text under the success rate.
-    counted = success_count(summary.get("k"), summary.get("n"))
-    required = required_percentage(summary.get("required_passes"), summary.get("n"))
-    facts = [
-        f"{counted}; overall {grade}" if counted else None,
-        required,
-    ]
+    # as muted text under the success rate. A compared run has no rate: the grade
+    # above is the one outcome, and the fact is the stored agreement statement.
+    compared = compared_block(summary) is not None
+    if compared:
+        facts = [repeat_statement(summary)]
+    else:
+        counted = success_count(summary.get("k"), summary.get("n"))
+        required = required_percentage(summary.get("required_passes"), summary.get("n"))
+        facts = [
+            f"{counted}; overall {grade}" if counted else None,
+            required,
+        ]
     facts = [fact for fact in facts if fact]
+    # A compared run with no statement has no rate fact. Keep the empty list for
+    # every other run so those pages stay as they are.
+    fact_list = "<ul class='facts'>" + "".join(f"<li>{esc(x)}</li>" for x in facts) + "</ul>"
+    if compared and not facts:
+        fact_list = ""
     out = [
         f"<section class='verdict' data-grade='{esc(grade)}'>",
         f"<p class='robot'>{esc(title)}</p>",
         f"<p class='grade'><strong>{esc(grade)}</strong></p>",
-        "<ul class='facts'>" + "".join(f"<li>{esc(x)}</li>" for x in facts) + "</ul>",
+        fact_list,
     ]
     if mission.get("description"):
         out.append(f"<p><strong>Expected:</strong> {esc(mission['description'])}</p>")

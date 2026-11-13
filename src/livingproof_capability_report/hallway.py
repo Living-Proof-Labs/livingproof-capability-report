@@ -140,9 +140,23 @@ def _interval(w):
 
 
 def _verdict(run):
-    from .steps import success_summary
+    from .steps import compared_block, repeat_statement, stored_finding_text, success_summary
 
     subject = f"{_robot(run['system'])} {'passes' if run['grade'] == PASS else 'does not pass'}"
+    block = compared_block(run)
+    if block is not None:
+        # One stored outcome. The statement or the finding text, not a rate.
+        parts = [str(run["grade"])]
+        statement = repeat_statement(run)
+        detail = stored_finding_text(block)
+        if statement:
+            parts.append(statement)
+        elif detail:
+            parts.append(detail)
+        text = ". ".join(parts)
+        if not text.endswith("."):
+            text += "."
+        return f"{subject} {run['spec']['capability']}: {text}"
     if run["grade"] in (PASS, FAIL):
         summary = success_summary(
             run.get("k"), run.get("n"), run.get("grade"), run.get("required_passes")
@@ -171,7 +185,7 @@ def markdown(report, links=None, retention=None):
             lines += [""] + [
                 f"**Actual · {_robot(s['system'])}:** {sections.actual(report, s)}" for s in runs
             ]
-        from .steps import required_percentage, success_count
+        from .steps import repeat_statement, required_percentage, success_count
 
         lines += [
             "",
@@ -179,7 +193,7 @@ def markdown(report, links=None, retention=None):
             "|---|---|---|---|",
         ]
         for s in runs:
-            passed = success_count(s.get("k"), s.get("n")) or "—"
+            passed = repeat_statement(s) or success_count(s.get("k"), s.get("n")) or "—"
             needs = required_percentage(s.get("required_passes"), s.get("n")) or "—"
             lines.append(
                 f"| {_robot(s['system'])} {s['system']['version']} | "
@@ -299,7 +313,15 @@ def canonical_plan(result):
     # 1.0.0 stores an int. 2.0.0 stores {"count": N}, which must not render as a dict.
     trials = plan.get("trials", "?")
     count = trials["count"] if isinstance(trials, dict) else trials
-    parts = [f"{spec['capability']}@{spec['revision']}", f"N={count}"]
+    record = prov.get("reproducibility")
+    compared = isinstance(record, dict) and record.get("compared") is True
+    parts = [f"{spec['capability']}@{spec['revision']}"]
+    if compared:
+        # plan.trials.count is how many repeats were compared, not a sample size.
+        if type(count) is int:
+            parts.append(f"{count} repeats")
+    else:
+        parts.append(f"N={count}")
     if "command_speed" in plan:
         parts.append(f"{_fmt(plan['command_speed'])} m/s")
     if "required_passes" in plan:

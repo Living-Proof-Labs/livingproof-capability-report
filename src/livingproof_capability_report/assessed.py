@@ -2,8 +2,11 @@
 
 Nothing here grades. Per-result statuses come from each result's ``decision`` and per-run
 k of N, interval and grade from the bundle's ``assessment`` (livingproof-run-assessment/0.1,
-robot-capability-specs). The report keeps the report 1.0.0 document layout that reporter
-1.x wrote, so ``render`` and ``comment`` print the same bytes; ``wilson95`` is kept.
+robot-capability-specs). When that assessment stored a ``reproducibility`` object it is
+copied onto the summary; assessments that omit it keep today's summary shape. The report
+keeps the report 1.0.0 document layout that reporter 1.x wrote, so ``render`` and
+``comment`` print the same bytes; ``wilson95`` is kept. Null ``k``, ``n`` and interval
+bounds are not a success rate.
 
 A missing or malformed field is an error naming the field and the result. The one check
 made against the evidence is integrity: a stored PASS whose evidence is missing or changed
@@ -79,7 +82,11 @@ def _summary(run, index):
         raise ValueError(f"Bundle 1.1.0: {where} interval must be the Wilson 95% interval")
     out = {k: copy.deepcopy(run[k]) for k in RUN_KEYS if k != "interval"}
     out["wilson95"] = [interval["lower"], interval["upper"]]
-    return {k: out[k] for k in SUMMARY_KEYS}
+    summary = {k: out[k] for k in SUMMARY_KEYS}
+    # Optional. A missing key leaves the summary byte-for-byte the shape it has today.
+    if "reproducibility" in run:
+        summary["reproducibility"] = copy.deepcopy(run["reproducibility"])
+    return summary
 
 
 def report_from_bundle(loaded, evidence_links=None):

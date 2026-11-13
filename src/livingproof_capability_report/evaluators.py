@@ -16,7 +16,13 @@ import re
 from pathlib import Path
 
 from . import html_theme
-from .steps import describe_success, success_count
+from .steps import (
+    compared_block,
+    describe_success,
+    repeat_statement,
+    stored_finding_text,
+    success_count,
+)
 from .svg_icon import acceptable_icon
 
 FALLBACK_TITLE = "Evaluator"
@@ -409,9 +415,21 @@ def assessment_failure_line(summary):
     """One plain callout from the assessment when it failed and no finding was stored.
 
     Successes and the percentage only. No fraction, and no reason the assessment
-    did not record.
+    did not record. A compared run that failed calls out the stored finding text.
+    A pass, including identical repeats that agree, is not called out.
     """
     if not _run_failed(summary):
+        return ""
+    block = compared_block(summary)
+    if block is not None:
+        grade = summary.get("grade") if isinstance(summary.get("grade"), str) else ""
+        detail = stored_finding_text(block)
+        if grade and grade != "PASS" and detail:
+            return f"Overall {grade}. {detail}"
+        if detail:
+            return detail
+        if grade and grade != "PASS":
+            return f"Overall {grade}."
         return ""
     counted = success_count(summary.get("k"), summary.get("n"))
     grade = summary.get("grade") if isinstance(summary.get("grade"), str) else ""
@@ -424,7 +442,27 @@ def assessment_failure_line(summary):
     return ""
 
 
+def _compared_hero(report, summary):
+    """The one outcome and the stored statement. No success ring and no rate."""
+    description = report["source_bundle"].get("description")
+    mission = description.get("mission") if isinstance(description, dict) else None
+    headline = _visible(mission.get("title")) if isinstance(mission, dict) else ""
+    if not headline:
+        headline = _visible(summary.get("capability"))
+    statement = repeat_statement(summary)
+    grade = summary.get("grade") if isinstance(summary.get("grade"), str) else ""
+    title = f"<h2 class='run-title'>{esc(headline)}</h2>" if headline else ""
+    statement_html = f"<p class='pct'>{esc(statement)}</p>" if statement else ""
+    status = f"<p class='stored-status'>Stored overall status: {esc(grade)}</p>" if grade else ""
+    return (
+        "<div class='summary-hero'><div>"
+        f"{title}{statement_html}{status}</div></div>"
+    )
+
+
 def _hero(report, summary):
+    if compared_block(summary) is not None:
+        return _compared_hero(report, summary)
     description = report["source_bundle"].get("description")
     mission = description.get("mission") if isinstance(description, dict) else None
     headline = _visible(mission.get("title")) if isinstance(mission, dict) else ""
