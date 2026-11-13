@@ -30,4 +30,8 @@ def test_only_test_report_publishing_may_continue_on_error():
                     assert "!cancelled()" in str(step.get("if"))
                 else:
                     assert not step.get("continue-on-error"), (path.name, step)
-    assert len(reporters) == 4
+    assert reporters == [
+        ("development.yml", "Individual container tests in run summary"),
+        ("documentation.yml", "Individual installed scenarios and manual checks"),
+        ("verify.yml", "Individual tests in run summary"),
+    ]
