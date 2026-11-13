@@ -216,13 +216,18 @@ def render(
     if format == "table":
         text = terminal_table(rows, aggregate(bundle["results"]))
         from . import sections
-        from .steps import success_summary
+        from .steps import repeat_statement, success_summary
 
         details = []
         for s in report.get("summaries", []):
-            summary = success_summary(
-                s.get("k"), s.get("n"), s.get("grade"), s.get("required_passes")
-            )
+            statement = repeat_statement(s)
+            if statement:
+                grade = s.get("grade") or ""
+                summary = f"{grade}. {statement}." if grade else f"{statement}."
+            else:
+                summary = success_summary(
+                    s.get("k"), s.get("n"), s.get("grade"), s.get("required_passes")
+                )
             line = f"Run {s['system']['id']}:"
             details.append(f"{line} {summary}" if summary else line)
             if sections.stored_run(report, s).get("failure_summary"):
@@ -383,14 +388,18 @@ def html_summary(report, bundle, escape):
             f"<dt>{escape(k)}</dt><dd>{escape(v)}</dd>" for k, v in pairs if v not in (None, "")
         )
 
-    from .steps import required_percentage, success_count
+    from .steps import repeat_statement, required_percentage, success_count
 
     parts = []
     for s in report.get("summaries") or []:
         check_grade(s.get("grade"))
         spec = s.get("spec") if isinstance(s.get("spec"), dict) else {}
-        counted = success_count(s.get("k"), s.get("n"))
-        observed = f"{counted}; overall {s['grade']}" if counted and s.get("grade") else counted
+        statement = repeat_statement(s)
+        if statement:
+            observed = statement
+        else:
+            counted = success_count(s.get("k"), s.get("n"))
+            observed = f"{counted}; overall {s['grade']}" if counted and s.get("grade") else counted
         required = required_percentage(s.get("required_passes"), s.get("n"))
         title = " ".join(x for x in (ref(s.get("system")), s.get("grade")) if x)
         parts.append(

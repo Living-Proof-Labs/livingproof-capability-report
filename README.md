@@ -399,16 +399,22 @@ packages and container images.
 
 capability-verifier grades walk-hallway trials one per result and stores each decision
 in the bundle, with the failed checks' structured fields
-`{check, observed, limit, unit, t, seed, wall}`. Its run assessment gives k of N, the
-Wilson 95% interval, the required passes and the run grade; the report keeps them as a
-`summaries` entry per run.
+`{check, observed, limit, unit, t, seed, wall}`. A seeded run's assessment gives k of N,
+the Wilson 95% interval, the required passes and the run grade. A run that compared its
+repeats stores one grade and a `reproducibility` object instead of a rate: null `k`,
+`n`, `required_passes` and Wilson bounds, plus `reproducibility.statement` when the
+repeats agree. The report keeps each run as a `summaries` entry and shows only those
+stored fields.
 
     livingproof-capability-report render bundle/manifest.json --format markdown -o summary.md
 
 writes a PR-comment summary in Art's layout. It starts with a stable
 `<!-- livingproof-verification -->` marker so CI can update one comment in place. Then it gives
-a header (scenario, N, speed, pass bar, lock sha), a grade table, a plain verdict and
-"Why runs failed" bullets (each seed counted once, under its first failure). Per-seed tables
+a header (scenario, the plan's trial count, speed, pass bar, lock sha), a grade table, a plain verdict and
+"Why runs failed" bullets (each seed counted once, under its first failure). When the
+result's provenance says the repeats were compared, that count is labelled as repeats
+rather than `N=`, and the verdict and Passed cell are the stored agreement statement
+instead of a success rate. Per-seed tables
 are in `<details>`, followed by a footer. Thumbnails appear only when results carry
 `provenance.assets`. `--report-url`, `--clips-url` and `--lock-diff-url` add a links row.
 

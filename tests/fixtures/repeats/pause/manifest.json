@@ -1,0 +1,562 @@
+{
+  "schema_version": "1.1.0",
+  "producer": {
+    "id": "capability-verifier",
+    "version": "0.0.0",
+    "commit": "209db38c3c7b14760cd969a370be46722f01dbe6"
+  },
+  "results": [
+    {
+      "id": "v1.1.1-v1.0.1-pass-1",
+      "spec": {
+        "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+        "tag": "v1.1.1",
+        "commit": "60b7572df9f5e5c5ab5757a0b4674da16de2b0df",
+        "revision": "1.0.0",
+        "capability": "pause"
+      },
+      "system": {
+        "id": "pause-fixtures",
+        "version": "1.0.0"
+      },
+      "environment": {
+        "id": "deterministic-fixture-no-robot",
+        "version": "1.0.0"
+      },
+      "assessments": [
+        {
+          "evaluator": "pause-rules",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "Pause state and 500 ms limit assessed",
+          "mandatory": true,
+          "id": "pause-rules",
+          "kind": "deterministic",
+          "evidence_ids": [
+            "observation"
+          ],
+          "provenance": {
+            "source": "released recorded fixture; no live review",
+            "mock": false
+          }
+        },
+        {
+          "evaluator": "mock-ai",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "MOCK AI; no model was called: Scripted favorable rubric example",
+          "mandatory": false,
+          "id": "mock-ai",
+          "kind": "mock-agent",
+          "evidence_ids": [
+            "observation"
+          ],
+          "provenance": {
+            "source": "released recorded fixture; no live review",
+            "mock": true
+          }
+        },
+        {
+          "evaluator": "human-fixture",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "HUMAN FIXTURE; no live review: Recorded favorable fixture review",
+          "mandatory": false,
+          "id": "human-fixture",
+          "kind": "human",
+          "evidence_ids": [
+            "observation"
+          ],
+          "provenance": {
+            "source": "released recorded fixture; no live review",
+            "mock": false
+          }
+        }
+      ],
+      "provenance": {
+        "run_id": "f602b30a-49a2-411d-96a7-22883f376a74",
+        "role": "matrix",
+        "fixture": {
+          "id": "pause-fixtures",
+          "version": "1.0.0",
+          "repository": "https://github.com/Living-Proof-Labs/capability-verifier",
+          "tag": "v1.0.1",
+          "commit": "0b23e8226f333152f137c04f3129dcc97ab7f761",
+          "path": "fixtures/pass.json"
+        },
+        "executor": {
+          "id": "capability-verifier",
+          "version": "1.0.1",
+          "repository": "https://github.com/Living-Proof-Labs/capability-verifier",
+          "tag": "v1.0.1",
+          "commit": "0b23e8226f333152f137c04f3129dcc97ab7f761"
+        },
+        "runtime": {
+          "id": "CPython",
+          "version": "3.12.12"
+        },
+        "evidence_state": {
+          "observation": "verified"
+        },
+        "simulator": null,
+        "plan": {
+          "command_speed": 0.5,
+          "trials": {
+            "count": 3
+          }
+        },
+        "reproducibility": {
+          "compared": true,
+          "identical": true,
+          "finding": null
+        },
+        "repeat_records": [
+          {
+            "index": 1,
+            "path": "trials/trial-01.json",
+            "sha256": "7664f748c7e0d58a32bc7dfdf924c1250057bdfc809af33124259f17686307d7",
+            "trajectory_sha256": "c9d8e3fd7fb1fcadcdf4b7cfef11ee88742f70f5758eb8f0a88ffe468d223f2d",
+            "outcome": "crossed_exit",
+            "wall_clock_s": 1.0
+          },
+          {
+            "index": 2,
+            "path": "trials/trial-02.json",
+            "sha256": "7664f748c7e0d58a32bc7dfdf924c1250057bdfc809af33124259f17686307d7",
+            "trajectory_sha256": "c9d8e3fd7fb1fcadcdf4b7cfef11ee88742f70f5758eb8f0a88ffe468d223f2d",
+            "outcome": "crossed_exit",
+            "wall_clock_s": 1.0
+          },
+          {
+            "index": 3,
+            "path": "trials/trial-03.json",
+            "sha256": "7664f748c7e0d58a32bc7dfdf924c1250057bdfc809af33124259f17686307d7",
+            "trajectory_sha256": "c9d8e3fd7fb1fcadcdf4b7cfef11ee88742f70f5758eb8f0a88ffe468d223f2d",
+            "outcome": "crossed_exit",
+            "wall_clock_s": 1.0
+          }
+        ]
+      },
+      "original_result": {
+        "status": "PASS",
+        "index": 1
+      },
+      "evidence": [
+        {
+          "id": "observation",
+          "path": "evidence/pass.json",
+          "sha256": "62f20434490defba9703b7cd0f09b060c1db671ce30e4289ca20dafb0ee78da0"
+        }
+      ],
+      "decision": {
+        "status": "PASS",
+        "reason": "Pause state and 500 ms limit assessed",
+        "failures": [],
+        "assessor_types": [],
+        "primary_failure": null,
+        "secondary_failures": [],
+        "policy": {
+          "id": "all-required-v1",
+          "version": "1.0.0"
+        }
+      }
+    },
+    {
+      "id": "v1.1.1-v1.0.1-pass-2",
+      "spec": {
+        "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+        "tag": "v1.1.1",
+        "commit": "60b7572df9f5e5c5ab5757a0b4674da16de2b0df",
+        "revision": "1.0.0",
+        "capability": "pause"
+      },
+      "system": {
+        "id": "pause-fixtures",
+        "version": "1.0.0"
+      },
+      "environment": {
+        "id": "deterministic-fixture-no-robot",
+        "version": "1.0.0"
+      },
+      "assessments": [
+        {
+          "evaluator": "pause-rules",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "Pause state and 500 ms limit assessed",
+          "mandatory": true,
+          "id": "pause-rules",
+          "kind": "deterministic",
+          "evidence_ids": [
+            "observation"
+          ],
+          "provenance": {
+            "source": "released recorded fixture; no live review",
+            "mock": false
+          }
+        },
+        {
+          "evaluator": "mock-ai",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "MOCK AI; no model was called: Scripted favorable rubric example",
+          "mandatory": false,
+          "id": "mock-ai",
+          "kind": "mock-agent",
+          "evidence_ids": [
+            "observation"
+          ],
+          "provenance": {
+            "source": "released recorded fixture; no live review",
+            "mock": true
+          }
+        },
+        {
+          "evaluator": "human-fixture",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "HUMAN FIXTURE; no live review: Recorded favorable fixture review",
+          "mandatory": false,
+          "id": "human-fixture",
+          "kind": "human",
+          "evidence_ids": [
+            "observation"
+          ],
+          "provenance": {
+            "source": "released recorded fixture; no live review",
+            "mock": false
+          }
+        }
+      ],
+      "provenance": {
+        "run_id": "f602b30a-49a2-411d-96a7-22883f376a74",
+        "role": "matrix",
+        "fixture": {
+          "id": "pause-fixtures",
+          "version": "1.0.0",
+          "repository": "https://github.com/Living-Proof-Labs/capability-verifier",
+          "tag": "v1.0.1",
+          "commit": "0b23e8226f333152f137c04f3129dcc97ab7f761",
+          "path": "fixtures/pass.json"
+        },
+        "executor": {
+          "id": "capability-verifier",
+          "version": "1.0.1",
+          "repository": "https://github.com/Living-Proof-Labs/capability-verifier",
+          "tag": "v1.0.1",
+          "commit": "0b23e8226f333152f137c04f3129dcc97ab7f761"
+        },
+        "runtime": {
+          "id": "CPython",
+          "version": "3.12.12"
+        },
+        "evidence_state": {
+          "observation": "verified"
+        },
+        "simulator": null,
+        "plan": {
+          "command_speed": 0.5,
+          "trials": {
+            "count": 3
+          }
+        },
+        "reproducibility": {
+          "compared": true,
+          "identical": true,
+          "finding": null
+        },
+        "repeat_records": [
+          {
+            "index": 1,
+            "path": "trials/trial-01.json",
+            "sha256": "7664f748c7e0d58a32bc7dfdf924c1250057bdfc809af33124259f17686307d7",
+            "trajectory_sha256": "c9d8e3fd7fb1fcadcdf4b7cfef11ee88742f70f5758eb8f0a88ffe468d223f2d",
+            "outcome": "crossed_exit",
+            "wall_clock_s": 1.0
+          },
+          {
+            "index": 2,
+            "path": "trials/trial-02.json",
+            "sha256": "7664f748c7e0d58a32bc7dfdf924c1250057bdfc809af33124259f17686307d7",
+            "trajectory_sha256": "c9d8e3fd7fb1fcadcdf4b7cfef11ee88742f70f5758eb8f0a88ffe468d223f2d",
+            "outcome": "crossed_exit",
+            "wall_clock_s": 1.0
+          },
+          {
+            "index": 3,
+            "path": "trials/trial-03.json",
+            "sha256": "7664f748c7e0d58a32bc7dfdf924c1250057bdfc809af33124259f17686307d7",
+            "trajectory_sha256": "c9d8e3fd7fb1fcadcdf4b7cfef11ee88742f70f5758eb8f0a88ffe468d223f2d",
+            "outcome": "crossed_exit",
+            "wall_clock_s": 1.0
+          }
+        ]
+      },
+      "original_result": {
+        "status": "PASS",
+        "index": 2
+      },
+      "evidence": [
+        {
+          "id": "observation",
+          "path": "evidence/pass.json",
+          "sha256": "62f20434490defba9703b7cd0f09b060c1db671ce30e4289ca20dafb0ee78da0"
+        }
+      ],
+      "decision": {
+        "status": "PASS",
+        "reason": "Pause state and 500 ms limit assessed",
+        "failures": [],
+        "assessor_types": [],
+        "primary_failure": null,
+        "secondary_failures": [],
+        "policy": {
+          "id": "all-required-v1",
+          "version": "1.0.0"
+        }
+      }
+    },
+    {
+      "id": "v1.1.1-v1.0.1-pass-3",
+      "spec": {
+        "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+        "tag": "v1.1.1",
+        "commit": "60b7572df9f5e5c5ab5757a0b4674da16de2b0df",
+        "revision": "1.0.0",
+        "capability": "pause"
+      },
+      "system": {
+        "id": "pause-fixtures",
+        "version": "1.0.0"
+      },
+      "environment": {
+        "id": "deterministic-fixture-no-robot",
+        "version": "1.0.0"
+      },
+      "assessments": [
+        {
+          "evaluator": "pause-rules",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "Pause state and 500 ms limit assessed",
+          "mandatory": true,
+          "id": "pause-rules",
+          "kind": "deterministic",
+          "evidence_ids": [
+            "observation"
+          ],
+          "provenance": {
+            "source": "released recorded fixture; no live review",
+            "mock": false
+          }
+        },
+        {
+          "evaluator": "mock-ai",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "MOCK AI; no model was called: Scripted favorable rubric example",
+          "mandatory": false,
+          "id": "mock-ai",
+          "kind": "mock-agent",
+          "evidence_ids": [
+            "observation"
+          ],
+          "provenance": {
+            "source": "released recorded fixture; no live review",
+            "mock": true
+          }
+        },
+        {
+          "evaluator": "human-fixture",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "HUMAN FIXTURE; no live review: Recorded favorable fixture review",
+          "mandatory": false,
+          "id": "human-fixture",
+          "kind": "human",
+          "evidence_ids": [
+            "observation"
+          ],
+          "provenance": {
+            "source": "released recorded fixture; no live review",
+            "mock": false
+          }
+        }
+      ],
+      "provenance": {
+        "run_id": "f602b30a-49a2-411d-96a7-22883f376a74",
+        "role": "matrix",
+        "fixture": {
+          "id": "pause-fixtures",
+          "version": "1.0.0",
+          "repository": "https://github.com/Living-Proof-Labs/capability-verifier",
+          "tag": "v1.0.1",
+          "commit": "0b23e8226f333152f137c04f3129dcc97ab7f761",
+          "path": "fixtures/pass.json"
+        },
+        "executor": {
+          "id": "capability-verifier",
+          "version": "1.0.1",
+          "repository": "https://github.com/Living-Proof-Labs/capability-verifier",
+          "tag": "v1.0.1",
+          "commit": "0b23e8226f333152f137c04f3129dcc97ab7f761"
+        },
+        "runtime": {
+          "id": "CPython",
+          "version": "3.12.12"
+        },
+        "evidence_state": {
+          "observation": "verified"
+        },
+        "simulator": null,
+        "plan": {
+          "command_speed": 0.5,
+          "trials": {
+            "count": 3
+          }
+        },
+        "reproducibility": {
+          "compared": true,
+          "identical": true,
+          "finding": null
+        },
+        "repeat_records": [
+          {
+            "index": 1,
+            "path": "trials/trial-01.json",
+            "sha256": "7664f748c7e0d58a32bc7dfdf924c1250057bdfc809af33124259f17686307d7",
+            "trajectory_sha256": "c9d8e3fd7fb1fcadcdf4b7cfef11ee88742f70f5758eb8f0a88ffe468d223f2d",
+            "outcome": "crossed_exit",
+            "wall_clock_s": 1.0
+          },
+          {
+            "index": 2,
+            "path": "trials/trial-02.json",
+            "sha256": "7664f748c7e0d58a32bc7dfdf924c1250057bdfc809af33124259f17686307d7",
+            "trajectory_sha256": "c9d8e3fd7fb1fcadcdf4b7cfef11ee88742f70f5758eb8f0a88ffe468d223f2d",
+            "outcome": "crossed_exit",
+            "wall_clock_s": 1.0
+          },
+          {
+            "index": 3,
+            "path": "trials/trial-03.json",
+            "sha256": "7664f748c7e0d58a32bc7dfdf924c1250057bdfc809af33124259f17686307d7",
+            "trajectory_sha256": "c9d8e3fd7fb1fcadcdf4b7cfef11ee88742f70f5758eb8f0a88ffe468d223f2d",
+            "outcome": "crossed_exit",
+            "wall_clock_s": 1.0
+          }
+        ]
+      },
+      "original_result": {
+        "status": "PASS",
+        "index": 3
+      },
+      "evidence": [
+        {
+          "id": "observation",
+          "path": "evidence/pass.json",
+          "sha256": "62f20434490defba9703b7cd0f09b060c1db671ce30e4289ca20dafb0ee78da0"
+        }
+      ],
+      "decision": {
+        "status": "PASS",
+        "reason": "Pause state and 500 ms limit assessed",
+        "failures": [],
+        "assessor_types": [],
+        "primary_failure": null,
+        "secondary_failures": [],
+        "policy": {
+          "id": "all-required-v1",
+          "version": "1.0.0"
+        }
+      }
+    }
+  ],
+  "assessment": {
+    "format": "livingproof-run-assessment/0.1",
+    "policy": {
+      "id": "all-required-v1",
+      "version": "1.0.0"
+    },
+    "aggregation": {
+      "id": "repeated-outcome",
+      "version": "1.0.0"
+    },
+    "decisions": [
+      {
+        "result_id": "v1.1.1-v1.0.1-pass-1",
+        "status": "PASS",
+        "reason": "Pause state and 500 ms limit assessed",
+        "failures": [],
+        "assessor_types": [],
+        "primary_failure": null,
+        "secondary_failures": []
+      },
+      {
+        "result_id": "v1.1.1-v1.0.1-pass-2",
+        "status": "PASS",
+        "reason": "Pause state and 500 ms limit assessed",
+        "failures": [],
+        "assessor_types": [],
+        "primary_failure": null,
+        "secondary_failures": []
+      },
+      {
+        "result_id": "v1.1.1-v1.0.1-pass-3",
+        "status": "PASS",
+        "reason": "Pause state and 500 ms limit assessed",
+        "failures": [],
+        "assessor_types": [],
+        "primary_failure": null,
+        "secondary_failures": []
+      }
+    ],
+    "runs": [
+      {
+        "capability": "pause",
+        "spec": {
+          "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+          "tag": "v1.1.1",
+          "commit": "60b7572df9f5e5c5ab5757a0b4674da16de2b0df",
+          "revision": "1.0.0",
+          "capability": "pause"
+        },
+        "system": {
+          "id": "pause-fixtures",
+          "version": "1.0.0"
+        },
+        "environment": {
+          "id": "deterministic-fixture-no-robot",
+          "version": "1.0.0"
+        },
+        "run_id": "f602b30a-49a2-411d-96a7-22883f376a74",
+        "k": null,
+        "n": null,
+        "required_passes": null,
+        "interval": {
+          "method": "wilson",
+          "level": 0.95,
+          "lower": null,
+          "upper": null
+        },
+        "grade": "PASS",
+        "rationale": "3 of 3 repeats agree",
+        "reproducibility": {
+          "compared": true,
+          "identical": true,
+          "repeats": 3,
+          "finding": null,
+          "agreeing": 3,
+          "statement": "3 of 3 repeats agree"
+        },
+        "result_ids": [
+          "v1.1.1-v1.0.1-pass-1",
+          "v1.1.1-v1.0.1-pass-2",
+          "v1.1.1-v1.0.1-pass-3"
+        ],
+        "failures": [],
+        "prototype": null
+      }
+    ]
+  }
+}

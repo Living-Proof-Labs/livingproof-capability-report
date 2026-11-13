@@ -3,8 +3,10 @@
 Each ring is the share of trials whose stored assessment for that step is PASS.
 The run ring is the stored k of n. Nothing here grades. The stored Wilson interval,
 when the run carries one, is a muted line under the run rate, not a ring or a headline.
-Trial numbers are the stored seed. Duration comes from observation ``duration_s``
-when that file is readable beside the manifest.
+A run whose assessment says the repeats were compared is one outcome plus the stored
+reproducibility statement. It is not a sample, so it has no success rate, no step
+ring and no interval. Trial numbers are the stored seed. Duration comes from
+observation ``duration_s`` when that file is readable beside the manifest.
 """
 
 import html
@@ -358,6 +360,45 @@ def success_count(passed, total):
     return _counted(passed, total, "success")
 
 
+def compared_block(summary):
+    """The stored reproducibility object when this run compared its repeats.
+
+    Anything else, including a missing key, is a k-of-n run and keeps that
+    rendering. No count or bound is filled in here.
+    """
+    if not isinstance(summary, dict):
+        return None
+    block = summary.get("reproducibility")
+    if isinstance(block, dict) and block.get("compared") is True:
+        return block
+    return None
+
+
+def repeat_statement(summary):
+    """``reproducibility.statement`` when it is stored text, else None."""
+    block = compared_block(summary)
+    if block is None:
+        return None
+    statement = block.get("statement")
+    if isinstance(statement, str) and statement.strip():
+        return statement.strip()
+    return None
+
+
+def stored_finding_text(block):
+    """The finding's stored text. A missing finding adds nothing."""
+    if not isinstance(block, dict):
+        return ""
+    finding = block.get("finding")
+    if isinstance(finding, str) and finding.strip():
+        return finding.strip()
+    if isinstance(finding, dict):
+        detail = finding.get("detail")
+        if isinstance(detail, str) and detail.strip():
+            return detail.strip()
+    return ""
+
+
 def failure_count(failed, total):
     return _counted(failed, total, "failure")
 
@@ -582,6 +623,117 @@ def _article(step, place, tied, close, trials, durations):
     )
 
 
+_DIFFERING_FIELDS = ("index", "outcome", "trajectory_sha256", "sha256")
+
+
+def _shared_status(step, trials):
+    """The one status every assessed repeat stored for this step, or None."""
+    statuses = []
+    for _, assessments in trials:
+        if step["id"] not in assessments:
+            continue
+        statuses.append(assessments[step["id"]].get("status"))
+    if statuses and all(item == statuses[0] for item in statuses):
+        return statuses[0]
+    return None
+
+
+def _differing_list(block):
+    """Repeats the assessment listed under ``differing``. Only stored fields."""
+    rows = block.get("differing")
+    if not isinstance(rows, list):
+        return ""
+    items = []
+    for rec in rows:
+        if not isinstance(rec, dict):
+            continue
+        keys = [key for key in _DIFFERING_FIELDS if key in rec]
+        keys += sorted(key for key in rec if key not in _DIFFERING_FIELDS)
+        bits = []
+        for key in keys:
+            value = rec[key]
+            if isinstance(value, (dict, list)):
+                continue
+            bits.append(f"{key} {value}")
+        if bits:
+            items.append(
+                "<li style='overflow-wrap:anywhere'>" + esc(", ".join(bits)) + "</li>"
+            )
+    if not items:
+        return ""
+    return (
+        "<h3>Differing repeats</h3>"
+        "<ul class='differing' style='overflow-wrap:anywhere;min-width:0'>"
+        + "".join(items)
+        + "</ul>"
+    )
+
+
+def _step_version(step, trials):
+    return next(
+        (
+            assessments[step["id"]].get("version")
+            for _, assessments in trials
+            if step["id"] in assessments and assessments[step["id"]].get("version")
+        ),
+        None,
+    )
+
+
+def _compared_article(step, trials, durations):
+    """One step of a compared run: the shared outcome, never a success rate."""
+    status = _shared_status(step, trials)
+    outcome = f"<span class='count'>{_verdict(status)}</span>" if status else ""
+    version = _step_version(step, trials)
+    version = f"v{version}" if version else ""
+    eval_line = " · ".join(part for part in (step["id"], version) if part)
+    return (
+        "<article class='step is-outcome'><details>"
+        "<summary class='step-summary is-outcome' style='grid-template-columns:minmax(0, 1fr)'>"
+        "<span class='rank-body'>"
+        f"<h3 class='step-name'>{esc(step['name'])}</h3>"
+        "<span class='step-meta'>"
+        f"{outcome}"
+        f"<span class='eval-line'>{esc(eval_line)}</span>"
+        "<span class='disclose'><span class='chevron' aria-hidden='true'></span>"
+        "<span class='disclose-closed'>Show trials</span>"
+        "<span class='disclose-open'>Hide trials</span></span>"
+        "</span></span></summary>"
+        "<div class='trial-panel' style='padding-left:0'>"
+        "<p class='trial-note'>Each trial for this step. Time is the first moment the step "
+        "was not met, the exit time on success, or the time of the extreme value for a "
+        "successful continuous check. Duration is the observation <code>duration_s</code>.</p>"
+        "<div class='table-wrap'><table class='trial-table'><thead><tr>"
+        "<th scope='col'>Trial</th><th scope='col'>Result</th>"
+        "<th scope='col'>Observed vs limit</th><th scope='col'>Time</th>"
+        "<th scope='col'>Duration</th></tr></thead><tbody>"
+        f"{_trial_rows(step, trials, durations)}</tbody></table></div></div>"
+        "</details></article>"
+    )
+
+
+def _compared_cards(report, summary, results, trials, catalog, durations):
+    """One outcome and the stored statement. No rate, ring, bar or interval."""
+    statement = repeat_statement(summary)
+    grade = summary.get("grade") or ""
+    statement_html = f"<p class='pct'>{esc(statement)}</p>" if statement else ""
+    status = f"<p class='stored-status'>Stored overall status: {esc(grade)}</p>" if grade else ""
+    pieces = [_compared_article(step, trials, durations) for step in catalog]
+    return (
+        "<div class='card scenario-steps'><h2>This run</h2><div class='split'><div style='min-width:0'>"
+        "<div class='run-hero'><div>"
+        f"{statement_html}{status}</div></div>"
+        f"{_differing_list(compared_block(summary))}</div>"
+        f"{_constants(report, summary, results[0])}</div></div>"
+        "<div class='card scenario-steps'><h2>Steps</h2>"
+        f"<div class='step-list'>{''.join(pieces)}</div>"
+        "<p class='sources'>Observed values, limits, times and margins are the stored "
+        "assessments. The step name is the feature spec's success criterion for that "
+        "check. Duration is <code>duration_s</code> from the trial observation when that "
+        "file is available to the report.</p></div>"
+    )
+
+
 def _run_cards(report, summary, durations):
     results = _results_for(report, summary)
     if not results:
@@ -590,6 +742,8 @@ def _run_cards(report, summary, durations):
     catalog = _catalog(trials, criterion_names(report["source_bundle"].get("description")))
     if not catalog:
         return ""
+    if compared_block(summary) is not None:
+        return _compared_cards(report, summary, results, trials, catalog, durations)
     k, n = summary.get("k"), summary.get("n")
     shown = describe_success(k, n)
     if shown is None:
