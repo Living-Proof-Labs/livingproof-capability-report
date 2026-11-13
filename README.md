@@ -274,9 +274,12 @@ source archive and `all.deb`, plus architecture-specific images and wheelhouses.
 
 ## Test results in GitHub
 
-The verify job uploads JUnit results even when tests fail. Its run summary and
-Reporter tests check show individual tests and failure annotations. Fork pull
-requests receive the summary and artifact without a write-token check. This
+The verify job uploads JUnit results even when tests fail. The job summary lists
+individual cases. The Reporter tests check is created already completed, so a
+failed follow-up update cannot leave it in progress. A missing or unreadable
+report fails the job. A failure to create or update that check is a warning and
+does not by itself fail the job. Fork pull requests receive the summary and
+artifact without a write-token check. Raw reports are retained for 14 days. This
 provides per-run history for comparison; this integration does not implement a
 historical trends dashboard or promise automatic trend correlation.
 
