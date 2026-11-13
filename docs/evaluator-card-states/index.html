@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evaluator cards: fixed width, hover, selected state · Living Proof Labs</title>
+<style>
+  :root {
+    color-scheme: light;
+    --font-sans: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --navy: #01152d;
+    --teal: #0e8785;
+    --teal-bright: #64dfc7;
+    --text: #0f172a;
+    --text-muted: #475569;
+    --bg: #f4f7fb;
+    --bg-muted: #e8eef5;
+    --surface: #ffffff;
+    --border: #d5dee9;
+    --border-strong: #c3cedb;
+    --shadow: 0 12px 32px rgba(1, 21, 45, 0.06);
+    --chip-fail-fg: #9f1239;
+    --chip-fail-bg: #ffe4e6;
+    --link: #0b6e6c;
+    --speak: #8a6a32;
+    --speak-text: #6b5428;
+    --focus: #0e8785;
+    --card-width: 11.25rem; /* 180px */
+    --eval-gap: 0.45rem;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: var(--font-sans);
+    font-size: 1.0625rem;
+    line-height: 1.55;
+    color: var(--text);
+    background: var(--bg);
+  }
+  .page { width: 72rem; max-width: 100%; margin: 0 auto; padding: 1.4rem 1.4rem 2.2rem; }
+  .kicker {
+    margin: 0 0 0.25rem;
+    font-size: 0.72rem;
+    font-weight: 650;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--teal);
+  }
+  h1 { margin: 0 0 0.35rem; font-size: 1.55rem; letter-spacing: -0.02em; }
+  .lede { margin: 0 0 1.25rem; color: var(--text-muted); max-width: 46rem; }
+  h2 {
+    margin: 0 0 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 650;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .figure {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    box-shadow: var(--shadow);
+    padding: 1rem 1.1rem 1.15rem;
+    margin-bottom: 1.1rem;
+  }
+  .figure p.cap {
+    margin: 0 0 0.85rem;
+    color: var(--text-muted);
+    font-size: 0.92rem;
+  }
+
+  /* —— report-like summary chrome —— */
+  .summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 1rem 1.1rem 1.05rem;
+  }
+  .summary-hero { display: flex; align-items: center; gap: 0.85rem 1rem; }
+  .ring {
+    width: 6.5rem; height: 6.5rem; flex: none;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 50% 50%, var(--navy) 0 2.15rem, transparent 2.2rem),
+      conic-gradient(#0b4f4d 0 360deg);
+    display: grid; place-items: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.35rem;
+    position: relative;
+  }
+  .ring::after {
+    content: "";
+    position: absolute;
+    width: 2.6rem; height: 1.85rem;
+    border: 3px solid #fff;
+    border-radius: 0.9rem;
+    top: 3.05rem;
+  }
+  .ring .eyes { position: absolute; top: 3.25rem; display: flex; gap: 0.55rem; }
+  .ring .eyes i { width: 0.38rem; height: 0.38rem; background: #fff; border-radius: 50%; display: block; }
+  .run-title { margin: 0; font-size: 1.15rem; font-weight: 650; letter-spacing: -0.02em; }
+  .pct { margin: 0.1rem 0 0; font-size: 1.35rem; font-weight: 650; }
+  .count, .stored-status { margin: 0.1rem 0 0; color: var(--text-muted); font-size: 0.95rem; }
+  .assessment-failure {
+    margin: 0.75rem 0 0;
+    padding: 0.4rem 0.6rem;
+    border-radius: 0.5rem;
+    border-left: 3px solid var(--speak);
+    background: color-mix(in srgb, var(--speak) 8%, var(--surface));
+    font-weight: 650;
+  }
+  .evaluators {
+    margin-top: 0.85rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+  }
+  .evaluators-label {
+    margin: 0 0 0.5rem;
+    font-size: 0.68rem;
+    font-weight: 650;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  /* Current: stretch to fill */
+  .eval-row.is-current {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
+  .eval-row.is-current .eval-mark { width: 100%; }
+
+  /* Proposed: fixed width, left aligned, wrap */
+  .eval-row.is-proposed,
+  .eval-row.is-states {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: var(--eval-gap);
+  }
+  .eval-row.is-proposed { position: relative; }
+  .eval-mark {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.28rem;
+    text-align: center;
+    width: var(--card-width);
+    flex: 0 0 var(--card-width);
+    margin: 0;
+    padding: 0.55rem 0.45rem 0.5rem;
+    border-radius: 0.65rem;
+    border: 1px solid transparent;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+  .eval-face {
+    position: relative;
+    width: 2.35rem;
+    height: 2.35rem;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg-muted) 80%, var(--surface));
+    color: var(--link);
+  }
+  .eval-face svg { width: 1.2rem; height: 1.2rem; display: block; }
+  .eval-name { font-size: 0.72rem; line-height: 1.25; color: var(--text-muted); }
+  .pip {
+    position: absolute;
+    right: -0.15rem;
+    bottom: -0.15rem;
+    width: 0.95rem;
+    height: 0.95rem;
+    border-radius: 999px;
+    background: var(--navy);
+    color: var(--teal-bright);
+    display: grid;
+    place-items: center;
+    box-shadow: 0 0 0 2px var(--surface);
+  }
+  .pip svg { width: 0.62rem; height: 0.62rem; display: block; }
+
+  /* Speaking (has a finding) — not the same as selected */
+  .eval-mark.is-speaking:not(.is-selected) {
+    background: color-mix(in srgb, var(--speak) 10%, var(--surface));
+    border-color: color-mix(in srgb, var(--speak) 45%, var(--border));
+  }
+  .eval-mark.is-speaking:not(.is-selected) .eval-face {
+    color: var(--speak-text);
+    background: color-mix(in srgb, var(--speak) 16%, var(--surface));
+  }
+  .eval-mark.is-speaking:not(.is-selected) .eval-name { color: var(--text); font-weight: 650; }
+
+  /* Hover */
+  .eval-mark.is-hover,
+  .eval-mark:hover {
+    background: color-mix(in srgb, var(--bg-muted) 85%, var(--surface));
+    border-color: var(--border-strong);
+  }
+  .eval-mark.is-hover .eval-name,
+  .eval-mark:hover .eval-name { color: var(--text); }
+
+  /* Selected — tied to the panel below */
+  .eval-mark.is-selected {
+    background: color-mix(in srgb, var(--link) 9%, var(--surface));
+    border-color: color-mix(in srgb, var(--link) 70%, var(--border));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--link) 35%, transparent);
+    position: relative;
+    z-index: 1;
+  }
+  .eval-mark.is-selected .eval-face {
+    color: var(--link);
+    background: color-mix(in srgb, var(--link) 14%, var(--surface));
+  }
+  .eval-mark.is-selected .eval-name { color: var(--text); font-weight: 650; }
+  .eval-mark.is-selected.is-speaking .eval-face { color: var(--speak-text); }
+  .eval-mark.is-selected::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -0.72rem;
+    width: 0.85rem;
+    height: 0.85rem;
+    background: color-mix(in srgb, var(--link) 9%, var(--surface));
+    border-right: 1.5px solid color-mix(in srgb, var(--link) 70%, var(--border));
+    border-bottom: 1.5px solid color-mix(in srgb, var(--link) 70%, var(--border));
+    transform: translateX(-50%) rotate(45deg);
+    z-index: 2;
+  }
+
+  .eval-mark:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .eval-panel {
+    margin-top: 0.7rem;
+    padding: 0.75rem 0.85rem 0.85rem;
+    border-radius: 0.65rem;
+    border: 1px solid color-mix(in srgb, var(--link) 55%, var(--border));
+    border-top: 3px solid var(--link);
+    background: color-mix(in srgb, var(--link) 5%, var(--surface));
+  }
+  .eval-panel h4 { margin: 0 0 0.15rem; font-size: 0.95rem; color: var(--link); }
+  .eval-panel .purpose { margin: 0.35rem 0 0; }
+  .eval-panel .meta { margin: 0.2rem 0 0; color: var(--text-muted); font-size: 0.86rem; }
+
+  .state-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+  .state-cell {
+    border: 1px dashed var(--border);
+    border-radius: 0.85rem;
+    padding: 0.7rem 0.55rem 1.15rem;
+    overflow: visible;
+    background: color-mix(in srgb, var(--bg) 60%, var(--surface));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+  }
+  .state-cell .tag {
+    margin: 0 0 0.55rem;
+    font-size: 0.68rem;
+    font-weight: 650;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .state-cell .note {
+    margin: 0.55rem 0 0;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.4;
+  }
+
+  /* Mobile frame */
+  .frames {
+    display: grid;
+    grid-template-columns: 1fr 22.5rem;
+    gap: 1rem;
+    align-items: start;
+  }
+  .phone {
+    width: 22.5rem;
+    margin: 0 auto;
+    background: var(--navy);
+    border-radius: 1.6rem;
+    padding: 0.7rem 0.55rem 0.9rem;
+    box-shadow: var(--shadow);
+  }
+  .phone .notch {
+    width: 6rem; height: 0.35rem;
+    background: #1a2a44;
+    border-radius: 999px;
+    margin: 0.15rem auto 0.55rem;
+  }
+  .phone-screen {
+    background: var(--bg);
+    border-radius: 0.95rem;
+    padding: 0.7rem 0.65rem 0.85rem;
+    overflow: hidden;
+  }
+  .phone .summary-card { padding: 0.8rem 0.75rem 0.85rem; }
+  .phone .ring { width: 4.6rem; height: 4.6rem; font-size: 1.05rem; }
+  .phone .ring::after { width: 1.85rem; height: 1.3rem; top: 2.2rem; border-width: 2.5px; }
+  .phone .ring .eyes { top: 2.35rem; gap: 0.4rem; }
+  .phone .ring .eyes i { width: 0.28rem; height: 0.28rem; }
+  .phone .run-title { font-size: 1rem; }
+  .phone .pct { font-size: 1.1rem; }
+  .phone .count, .phone .stored-status { font-size: 0.82rem; }
+  .phone .eval-row.is-proposed {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.35rem;
+    scrollbar-width: thin;
+  }
+  .fade-hint {
+    pointer-events: none;
+    position: relative;
+  }
+  .phone .eval-row.is-proposed::after {
+    content: "";
+    flex: 0 0 1.2rem;
+  }
+  .scroll-note {
+    margin: 0.45rem 0 0;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  .annot {
+    display: inline-block;
+    margin-left: 0.35rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    background: var(--bg-muted);
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    font-weight: 650;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    vertical-align: middle;
+  }
+</style>
+<body>
+<div class="page" id="desktop">
+
+  <p class="kicker">Living Proof Labs · design mock</p>
+  <h1>Evaluator cards: fixed width, hover, and a selected state</h1>
+  <p class="lede">Titles are used exactly as the descriptor supplies them, with no “Evaluator” suffix. Cards keep a fixed width so a longer row stays predictable. Hover makes the control feel clickable, and the selected card is visually tied to the details below.</p>
+
+  <section class="figure" aria-labelledby="current-h">
+    <h2 id="current-h">Current · reporter v3.5.0</h2>
+    <p class="cap">On today’s live hallway report the one mark is titled “Scenario evaluator”, stretches the full row, and uses the speaking style even while its details stay closed. There is no hover colour, and no selected treatment that belongs only to an open card.</p>
+    <div class="summary-card">
+      <div class="summary-hero">
+        <div class="ring" aria-hidden="true">0%<span class="eyes"><i></i><i></i></span></div>
+        <div>
+          <h3 class="run-title">Walk the hallway</h3>
+          <p class="pct">0% success</p>
+          <p class="count">0 successes, 0%</p>
+          <p class="stored-status">Stored overall status: FAIL</p>
+        </div>
+      </div>
+      <p class="assessment-failure">0 successes, 0%; overall FAIL.</p>
+      <div class="evaluators">
+        <p class="evaluators-label">Evaluators</p>
+        <div class="eval-row is-current">
+          <div class="eval-mark is-speaking" style="width:100%;flex:1 1 auto">
+            <span class="eval-face" role="img" aria-label="Scenario evaluator">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><g stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 7L10.5 11L17.5 4"/><rect x="4" y="9" width="16" height="11" rx="4"/></g><g fill="currentColor"><circle cx="8.5" cy="14.5" r="1.5"/><circle cx="15.5" cy="14.5" r="1.5"/></g></svg>
+            </span>
+            <span class="eval-name">Scenario evaluator</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="figure" aria-labelledby="states-h">
+    <h2 id="states-h">Proposed card states</h2>
+    <p class="cap">Width is 11.25rem (180px). Speaking still means “this evaluator has something to say”. Selected is a separate state, used only when that card is open, so the panel below is clearly theirs.</p>
+    <div class="state-grid">
+      <div class="state-cell">
+        <p class="tag">Default</p>
+        <button type="button" class="eval-mark" aria-pressed="false">
+          <span class="eval-face" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="4.5" width="17" height="15" rx="3.5" stroke="currentColor" stroke-width="2"/><path d="M6.5 12.5h3l1.2-3 2.2 7 1.6-4H17.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="pip"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.2 8.2 6.1 11.1 12.8 4.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </span>
+          <span class="eval-name">Run Integrity</span>
+        </button>
+        <p class="note">Quiet, with the teal check. Transparent border, ready to receive hover.</p>
+      </div>
+      <div class="state-cell">
+        <p class="tag">Hover</p>
+        <button type="button" class="eval-mark is-hover" aria-pressed="false">
+          <span class="eval-face" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><path d="M10 4.5a2 2 0 0 1 4 0v9.15a3.5 3.5 0 1 1-4 0V4.5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9.5v4.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16.6" r="1.15" fill="currentColor"/></svg>
+            <span class="pip"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.2 8.2 6.1 11.1 12.8 4.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </span>
+          <span class="eval-name">Robot health</span>
+        </button>
+        <p class="note">Background and border shift to --bg-muted / --border-strong. Cursor is pointer. Keyboard uses the existing --focus ring.</p>
+      </div>
+      <div class="state-cell">
+        <p class="tag">Speaking, not open</p>
+        <button type="button" class="eval-mark is-speaking" aria-pressed="false">
+          <span class="eval-face" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><g stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 7L10.5 11L17.5 4"/><rect x="4" y="9" width="16" height="11" rx="4"/></g><g fill="currentColor"><circle cx="8.5" cy="14.5" r="1.5"/><circle cx="15.5" cy="14.5" r="1.5"/></g></svg>
+          </span>
+          <span class="eval-name">Scenario</span>
+        </button>
+        <p class="note">The --speak tint still flags a finding. Details stay closed until the card is clicked, so this is not the selected state.</p>
+      </div>
+      <div class="state-cell">
+        <p class="tag">Selected</p>
+        <button type="button" class="eval-mark is-speaking is-selected" aria-pressed="true">
+          <span class="eval-face" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><g stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 7L10.5 11L17.5 4"/><rect x="4" y="9" width="16" height="11" rx="4"/></g><g fill="currentColor"><circle cx="8.5" cy="14.5" r="1.5"/><circle cx="15.5" cy="14.5" r="1.5"/></g></svg>
+          </span>
+          <span class="eval-name">Scenario</span>
+        </button>
+        <p class="note">Teal accent border and a connector into the panel. The panel heading uses the same accent, so the two read as one control.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="figure" aria-labelledby="report-h">
+    <h2 id="report-h">Proposed, in a report · desktop</h2>
+    <p class="cap">Four evaluators, left-aligned at the fixed width. Scenario is open. The other marks stay quiet. When every evaluator passes, nothing is selected and every panel stays closed.</p>
+    <div class="summary-card">
+      <div class="summary-hero">
+        <div class="ring" aria-hidden="true">0%<span class="eyes"><i></i><i></i></span></div>
+        <div>
+          <h3 class="run-title">Walk the hallway</h3>
+          <p class="pct">0% success</p>
+          <p class="count">0 successes, 0%</p>
+          <p class="stored-status">Stored overall status: FAIL</p>
+        </div>
+      </div>
+      <p class="assessment-failure">0 successes, 0%; overall FAIL.</p>
+      <div class="evaluators">
+        <p class="evaluators-label">Evaluators</p>
+        <div class="eval-row is-proposed" role="tablist" aria-label="Evaluators">
+          <button type="button" class="eval-mark is-speaking is-selected" role="tab" aria-selected="true" aria-controls="panel-scenario" id="tab-scenario">
+            <span class="eval-face" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><g stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 7L10.5 11L17.5 4"/><rect x="4" y="9" width="16" height="11" rx="4"/></g><g fill="currentColor"><circle cx="8.5" cy="14.5" r="1.5"/><circle cx="15.5" cy="14.5" r="1.5"/></g></svg>
+            </span>
+            <span class="eval-name">Scenario</span>
+          </button>
+          <button type="button" class="eval-mark is-hover" role="tab" aria-selected="false" aria-controls="panel-scenario" id="tab-health">
+            <span class="eval-face" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><path d="M10 4.5a2 2 0 0 1 4 0v9.15a3.5 3.5 0 1 1-4 0V4.5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9.5v4.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16.6" r="1.15" fill="currentColor"/></svg>
+              <span class="pip"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.2 8.2 6.1 11.1 12.8 4.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </span>
+            <span class="eval-name">Robot health</span>
+          </button>
+          <button type="button" class="eval-mark" role="tab" aria-selected="false">
+            <span class="eval-face" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="4.5" width="17" height="15" rx="3.5" stroke="currentColor" stroke-width="2"/><path d="M6.5 12.5h3l1.2-3 2.2 7 1.6-4H17.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span class="pip"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.2 8.2 6.1 11.1 12.8 4.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </span>
+            <span class="eval-name">Run Integrity</span>
+          </button>
+          <button type="button" class="eval-mark" role="tab" aria-selected="false">
+            <span class="eval-face" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="2.5" stroke="currentColor" stroke-width="2"/><path d="M4.4 18c.5-3.1 2.4-4.8 4.6-4.8s4.1 1.7 4.6 4.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="16.2" cy="8.4" r="2.15" stroke="currentColor" stroke-width="2"/><path d="M13.2 18c.35-2.35 1.6-3.6 3-3.6 1.7 0 3.1 1.4 3.4 3.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <span class="pip"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.2 8.2 6.1 11.1 12.8 4.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </span>
+            <span class="eval-name">Human review</span>
+          </button>
+        </div>
+        <div class="eval-panel" role="tabpanel" id="panel-scenario" aria-labelledby="tab-scenario">
+          <h4>Scenario</h4>
+          <p class="meta">1.0.0</p>
+          <p class="purpose">Checks one trial’s steps against its stored observation.</p>
+          <p class="meta">Tier: Verdict</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="figure" aria-labelledby="mobile-h">
+    <h2 id="mobile-h">Proposed · mobile</h2>
+    <p class="cap">The same 180px cards. On a narrow screen the row scrolls sideways, so the width stays fixed and the selected connector still lines up with Scenario. The details panel is full width underneath, with the same teal top edge.</p>
+    <div class="phone" id="mobile-frame">
+      <div class="notch"></div>
+      <div class="phone-screen">
+        <div class="summary-card">
+          <div class="summary-hero">
+            <div class="ring" aria-hidden="true">0%<span class="eyes"><i></i><i></i></span></div>
+            <div>
+              <h3 class="run-title">Walk the hallway</h3>
+              <p class="pct">0% success</p>
+              <p class="count">0 successes, 0%</p>
+            </div>
+          </div>
+          <p class="assessment-failure">0 successes, 0%; overall FAIL.</p>
+          <div class="evaluators">
+            <p class="evaluators-label">Evaluators</p>
+            <div class="eval-row is-proposed">
+              <button type="button" class="eval-mark is-speaking is-selected" aria-pressed="true">
+                <span class="eval-face" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><g stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 7L10.5 11L17.5 4"/><rect x="4" y="9" width="16" height="11" rx="4"/></g><g fill="currentColor"><circle cx="8.5" cy="14.5" r="1.5"/><circle cx="15.5" cy="14.5" r="1.5"/></g></svg>
+                </span>
+                <span class="eval-name">Scenario</span>
+              </button>
+              <button type="button" class="eval-mark" aria-pressed="false">
+                <span class="eval-face" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><path d="M10 4.5a2 2 0 0 1 4 0v9.15a3.5 3.5 0 1 1-4 0V4.5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9.5v4.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16.6" r="1.15" fill="currentColor"/></svg>
+                  <span class="pip"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.2 8.2 6.1 11.1 12.8 4.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                </span>
+                <span class="eval-name">Robot health</span>
+              </button>
+              <button type="button" class="eval-mark" aria-pressed="false">
+                <span class="eval-face" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="4.5" width="17" height="15" rx="3.5" stroke="currentColor" stroke-width="2"/><path d="M6.5 12.5h3l1.2-3 2.2 7 1.6-4H17.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span class="pip"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.2 8.2 6.1 11.1 12.8 4.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                </span>
+                <span class="eval-name">Run Integrity</span>
+              </button>
+              <button type="button" class="eval-mark" aria-pressed="false">
+                <span class="eval-face" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="2.5" stroke="currentColor" stroke-width="2"/><path d="M4.4 18c.5-3.1 2.4-4.8 4.6-4.8s4.1 1.7 4.6 4.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="16.2" cy="8.4" r="2.15" stroke="currentColor" stroke-width="2"/><path d="M13.2 18c.35-2.35 1.6-3.6 3-3.6 1.7 0 3.1 1.4 3.4 3.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                  <span class="pip"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.2 8.2 6.1 11.1 12.8 4.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                </span>
+                <span class="eval-name">Human review</span>
+              </button>
+            </div>
+            <div class="eval-panel">
+              <h4>Scenario</h4>
+              <p class="meta">1.0.0</p>
+              <p class="purpose">Checks one trial’s steps against its stored observation.</p>
+              <p class="meta">Tier: Verdict</p>
+            </div>
+          </div>
+        </div>
+        <p class="scroll-note">Swipe to see the rest of the row · same 180px cards</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
