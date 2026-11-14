@@ -5,7 +5,7 @@ from pathlib import Path
 import click
 from jsonschema import ValidationError
 
-from .core import decode, load_bundle, render, require_decisions
+from .core import decode, load_bundle, markdown_filename, render, require_decisions
 
 
 def errors(function):
@@ -173,6 +173,8 @@ def render_command(
     livingproof-capability-report render examples/bundle/manifest.json --format markdown -o report.md
 
     Default stdout is a terminal table. Choose new output filenames when rerunning.
+    A directory passed to ``--output`` with ``--format markdown`` is filled with
+    ``<scenario>.markdown``, named from the scenario id in the bundle.
     """
     from . import assessed
 
@@ -207,6 +209,12 @@ def render_command(
         history=history,
         retention=evidence_retention,
     )
+    if output is not None and output.is_dir():
+        if selected_format != "markdown":
+            raise click.ClickException(
+                "A directory --output is only for --format markdown; pass a file name"
+            )
+        output = output / markdown_filename(stored)
     if output is None:
         click.echo(content, nl=False, color=False)
         return

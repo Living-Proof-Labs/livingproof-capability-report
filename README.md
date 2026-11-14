@@ -119,7 +119,9 @@ Grading belongs to capability-verifier. It assesses the evidence and writes a bu
 `schema_version` 1.1.0 that carries its decisions; this reporter only checks and renders
 them ([reporter #30](https://github.com/Living-Proof-Labs/livingproof-capability-report/issues/30)).
 
-The packaged `bundle.schema.json` accepts `schema_version` 1.0.0 and 1.1.0. Each result
+The packaged `bundle.schema.json` stays in this repository. Its `$id` is the schema's
+address and its `version` is `1.1.0`, the newest bundle `schema_version` it accepts.
+It accepts `schema_version` 1.0.0 and 1.1.0. Each result
 includes an identifier, released catalog tag and commit, capability/revision, system and
 environment versions, relative evidence paths with SHA-256 digests, assessments,
 provenance and the original producer result. Unknown extension fields are retained.
@@ -131,6 +133,10 @@ A 1.0.0 bundle still validates, but it has no decisions, so `render` refuses it 
 error that points to the verifier: assess the evidence with capability-verifier v1.9.0
 or later, which writes bundle 1.1.0, and render that. There is no averaging and no
 overall numeric score. Aggregation groups exact spec, system and environment contexts.
+Step names, limit lines and failure wording come from the bundle's scenario
+description and the stored evaluator results. A directory passed as `--output`
+with `--format markdown` is written as `<scenario>.markdown`, using the scenario
+id on that description (or the result capability when the description has none).
 
 ## Version 2.0.0: render the verifier's grading (bundle 1.1.0)
 

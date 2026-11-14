@@ -24,7 +24,7 @@ from pathlib import Path
 
 from livingproof_capability_report.assessed import report_from_bundle
 from livingproof_capability_report.core import load_bundle, render
-from livingproof_capability_report.hallway import _interval
+from livingproof_capability_report.narrative import _interval
 
 FIXTURES = Path(__file__).parent / "fixtures/repeats"
 HALLWAY = Path(__file__).parent / "fixtures/hallway-2.0.0"

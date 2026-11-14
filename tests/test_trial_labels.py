@@ -4,7 +4,7 @@
 v1.16.1 (67bb6bbc330645f9fee66b9ab16f6c055cd313f8) from livingproof-hallway-evidence/2.0.0.
 The observations start from that verifier's G1 stock fixture. Trials 2 and 3 were given
 a lateral drift past the stored limit (trial 2 also touches the left wall) so the export
-records failures, then ``tools/verify_hallway.py --bundle-version 1.1.0`` wrote this
+records failures, then ``tools/verify_narrative.py --bundle-version 1.1.0`` wrote this
 bundle. The catalog description is omitted: specs v1.9.0's grading sentence still says
 "seeds" and is shown unchanged when a bundle carries it. This is not a simulator run.
 """
@@ -13,7 +13,7 @@ import re
 from html import unescape
 from pathlib import Path
 
-from livingproof_capability_report import hallway
+from livingproof_capability_report import narrative
 from livingproof_capability_report.assessed import report_from_bundle
 from livingproof_capability_report.core import load_bundle, render
 
@@ -46,8 +46,8 @@ def test_repeat_name_uses_index_or_a_trials_dict_not_the_seed_number():
         "original_result": {"seed": 2},
         "provenance": {"plan": {"trials": 3, "seeds": [1, 2, 3]}},
     }
-    assert hallway.repeat_name(numbered) == "seed"
-    assert hallway.repeat_name(numbered, plural=True, capital=True) == "Seeds"
+    assert narrative.repeat_name(numbered) == "seed"
+    assert narrative.repeat_name(numbered, plural=True, capital=True) == "Seeds"
     by_index = {
         "original_result": {"seed": 2, "index": 2},
         "provenance": {"plan": {"trials": 3, "seeds": [1, 2, 3]}},
@@ -56,15 +56,15 @@ def test_repeat_name_uses_index_or_a_trials_dict_not_the_seed_number():
         "original_result": {"seed": 2},
         "provenance": {"plan": {"trials": {"count": 3}}},
     }
-    assert hallway.repeat_name(by_index) == "trial"
-    assert hallway.repeat_name(by_plan) == "trial"
-    assert hallway.repeat_name(by_plan, plural=True, capital=True) == "Trials"
+    assert narrative.repeat_name(by_index) == "trial"
+    assert narrative.repeat_name(by_plan) == "trial"
+    assert narrative.repeat_name(by_plan, plural=True, capital=True) == "Trials"
 
 
 def test_plan_count_renders_for_a_trials_dict():
     result = stored()["source_bundle"]["results"][0]
-    assert hallway.canonical_plan(result) == "walk-hallway@0.1.0 · N=3 · 0.50 m/s"
-    assert "pass bar" not in hallway.canonical_plan(result)
+    assert narrative.canonical_plan(result) == "walk-hallway@0.1.0 · N=3 · 0.50 m/s"
+    assert "pass bar" not in narrative.canonical_plan(result)
     copied = {
         **result,
         "provenance": {
@@ -72,7 +72,7 @@ def test_plan_count_renders_for_a_trials_dict():
             "plan": {**result["provenance"]["plan"], "required_passes": 3},
         },
     }
-    assert hallway.canonical_plan(copied) == (
+    assert narrative.canonical_plan(copied) == (
         "walk-hallway@0.1.0 · N=3 · 0.50 m/s · pass bar 100%"
     )
     uncomputable = {
@@ -82,8 +82,8 @@ def test_plan_count_renders_for_a_trials_dict():
             "plan": {**result["provenance"]["plan"], "required_passes": 3, "trials": 0},
         },
     }
-    assert hallway.canonical_plan(uncomputable) == "walk-hallway@0.1.0 · N=0 · 0.50 m/s"
-    assert "pass bar" not in hallway.canonical_plan(uncomputable)
+    assert narrative.canonical_plan(uncomputable) == "walk-hallway@0.1.0 · N=0 · 0.50 m/s"
+    assert "pass bar" not in narrative.canonical_plan(uncomputable)
 
 
 def test_evidence_2_report_says_trial_and_keeps_seed_contracts():
@@ -115,7 +115,7 @@ def test_evidence_2_report_says_trial_and_keeps_seed_contracts():
 
 def test_fallback_failure_lines_follow_the_same_word():
     result = stored()["source_bundle"]["results"][1]
-    described = hallway._describe(
+    described = narrative._describe(
         {
             "check": "hallway-lateral-limit",
             "observed": 0.62,
@@ -137,9 +137,9 @@ def test_fallback_failure_lines_follow_the_same_word():
             "seed": index + 1,
             "wall": "wall-left",
         }
-        for index, check in enumerate(hallway.ORDER)
+        for index, check in enumerate(narrative.ORDER)
     ]
-    lines = hallway.why_failed({"failures": failures}, result=result)
+    lines = narrative.why_failed({"failures": failures}, result=result)
     assert lines[-1] == "- 1× other first failures; see the per-trial details"
     assert all("(trial " in line or line.endswith("details") for line in lines)
 

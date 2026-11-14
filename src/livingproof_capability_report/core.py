@@ -12,7 +12,7 @@ from pathlib import Path, PurePosixPath
 
 from jsonschema import Draft202012Validator
 
-from . import hallway
+from . import narrative
 from . import html_theme
 from . import links as elinks
 
@@ -152,6 +152,33 @@ def require_decisions(bundle):
         )
 
 
+_SCENARIO_ID = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+
+
+def markdown_filename(report):
+    """Markdown file name from the scenario id stored on the bundle.
+
+    The description's scenario id wins. Otherwise the first result's capability
+    is used. A value that is not a scenario id becomes ``report.markdown``.
+    """
+    ident = None
+    bundle = report.get("source_bundle") if isinstance(report, dict) else None
+    if isinstance(bundle, dict):
+        description = bundle.get("description")
+        scenario = description.get("scenario") if isinstance(description, dict) else None
+        if isinstance(scenario, dict) and isinstance(scenario.get("id"), str):
+            ident = scenario["id"]
+        if ident is None:
+            for result in bundle.get("results") or []:
+                spec = result.get("spec") if isinstance(result, dict) else None
+                if isinstance(spec, dict) and isinstance(spec.get("capability"), str):
+                    ident = spec["capability"]
+                    break
+    if not isinstance(ident, str) or _SCENARIO_ID.fullmatch(ident) is None:
+        ident = "report"
+    return f"{ident}.markdown"
+
+
 def check_grade(grade):
     """A stored summary grade must be one the verifier writes; anything else is refused."""
     if not isinstance(grade, str) or grade not in GRADES:
@@ -200,7 +227,7 @@ def render(
     if format == "json":
         return json.dumps(report, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
     if format == "markdown":
-        return hallway.markdown(report, links, retention)
+        return narrative.markdown(report, links, retention)
     results = {r["id"]: r for r in bundle["results"]}
     rows = [
         {
@@ -269,6 +296,7 @@ def render(
     runs = [s for s in report.get("summaries") or [] if isinstance(s, dict)]
     in_runs = {r for s in runs for r in s.get("result_ids", [])}
     description = bundle.get("description") if isinstance(bundle.get("description"), dict) else None
+
     # Results outside any stored run keep these columns; no Environment JSON column (#40).
     # The status chip repeats the stored decision. It is not a new grade.
     def cell(key, value):

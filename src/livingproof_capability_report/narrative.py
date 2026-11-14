@@ -1,19 +1,18 @@
-"""Walk-hallway rendering: the markdown report from stored decisions and run assessments.
+"""Markdown report from stored decisions and run assessments.
 
 Each result is one trial. Evidence 1.0.0 numbers it by seed; evidence 2.0.0 numbers
 identical trials by index and stores that index in the same ``seed`` fields. Status,
 failures and the run's k of N, interval and grade are the capability verifier's
 (bundle 1.1.0); nothing here grades. Failed checks carry structured fields
-{check, observed, limit, unit, t, seed, wall}.
+{check, observed, limit, unit, t, seed, wall}. Step names and limit lines come from
+the bundle's scenario description. Checks recorded in the frozen evidence format
+are read by ``legacy_evidence``.
 """
 
+from . import legacy_evidence
+
 PASS, FAIL, INSUFFICIENT, INCOMPATIBLE = "PASS", "FAIL", "INSUFFICIENT_EVIDENCE", "INCOMPATIBLE"
-EVALUATORS = {
-    "hallway-exit-reached": "1.0.0",
-    "hallway-lateral-limit": "1.0.0",
-    "hallway-wall-contact": "1.0.0",
-    "hallway-fall": "1.0.0",
-}
+ORDER = legacy_evidence.order()
 
 
 MARKER = "<!-- livingproof-verification -->"
@@ -23,7 +22,6 @@ GRADE = {
     INSUFFICIENT: "⚠️ INSUFFICIENT EVIDENCE",
     INCOMPATIBLE: "⚠️ INCOMPATIBLE",
 }
-ORDER = list(EVALUATORS)
 
 
 def _label(value, where):
@@ -31,14 +29,6 @@ def _label(value, where):
     if not isinstance(value, str) or value not in GRADE:
         raise ValueError(f"Report {where} is {value!r}; expected one of {', '.join(GRADE)}")
     return GRADE[value]
-
-
-WHAT = {
-    "hallway-exit-reached": "exit not reached in time",
-    "hallway-lateral-limit": "lateral limit exceeded",
-    "hallway-wall-contact": "touched a wall",
-    "hallway-fall": "fell",
-}
 
 
 def _fmt(value, other=None, decimals=2):
@@ -93,7 +83,7 @@ def repeat_name(result=None, *, report=None, result_ids=(), plural=False, capita
 
 def _worse(a, b):
     """The worse of two failures of one check."""
-    if a["check"] == "hallway-fall":
+    if legacy_evidence.is_fall(a["check"]):
         return a if a["observed"] < b["observed"] else b
     if a["observed"] is None or b["observed"] is None:
         return a if a["observed"] is None else b
@@ -102,11 +92,11 @@ def _worse(a, b):
 
 def _describe(f, result=None):
     s = f" ({repeat_name(result)} {f['seed']})" if f["seed"] is not None else ""
-    if f["check"] == "hallway-wall-contact":
+    if legacy_evidence.is_contact(f["check"]):
         return f"touched {_wall(f.get('wall'))} at {_fmt(f['t'])} s{s}"
     if f["observed"] is None:
         return f"not reached by {_fmt(f['limit'])} s{s}"
-    op = "<" if f["check"] == "hallway-fall" else ">"
+    op = "<" if legacy_evidence.is_fall(f["check"]) else ">"
     obs, lim = _fmt(f["observed"], f["limit"]), _fmt(f["limit"], f["observed"])
     at = f" at {_fmt(f['t'])} s" if f["unit"] != "s" else ""
     return f"{obs} {op} {lim} {f['unit']}{at}{s}"
@@ -116,19 +106,20 @@ def why_failed(run, limit=3, result=None):
     """Each failed result counted once, under its first failure (earliest t, then check order)."""
     first = {}
     for f in run["failures"]:
-        key = (f["t"] if f["t"] is not None else float("inf"), ORDER.index(f["check"]))
+        key = (f["t"] if f["t"] is not None else float("inf"), legacy_evidence.position(f["check"]))
         if f["seed"] not in first or key < first[f["seed"]][0]:
             first[f["seed"]] = (key, f)
     groups = {}
     for _, f in first.values():
         groups.setdefault(f["check"], []).append(f)
-    ranked = sorted(groups.items(), key=lambda kv: (-len(kv[1]), ORDER.index(kv[0])))
+    ranked = sorted(groups.items(), key=lambda kv: (-len(kv[1]), legacy_evidence.position(kv[0])))
     lines = []
     for check, items in ranked[:limit]:
         worst = items[0]
         for f in items[1:]:
             worst = _worse(worst, f)
-        lines.append(f"- {len(items)}× {WHAT[check]} — worst: {_describe(worst, result)}")
+        label = legacy_evidence.what(check) or check
+        lines.append(f"- {len(items)}× {label} — worst: {_describe(worst, result)}")
     rest = sum(len(items) for _, items in ranked[limit:])
     if rest:
         lines.append(f"- {rest}× other first failures; see the per-{repeat_name(result)} details")
@@ -253,12 +244,14 @@ def markdown(report, links=None, retention=None):
             by_check = {}
             for f in s["failures"]:
                 by_check.setdefault(f["check"], []).append(f)
-            for check in [c for c in ORDER if c in by_check]:
+            ordered = [c for c in ORDER if c in by_check]
+            ordered += [c for c in by_check if c not in ordered]
+            for check in ordered:
                 items = sorted(
                     by_check[check], key=lambda f: (f["seed"] is None, f["seed"] or 0, f["t"] or 0)
                 )
                 lines += [f"**{check}**", ""]
-                if check == "hallway-wall-contact":
+                if legacy_evidence.is_contact(check):
                     lines += [f"| {head} | Contact |", "|---|---|"]
                     lines += [
                         f"| {f['seed']} | touched {_wall(f.get('wall'))} at {_fmt(f['t'])} s |"
@@ -291,10 +284,12 @@ def markdown(report, links=None, retention=None):
     )
     footer = [f"Policy {report['policy']}", "catalog " + ", ".join(catalogs)]
     footer += [f"run {s['run_id']}" for s in runs if s.get("run_id")]
-    from . import sections
-
-    if any(sections.visual_walls(report, s) for s in runs):
-        footer.append(sections.WALLS_SHORT)
+    note = next(
+        (item for item in (legacy_evidence.mujoco_note(report, run) for run in runs) if item),
+        None,
+    )
+    if note:
+        footer.append(note)
     footer += ["stored decisions, no regrading", "simulation evidence, not hardware validation"]
     lines += ["", "<sub>" + " · ".join(footer) + "</sub>"]
     notes = sorted({s["prototype"] for s in runs if s.get("prototype")})
