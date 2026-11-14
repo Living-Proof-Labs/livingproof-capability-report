@@ -1,0 +1,7 @@
+{
+  "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+  "tag": "v2.2.1",
+  "path": "specs/scenarios/scenario-description.schema.json",
+  "sha256": "be989f8ae0cb843f045dbe6f0ef9325cd261a24d7974fdef0970b751c1ea1df4",
+  "note": "No walk-corner description is in a released tag through v2.2.1. walk-corner.description.json is built so it validates against that schema. Its quantities are the positive numbers the schema requires, not measured corner results."
+}
