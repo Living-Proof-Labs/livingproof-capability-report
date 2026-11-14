@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
-from jsonschema import Draft202012Validator
+from jsonschema import Draft202012Validator, ValidationError
 
 import livingproof_capability_report
 from livingproof_capability_report.assessed import report_from_bundle
@@ -48,6 +48,61 @@ def test_bundle_schema_keeps_an_id_and_a_version():
     Draft202012Validator.check_schema(schema)
     manifest = json.loads((ROOT / "examples/bundle/manifest.json").read_text(encoding="utf-8"))
     Draft202012Validator(schema).validate(manifest)
+
+
+def test_bundle_schema_accepts_1_0_0_and_rejects_an_invalid_bundle():
+    """The 1.1.0 schema still accepts a 1.0.0 bundle and refuses an invalid one."""
+    schema = json.loads((PACKAGE / "bundle.schema.json").read_text(encoding="utf-8"))
+    validator = Draft202012Validator(schema)
+    legacy = json.loads((ROOT / "examples/bundle/manifest.json").read_text(encoding="utf-8"))
+    legacy["schema_version"] = "1.0.0"
+    legacy.pop("assessment", None)
+    for result in legacy["results"]:
+        result.pop("decision", None)
+    validator.validate(legacy)
+    compact = {
+        "schema_version": "1.0.0",
+        "producer": {"id": "test", "version": "1.0.0", "commit": "b" * 40},
+        "results": [
+            {
+                "id": "pause-120",
+                "spec": {
+                    "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+                    "tag": "v1.1.1",
+                    "commit": "e8ff8b45d76c6c0c0c3f7a0c2f62e1c0d1f2a3b4",
+                    "capability": "pause",
+                    "revision": "1.0.0",
+                },
+                "system": {"id": "fixtures", "version": "1.0.0"},
+                "environment": {"id": "deterministic-fixture", "version": "1.0.0"},
+                "evidence": [
+                    {"id": "observation", "path": "evidence.json", "sha256": "a" * 64}
+                ],
+                "assessments": [
+                    {
+                        "id": "pause-rules",
+                        "evaluator": "pause-rules",
+                        "kind": "deterministic",
+                        "version": "1.0.0",
+                        "status": "PASS",
+                        "rationale": "ok",
+                        "mandatory": True,
+                        "evidence_ids": ["observation"],
+                        "provenance": {"label": "recorded fixture"},
+                    }
+                ],
+                "provenance": {"simulator": None},
+                "original_result": {"status": "PASS"},
+            }
+        ],
+    }
+    validator.validate(compact)
+    bad_version = copy.deepcopy(compact)
+    bad_version["schema_version"] = "9.9.9"
+    with pytest.raises(ValidationError, match="9.9.9"):
+        validator.validate(bad_version)
+    with pytest.raises(ValidationError):
+        validator.validate({})
 
 
 @pytest.mark.parametrize("name", ["g1", "go1", "t1"])
@@ -141,6 +196,37 @@ def test_corner_description_renders_its_own_step_names():
     assert markdown_filename(stored) == "walk-corner.markdown"
     assert "Walk around the corner" in page
     assert REMOVED_LABEL not in page
+
+
+# Hallway success-criteria text from the stored G1 description, and labels the
+# reporter must not keep when a corner description is attached.
+_HALLWAY_STEP_NAMES = (
+    "Reaches the exit, 5.5 m along the route, within 27 s, crossing it inside the exit segment.",
+    "Never touches a side wall.",
+    "Stays upright: the base never drops below the fall height.",
+    "Stays within its lateral limit of the hallway centreline.",
+)
+_HALLWAY_LABELS = ("Fits the hallway", "Walk the hallway", "Open hallway")
+
+
+def test_corner_report_has_no_hallway_step_names_or_labels():
+    """Corner step names are used; leftover stored hallway evidence ids may still show.
+
+    The contract fixture puts a corner description on a real G1 hallway bundle and
+    remaps per-trial evaluator ids only. Stored check names, capability, environment
+    and run id are unchanged, so those identifiers can still appear, and
+    legacy_evidence may still word a stored hallway failure. This test locks the
+    wording the reporter owns: step headings and hallway labels.
+    """
+    page = render(report(_corner_bundle()), "html")
+    markdown = render(report(_corner_bundle()), "markdown")
+    for output in (page, markdown):
+        for text in _HALLWAY_STEP_NAMES:
+            assert text not in output
+        for label in _HALLWAY_LABELS:
+            assert label not in output
+    # Step headings are HTML; the markdown summary does not list them.
+    assert "Turns the corner" in page
 
 
 def test_scenario_names_stay_in_the_legacy_reader():
