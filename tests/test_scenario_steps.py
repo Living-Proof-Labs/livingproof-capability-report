@@ -13,7 +13,7 @@ from click.testing import CliRunner
 
 from livingproof_capability_report.cli import report as cli
 from livingproof_capability_report.core import render
-from livingproof_capability_report.hallway import _interval
+from livingproof_capability_report.narrative import _interval
 from livingproof_capability_report.html_theme import success_badge
 from livingproof_capability_report.steps import describe_success, durations_by_result, esc
 from test_sections import bundle, report

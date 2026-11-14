@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from livingproof_capability_report import hallway
+from livingproof_capability_report import narrative
 from livingproof_capability_report.assessed import report_from_bundle
 from livingproof_capability_report.core import digest, load_bundle, render
 
@@ -81,8 +81,8 @@ def test_markdown_close_call_keeps_minimal_extra_digit():
         "t": 9.2,
         "seed": 17,
     }
-    assert hallway._describe(f) == "0.492 > 0.490 m at 9.20 s (seed 17)"
-    assert hallway._describe(dict(f, observed=0.62)) == "0.62 > 0.49 m at 9.20 s (seed 17)"
+    assert narrative._describe(f) == "0.492 > 0.490 m at 9.20 s (seed 17)"
+    assert narrative._describe(dict(f, observed=0.62)) == "0.62 > 0.49 m at 9.20 s (seed 17)"
 
 
 def test_markdown_thumbnails_links_and_prototype_line(tmp_path):
@@ -183,7 +183,7 @@ def test_the_reporter_has_no_grading_code():
     from livingproof_capability_report import core
 
     for name in ("grade", "decide", "wilson", "summaries", "members_supported"):
-        assert not hasattr(hallway, name) and not hasattr(core, name), name
+        assert not hasattr(narrative, name) and not hasattr(core, name), name
     assert not hasattr(package, "grade")
     src = Path(package.__file__).parent
     assert not (src / "policy.py").exists() and not (src / "human.schema.json").exists()

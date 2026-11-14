@@ -33,7 +33,7 @@ import html
 import json
 import re
 
-from . import hallway
+from . import narrative
 
 KINDS = ("artifact", "video", "mcap", "log", "note")
 _URL = re.compile(r"^https://[^\s()<>\[\]|`]+$")
@@ -225,7 +225,7 @@ def _markdown_piece(entry, retention):
 
 
 def lines(report, run, retention=None):
-    """Markdown lines for one hallway run (empty without stored links)."""
+    """Markdown lines for one run (empty without stored links)."""
     stored = report.get("evidence_links")
     if not stored:
         return []
@@ -249,7 +249,7 @@ def lines(report, run, retention=None):
                 )
             key = (entry["status"] != "FAIL", entry["seed"])
             trials.setdefault(key, []).append(entry)
-    name = hallway.repeat_name(report=report, result_ids=run.get("result_ids") or [])
+    name = narrative.repeat_name(report=report, result_ids=run.get("result_ids") or [])
     for (_, seed), items in sorted(trials.items()):
         word = "pass" if items[0]["status"] == "PASS" else "fail"
         icon = "▶️" if any(entry["kind"] == "video" for entry in items) else "📎"
@@ -322,7 +322,7 @@ def _display_label(report, entry):
         (item for item in report["source_bundle"]["results"] if item["id"].endswith(suffix)),
         None,
     )
-    name = hallway.repeat_name(result)
+    name = narrative.repeat_name(result)
     return f"{name} {entry['seed']} ({entry['status']}): {entry.get('label', '')}"
 
 

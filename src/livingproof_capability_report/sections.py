@@ -1,4 +1,4 @@
-"""Hallway HTML sections (#39 header, #40 context card, failure section and trial grid).
+"""HTML sections (#39 header, #40 context card, failure section and trial grid).
 
 Everything shown is a stored value: the bundle's top-level ``description`` (specs v1.9.0
 text), each result's ``provenance.limits`` and per-trial ``decision`` (``primary_failure``,
@@ -11,38 +11,20 @@ it, rather than being recomputed.
 import html
 import re
 
-from . import hallway
+from . import legacy_evidence
+from . import narrative
 from .links import html_links
-from .steps import compared_block, failure_count, repeat_statement, required_percentage, success_count
-
-PASS, FAIL = hallway.PASS, hallway.FAIL
-
-# Which stored limit backs each check (display only; values come from provenance.limits).
-LIMIT_FOR = {
-    "hallway-exit-reached": ("time_limit", "exit_segment"),
-    "hallway-lateral-limit": ("lateral_limit",),
-    "hallway-fall": ("fall_height",),
-    "hallway-wall-contact": (),
-}
-WORST = {"max": "highest", "min": "lowest"}
-WALLS_SHORT = (
-    "MuJoCo hallway walls are visual only (no collision); from sim-mujoco v1.8.3 a trial "
-    "ends left_hallway past a wall's outer face"
+from .steps import (
+    compared_block,
+    failure_count,
+    repeat_statement,
+    required_percentage,
+    success_count,
 )
 
+PASS, FAIL = narrative.PASS, narrative.FAIL
 
-def visual_walls(report, summary):
-    """True when the run's stored provenance names the MuJoCo simulator on hallway-open."""
-    if _dict(summary.get("environment")).get("id") != "hallway-open":
-        return False
-    results = {r["id"]: r for r in report["source_bundle"]["results"]}
-    return any(
-        _dict(
-            _dict(_dict(results.get(r, {}).get("provenance")).get("simulator")).get("simulator")
-        ).get("id")
-        == "mujoco"
-        for r in summary.get("result_ids", [])
-    )
+WORST = {"max": "highest", "min": "lowest"}
 
 
 def esc(value):
@@ -96,29 +78,15 @@ def any_limits(report, summary):
 
 def words(f):
     """One stored failure in words; observed and limit as stored, two decimals."""
-    fmt = hallway._fmt
+    fmt = narrative._fmt
+    stored = legacy_evidence.failure_words(f, fmt, num)
+    if stored is not None:
+        return stored
     t = f" at {fmt(f['t'])} s" if f.get("t") is not None else ""
     check = f.get("check")
-    if check == "hallway-wall-contact":
-        depth = f" ({fmt(f['observed'], decimals=3)} m in)" if f.get("observed") else ""
-        side = (f.get("wall") or "").removeprefix("wall-")
-        return f"touched {'the ' + side + ' wall' if side else 'a wall'}{t}{depth}"
-    if check == "hallway-exit-reached":
-        via = f.get("via")
-        if isinstance(via, str) and via.startswith("wall-"):
-            return f"left the hallway through the {via.removeprefix('wall-')} wall{t}"
-        if via == "exit-outside-segment":
-            return f"crossed the exit line outside the exit segment{t}"
-        if f.get("observed") is None:
-            return f"did not reach the exit within {fmt(f.get('limit'))} s"
-        return f"reached the exit at {fmt(f['observed'], f.get('limit'))} s > {fmt(f.get('limit'), f['observed'])} s"
     obs, lim = f.get("observed"), f.get("limit")
     if obs is None:
         return f"{check} not measured"
-    if check == "hallway-lateral-limit":
-        return f"drifted {fmt(obs, lim)} m > {num(lim)} m from the centreline{t}"
-    if check == "hallway-fall":
-        return f"base dropped to {fmt(obs, lim)} m < {num(lim)} m{t}"
     return f"{check}: {fmt(obs, lim)} {f.get('unit', '')} vs {fmt(lim, obs)}{t}"
 
 
@@ -164,7 +132,7 @@ def header(report, summary, description):
     grade = summary["grade"]
     mission = _dict(_dict(description).get("mission"))
     world = _dict(_dict(description).get("world"))
-    robot = hallway._robot(summary["system"])
+    robot = narrative._robot(summary["system"])
     what = mission.get("title") or _dict(summary.get("spec")).get("capability") or "capability"
     where = world.get("title") or _dict(summary.get("environment")).get("id")
     title = f"{robot} {summary['system'].get('version', '')}".strip() + f" — {what}"
@@ -210,8 +178,8 @@ def why_lines(report, summary):
         return None
     worst = {w.get("check"): w for w in _list(run.get("worst")) if isinstance(w, dict)}
     ids = summary.get("result_ids") or []
-    one = hallway.repeat_name(report=report, result_ids=ids)
-    many = hallway.repeat_name(report=report, result_ids=ids, plural=True)
+    one = narrative.repeat_name(report=report, result_ids=ids)
+    many = narrative.repeat_name(report=report, result_ids=ids, plural=True)
     lines = []
     for b in _list(fs.get("by_primary")):
         if not isinstance(b, dict):
@@ -222,7 +190,7 @@ def why_lines(report, summary):
             tail = f" — worst {num(w['observed'])} {w.get('unit', '')} ({one} {w.get('seed')})"
         seeds = ", ".join(str(x) for x in _list(b.get("seeds")))
         lines.append(
-            f"- {b.get('count')}× {hallway.WHAT.get(b.get('check'), b.get('check'))} "
+            f"- {b.get('count')}× {legacy_evidence.what(b.get('check')) or b.get('check')} "
             f"(primary) — {many} {seeds}{tail}"
         )
     return lines
@@ -240,7 +208,7 @@ def html_actual(report, summary):
     if not failed:
         counted = success_count(summary.get("k"), summary.get("n"))
         return f"No trial failed: {counted}." if counted else "No trial failed."
-    many = hallway.repeat_name(
+    many = narrative.repeat_name(
         report=report, result_ids=summary.get("result_ids") or [], plural=True
     )
     parts = []
@@ -258,7 +226,7 @@ def html_actual(report, summary):
 def actual(report, summary):
     fs = _dict(stored_run(report, summary).get("failure_summary"))
     if not fs:
-        return hallway._verdict(summary)
+        return narrative._verdict(summary)
     failed = fs.get("failed_trials")
     if not failed:
         counted = success_count(summary.get("k"), summary.get("n"))
@@ -269,9 +237,9 @@ def actual(report, summary):
         if not isinstance(b, dict):
             continue
         listed = _list(b.get("seeds"))
-        name = hallway.repeat_name(report=report, result_ids=ids, plural=len(listed) != 1)
+        name = narrative.repeat_name(report=report, result_ids=ids, plural=len(listed) != 1)
         parts.append(
-            f"{hallway.WHAT.get(b['check'], b['check'])} in {b['count']} "
+            f"{legacy_evidence.what(b['check']) or b['check']} in {b['count']} "
             f"({name} {', '.join(str(s) for s in listed)})"
         )
     text = failure_count(failed, summary.get("n")) or f"{failed} failures"
@@ -285,7 +253,7 @@ def context(report, summary, description):
     d = _dict(description)
     mission, world, rules = _dict(d.get("mission")), _dict(d.get("world")), _dict(d.get("limits"))
     limits = run_limits(report, summary)
-    robot = hallway._robot(summary["system"])
+    robot = narrative._robot(summary["system"])
     out = ["<section class='context'><h3>Test context</h3>"]
     items = []
     if mission:
@@ -301,7 +269,7 @@ def context(report, summary, description):
             continue
         lines = [
             _limit_line(k.replace("_", " "), _dict(limits).get(k))
-            for k in LIMIT_FOR.get(c.get("evaluator"), ())
+            for k in legacy_evidence.limit_keys(c.get("evaluator"))
         ]
         lines = [x for x in lines if x]
         criteria.append(
@@ -354,10 +322,9 @@ def context(report, summary, description):
         if text:
             out.append(f"<dt>Lateral limit</dt><dd>{esc(text)}</dd>")
         fits = _dict(limits.get("fits_width"))
-        if fits.get("detail") or "met" in fits:
-            out.append(
-                f"<dt>Fits the hallway</dt><dd>{esc(fits.get('detail') or _limit_line('fits width', fits))}</dd>"
-            )
+        body = fits.get("detail") or _limit_line("fits width", fits)
+        if body:
+            out.append(f"<dd>{esc(body)}</dd>")
         others = [
             _limit_line(k.replace("_", " "), v)
             for k, v in limits.items()
@@ -383,8 +350,8 @@ def failures(report, summary):
     worst = _list(run.get("worst"))
     limits = _dict(run_limits(report, summary))
     ids = summary.get("result_ids") or []
-    many = hallway.repeat_name(report=report, result_ids=ids, plural=True, capital=True)
-    one = hallway.repeat_name(report=report, result_ids=ids, capital=True)
+    many = narrative.repeat_name(report=report, result_ids=ids, plural=True, capital=True)
+    one = narrative.repeat_name(report=report, result_ids=ids, capital=True)
     if not fs and not worst:
         return ""
     out = ["<section class='failures'><h3>Why trials failed</h3>"]
@@ -414,26 +381,30 @@ def failures(report, summary):
             check = w.get("check")
             if w.get("observed") is None:
                 value = "none observed"
-                if check == "hallway-exit-reached" and w.get("missing") is not None:
+                if legacy_evidence.is_exit(check) and w.get("missing") is not None:
                     missed = failure_count(w["missing"], summary.get("n"))
-                    value = f"no exit time, {missed}" if missed else f"no exit time in {w['missing']} trials"
+                    value = (
+                        f"no exit time, {missed}"
+                        if missed
+                        else f"no exit time in {w['missing']} trials"
+                    )
             else:
                 value = f"{num(w['observed'])} {w.get('unit', '')}".strip()
                 if w.get("wall"):
-                    value += f" ({hallway._wall(w['wall'])})"
-                if check == "hallway-exit-reached" and w.get("missing"):
+                    value += f" ({narrative._wall(w['wall'])})"
+                if legacy_evidence.is_exit(check) and w.get("missing"):
                     missed = failure_count(w["missing"], summary.get("n"))
                     value += f"; no exit time, {missed}" if missed else ""
             lim = [
                 f"{num(limits[k]['value'])} {limits[k].get('unit', '')}".strip()
-                for k in LIMIT_FOR.get(check, ())[:1]
+                for k in legacy_evidence.limit_keys(check)[:1]
                 if isinstance(limits.get(k), dict) and "value" in limits[k]
             ]
             rows.append(
                 f"<tr><td>{esc(check)}</td>"
                 f"<td>{esc(WORST.get(w.get('worst'), w.get('worst', '')))}</td><td>{esc(value)}</td>"
                 f"<td>{esc('' if w.get('seed') is None else w['seed'])}</td>"
-                f"<td>{esc('' if w.get('t') is None else hallway._fmt(w['t']) + ' s')}</td>"
+                f"<td>{esc('' if w.get('t') is None else narrative._fmt(w['t']) + ' s')}</td>"
                 f"<td>{esc(', '.join(lim))}</td></tr>"
             )
         out.append(
@@ -463,7 +434,7 @@ def trials(report, summary, retention=None):
         result, decision = results.get(rid, {}), decisions.get(rid, {})
         bundle_decision = _dict(result.get("decision"))
         seed = _seed(result, decision)
-        label = f"{hallway.repeat_name(result)} {seed}" if seed is not None else rid
+        label = f"{narrative.repeat_name(result)} {seed}" if seed is not None else rid
         linked = html_links(per_seed.get(seed, []), retention)
         links = f" {linked}" if linked else ""
         if decision.get("status") == PASS:
@@ -486,7 +457,7 @@ def trials(report, summary, retention=None):
             f"<td>{esc(main)}<br><span class='muted'>{esc(then)}</span></td>"
             f"<td>{links.strip()}</td></tr>"
         )
-    out = [f"<section class='trials'><h3>Trials · {esc(hallway._robot(summary['system']))}</h3>"]
+    out = [f"<section class='trials'><h3>Trials · {esc(narrative._robot(summary['system']))}</h3>"]
     if rows:
         out.append(
             "<table class='failed'><thead><tr><th>Trial</th><th>Status</th>"

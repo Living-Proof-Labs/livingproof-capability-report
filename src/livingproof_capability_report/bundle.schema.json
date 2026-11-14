@@ -1,4 +1,8 @@
 {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Living-Proof-Labs/livingproof-capability-report/src/livingproof_capability_report/bundle.schema.json",
+  "title": "livingproof-capability-bundle",
+  "version": "1.1.0",
   "type": "object",
   "properties": {
     "schema_version": {
@@ -218,6 +222,5 @@
     "schema_version",
     "producer",
     "results"
-  ],
-  "$schema": "https://json-schema.org/draft/2020-12/schema"
+  ]
 }

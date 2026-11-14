@@ -13,18 +13,14 @@ import html
 import json
 from pathlib import Path
 
-from . import hallway
 from . import html_theme
+from . import legacy_evidence
+from . import narrative
 from .core import safe_relative
 
 # How a known check's stored details are read. The visible name comes from the
-# feature spec's success_criteria text, not from this table.
-_KIND = {
-    "hallway-lateral-limit": "lateral",
-    "hallway-wall-contact": "wall",
-    "hallway-exit-reached": "exit",
-    "hallway-fall": "fall",
-}
+# feature spec's success_criteria text. The kind, for a frozen check name, comes
+# from the legacy evidence reader.
 _LIMIT_KEY = {"lateral": "lateral_limit", "exit": "time_limit", "fall": "fall_height"}
 _DEFAULT_UNIT = {"lateral": "m", "exit": "s", "fall": "m"}
 _TIME_KIND = {
@@ -282,7 +278,8 @@ def _verdict(status):
 def _trial_rows(step, trials, durations):
     rows = []
     ordered = sorted(
-        trials, key=lambda item: (_seed(item[0]) is None, _seed(item[0]) or 0, item[0].get("id", ""))
+        trials,
+        key=lambda item: (_seed(item[0]) is None, _seed(item[0]) or 0, item[0].get("id", "")),
     )
     for result, assessments in ordered:
         seed = _seed(result)
@@ -443,7 +440,11 @@ def _catalog(trials, names):
     ordered = [ident for ident in names if ident in present]
     ordered += sorted(ident for ident in present if ident not in ordered)
     return [
-        {"id": ident, "name": names.get(ident, ident), "kind": _KIND.get(ident, "other")}
+        {
+            "id": ident,
+            "name": names.get(ident, ident),
+            "kind": legacy_evidence.kind(ident) or "other",
+        }
         for ident in ordered
     ]
 
@@ -465,7 +466,9 @@ def _ranked(catalog, trials):
             ),
             None,
         )
-        ranked.append({**step, "passed": passed, "total": total, "version": version, "order": index})
+        ranked.append(
+            {**step, "passed": passed, "total": total, "version": version, "order": index}
+        )
     ranked.sort(key=lambda step: (step["passed"], step["order"], step["id"]))
     return ranked
 
@@ -492,7 +495,7 @@ def _confidence(summary):
         return ""
     return (
         "<p class='confidence'>95% confidence range for the success rate: "
-        f"{esc(hallway._interval(interval))}</p>"
+        f"{esc(narrative._interval(interval))}</p>"
     )
 
 
@@ -580,7 +583,12 @@ def _article(step, place, tied, close, trials, durations):
     shown = describe_success(step["passed"], step["total"])
     rate = shown["phrase"]
     badge = html_theme.success_badge(
-        shown["face"], f"{step['name']}: {rate}", esc, complete=shown["complete"], fill=shown["fill"], size=88
+        shown["face"],
+        f"{step['name']}: {rate}",
+        esc,
+        complete=shown["complete"],
+        fill=shown["fill"],
+        size=88,
     )
     place_label = f"={place}" if tied else str(place)
     place_class = "place tie" if tied else "place"
@@ -656,9 +664,7 @@ def _differing_list(block):
                 continue
             bits.append(f"{key} {value}")
         if bits:
-            items.append(
-                "<li style='overflow-wrap:anywhere'>" + esc(", ".join(bits)) + "</li>"
-            )
+            items.append("<li style='overflow-wrap:anywhere'>" + esc(", ".join(bits)) + "</li>")
     if not items:
         return ""
     return (
@@ -749,7 +755,12 @@ def _run_cards(report, summary, durations):
     if shown is None:
         rate, face, complete, fill = "Success rate not stored", "", False, 0
     else:
-        rate, face, complete, fill = shown["phrase"], shown["face"], shown["complete"], shown["fill"]
+        rate, face, complete, fill = (
+            shown["phrase"],
+            shown["face"],
+            shown["complete"],
+            shown["fill"],
+        )
     grade = summary.get("grade") or ""
     counted = success_count(k, n)
     count = f"<p class='count'>{esc(counted)}</p>" if counted else ""
@@ -759,7 +770,14 @@ def _run_cards(report, summary, durations):
     places, shared = _places(ranked)
     pieces = []
     for index, (previous, step, place) in enumerate(zip([None, *ranked[:-1]], ranked, places)):
-        neighbors = [item for item in (ranked[index - 1] if index else None, ranked[index + 1] if index + 1 < len(ranked) else None) if item]
+        neighbors = [
+            item
+            for item in (
+                ranked[index - 1] if index else None,
+                ranked[index + 1] if index + 1 < len(ranked) else None,
+            )
+            if item
+        ]
         close = any(abs(step["passed"] - other["passed"]) == 1 for other in neighbors)
         pieces.append(_article(step, place, place in shared, close, trials, durations))
         if previous is not None and abs(step["passed"] - previous["passed"]) == 1:

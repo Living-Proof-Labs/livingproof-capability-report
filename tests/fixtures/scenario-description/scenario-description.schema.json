@@ -1,0 +1,321 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Living-Proof-Labs/robot-capability-specs/specs/scenarios/scenario-description.schema.json",
+  "title": "livingproof-scenario-description/0.1",
+  "description": "Human-readable mission and world text for one scenario revision, with the acceptance parameters it names and the rule for each limit the verifier resolves per robot. Text only: it changes no acceptance rule, and the scenario README stays normative. A verifier passes it through into the bundle unchanged, adding the values it resolved, so a report renders it without computing anything.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "scenario",
+    "world",
+    "mission",
+    "parameters",
+    "limits"
+  ],
+  "properties": {
+    "$comment": {
+      "type": "string"
+    },
+    "format": {
+      "const": "livingproof-scenario-description/0.1"
+    },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "revision"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "revision": {
+          "$ref": "#/$defs/version"
+        }
+      }
+    },
+    "mission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "description",
+        "success_criteria",
+        "grading",
+        "time_limit_explained"
+      ],
+      "properties": {
+        "title": {
+          "$ref": "#/$defs/text"
+        },
+        "description": {
+          "$ref": "#/$defs/text"
+        },
+        "success_criteria": {
+          "description": "One run passes when every criterion holds; each names the evaluator that judges it.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "evaluator",
+              "text"
+            ],
+            "properties": {
+              "evaluator": {
+                "$ref": "#/$defs/id"
+              },
+              "text": {
+                "$ref": "#/$defs/text"
+              }
+            }
+          }
+        },
+        "grading": {
+          "$ref": "#/$defs/text"
+        },
+        "time_limit_explained": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "world": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "content_version",
+        "title",
+        "description",
+        "dimensions"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "content_version": {
+          "$ref": "#/$defs/version"
+        },
+        "title": {
+          "$ref": "#/$defs/text"
+        },
+        "description": {
+          "$ref": "#/$defs/text"
+        },
+        "dimensions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "clear_width",
+            "length",
+            "wall_height",
+            "wall_thickness"
+          ],
+          "properties": {
+            "clear_width": {
+              "$ref": "#/$defs/metres"
+            },
+            "length": {
+              "$ref": "#/$defs/metres"
+            },
+            "wall_height": {
+              "$ref": "#/$defs/metres"
+            },
+            "wall_thickness": {
+              "$ref": "#/$defs/metres"
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "description": "Acceptance parameters with fixed values, as the scenario README states them.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "route_length",
+        "command_speed",
+        "time_limit",
+        "trials",
+        "wall_clearance"
+      ],
+      "properties": {
+        "route_length": {
+          "$ref": "#/$defs/metres"
+        },
+        "command_speed": {
+          "$ref": "#/$defs/quantity"
+        },
+        "time_limit": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "unit",
+            "formula"
+          ],
+          "properties": {
+            "value": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "unit": {
+              "const": "s"
+            },
+            "formula": {
+              "$ref": "#/$defs/text"
+            }
+          }
+        },
+        "trials": {
+          "description": "How many identical trials one run performs at the nominal start. The default count is 1. A failed trial is not retried.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "count",
+            "retries"
+          ],
+          "properties": {
+            "count": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "retries": {
+              "type": "boolean"
+            }
+          }
+        },
+        "wall_clearance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "humanoid",
+            "quadruped"
+          ],
+          "properties": {
+            "humanoid": {
+              "$ref": "#/$defs/metres"
+            },
+            "quadruped": {
+              "$ref": "#/$defs/metres"
+            }
+          }
+        }
+      }
+    },
+    "limits": {
+      "description": "Limits the verifier resolves per robot from the world and the robot and configuration profiles. No resolved value is stated here: the verifier writes the inputs it used, the formula and the unrounded result.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lateral_limit",
+        "exit_segment",
+        "fall_height",
+        "fits_width"
+      ],
+      "properties": {
+        "lateral_limit": {
+          "$ref": "#/$defs/rule"
+        },
+        "exit_segment": {
+          "$ref": "#/$defs/rule"
+        },
+        "fall_height": {
+          "$ref": "#/$defs/rule"
+        },
+        "fits_width": {
+          "$ref": "#/$defs/rule"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "quantity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "unit"
+      ],
+      "properties": {
+        "value": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "unit": {
+          "enum": [
+            "m",
+            "s",
+            "m/s"
+          ]
+        }
+      }
+    },
+    "metres": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "unit"
+      ],
+      "properties": {
+        "value": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "unit": {
+          "const": "m"
+        }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "unit",
+        "formula",
+        "inputs",
+        "text"
+      ],
+      "properties": {
+        "unit": {
+          "const": "m"
+        },
+        "formula": {
+          "$ref": "#/$defs/text"
+        },
+        "inputs": {
+          "description": "Where each input comes from: a world dimension or a profile field.",
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "text": {
+          "$ref": "#/$defs/text"
+        },
+        "sentence": {
+          "description": "A report sentence with {placeholders} named by inputs, plus {robot} and {value}.",
+          "$ref": "#/$defs/text"
+        }
+      }
+    }
+  }
+}
