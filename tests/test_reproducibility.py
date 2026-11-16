@@ -1,7 +1,8 @@
 """Compared repeats are one outcome plus the stored statement.
 
-Fixtures are capability-verifier output at 209db38c3c7b14760cd969a370be46722f01dbe6
-(pull request 85). ``identical``, ``disagreeing`` and ``single`` were exported by
+Fixtures are capability-verifier release v1.19.0 output (commit
+cb7bfdfb22d3273005517b205886c1ac98c45b42, the first release with pull request 85),
+regenerated at that tag with ``LIVINGPROOF_VERIFIER_VERSION=1.19.0``. ``identical``, ``disagreeing`` and ``single`` were exported by
 ``tools/verify_hallway.py --bundle-version 1.1.0`` from
 ``tests/fixtures/hallway/evidence-2.0.0``. The disagreement edits trial 2 and sets
 the finding the way ``test_a_reproducibility_finding_is_not_a_robot_fail`` does.
