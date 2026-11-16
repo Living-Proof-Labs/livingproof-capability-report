@@ -16,6 +16,7 @@ from . import narrative
 from .links import html_links
 from .steps import (
     compared_block,
+    disagreement_text,
     failure_count,
     repeat_statement,
     required_percentage,
@@ -207,6 +208,9 @@ def html_actual(report, summary):
     failed = fs.get("failed_trials")
     if not failed:
         counted = success_count(summary.get("k"), summary.get("n"))
+        disagreed = disagreement_text(summary)
+        if disagreed:
+            return disagreed
         return f"No trial failed: {counted}." if counted else "No trial failed."
     many = narrative.repeat_name(
         report=report, result_ids=summary.get("result_ids") or [], plural=True
@@ -220,7 +224,8 @@ def html_actual(report, summary):
     text = failure_count(failed, summary.get("n")) or f"{failed} failures"
     if parts:
         text += "; primary failure: " + "; ".join(parts)
-    return text + "."
+    disagreed = disagreement_text(summary)
+    return f"{text}. {disagreed}" if disagreed else text + "."
 
 
 def actual(report, summary):
@@ -230,6 +235,9 @@ def actual(report, summary):
     failed = fs.get("failed_trials")
     if not failed:
         counted = success_count(summary.get("k"), summary.get("n"))
+        disagreed = disagreement_text(summary)
+        if disagreed:
+            return disagreed
         return f"No trial failed: {counted}." if counted else "No trial failed."
     ids = summary.get("result_ids") or []
     parts = []
@@ -245,7 +253,8 @@ def actual(report, summary):
     text = failure_count(failed, summary.get("n")) or f"{failed} failures"
     if parts:
         text += "; primary failure: " + "; ".join(parts)
-    return text + "."
+    disagreed = disagreement_text(summary)
+    return f"{text}. {disagreed}" if disagreed else text + "."
 
 
 def context(report, summary, description):
