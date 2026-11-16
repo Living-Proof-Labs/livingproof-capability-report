@@ -183,7 +183,9 @@ def resolve_one(document):
     """One mark from a result envelope or a bare descriptor (example data)."""
     if is_result(document):
         evaluator = document.get("evaluator") if isinstance(document.get("evaluator"), dict) else {}
-        descriptor = document.get("descriptor") if isinstance(document.get("descriptor"), dict) else None
+        descriptor = (
+            document.get("descriptor") if isinstance(document.get("descriptor"), dict) else None
+        )
         fields = descriptor or {}
         display = _visible(evaluator.get("display_name"))
         title = _visible(fields.get("title")) or display or FALLBACK_TITLE
@@ -454,10 +456,7 @@ def _compared_hero(report, summary):
     title = f"<h2 class='run-title'>{esc(headline)}</h2>" if headline else ""
     statement_html = f"<p class='pct'>{esc(statement)}</p>" if statement else ""
     status = f"<p class='stored-status'>Stored overall status: {esc(grade)}</p>" if grade else ""
-    return (
-        "<div class='summary-hero'><div>"
-        f"{title}{statement_html}{status}</div></div>"
-    )
+    return f"<div class='summary-hero'><div>{title}{statement_html}{status}</div></div>"
 
 
 def _hero(report, summary):
@@ -478,12 +477,8 @@ def _hero(report, summary):
         counted = success_count(summary.get("k"), summary.get("n"))
         count = f"<p class='count'>{esc(counted)}</p>" if counted else ""
     grade = summary.get("grade") if isinstance(summary.get("grade"), str) else ""
-    status = (
-        f"<p class='stored-status'>Stored overall status: {esc(grade)}</p>" if grade else ""
-    )
-    badge = html_theme.success_badge(
-        face, phrase, esc, complete=complete, fill=fill, size=128
-    )
+    status = f"<p class='stored-status'>Stored overall status: {esc(grade)}</p>" if grade else ""
+    badge = html_theme.success_badge(face, phrase, esc, complete=complete, fill=fill, size=128)
     title = f"<h2 class='run-title'>{esc(headline)}</h2>" if headline else ""
     return (
         "<div class='summary-hero'>"
@@ -603,9 +598,7 @@ def _callouts(views, *, quiet):
 def render_marks(views, *, group="eval-marks", quiet=False):
     ordered = order_marks(views)
     count = len(ordered) or 1
-    marks = "".join(
-        _mark(view, group, index + 1, count) for index, view in enumerate(ordered)
-    )
+    marks = "".join(_mark(view, group, index + 1, count) for index, view in enumerate(ordered))
     return (
         "<div class='evaluators'>"
         "<p class='evaluators-label'>Evaluators</p>"
@@ -680,9 +673,7 @@ def summary_front(report, stored_body, evidence_results=None):
         host["body_html"] = stored_body
         if failed and not host["findings"]:
             host["force_speaking"] = True
-    quiet = not failed and not any(
-        view["findings"] or view.get("force_speaking") for view in views
-    )
+    quiet = not failed and not any(view["findings"] or view.get("force_speaking") for view in views)
     heroes = "".join(_hero(report, summary) for summary in runs)
     failure = ""
     if not any(view["findings"] for view in views):
@@ -694,3 +685,38 @@ def summary_front(report, stored_body, evidence_results=None):
         "<article class='summary-card'>"
         f"{heroes}{failure}{render_marks(views, group='run-evaluators', quiet=quiet)}</article>"
     )
+
+
+def _plain(value):
+    """One line of Markdown-safe text: no line breaks, no table or emphasis markup."""
+    text = " ".join(str(value).split())
+    for char in ("\\", "|", "*", "_", "`", "[", "]", "<", ">"):
+        text = text.replace(char, "\\" + char)
+    return text
+
+
+def markdown_line(report, evidence_results=None):
+    """``**Evaluators:** Title version · ...`` for the Markdown report and PR comment.
+
+    Built from each contributing evaluator's descriptor (title, and version where
+    known), in the same order as the HTML marks. An evaluator's problems (findings)
+    are counted only when it reported some. None when no evaluator result is in the
+    report, so a bundle without evaluator entries renders as before.
+    """
+    runs = [summary for summary in report.get("summaries") or [] if isinstance(summary, dict)]
+    docs = []
+    for summary in runs:
+        docs.extend(documents_for_summary(report, summary, evidence_results))
+    views = order_marks(views_from(docs))
+    if not views:
+        return None
+    names = []
+    for view in views:
+        name = _plain(view["title"])
+        if view["version"]:
+            name += f" {_plain(view['version'])}"
+        count = len(view["findings"])
+        if count:
+            name += f" ({count} {'problem' if count == 1 else 'problems'})"
+        names.append(name)
+    return "**Evaluators:** " + " · ".join(names)

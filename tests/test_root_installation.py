@@ -19,8 +19,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 ROOT_WHEEL = "livingproof-1.4.18-py3-none-any.whl"
 ROOT_URL = (
-    "https://github.com/Living-Proof-Labs/livingproof/releases/download/v1.4.18/"
-    + ROOT_WHEEL
+    "https://github.com/Living-Proof-Labs/livingproof/releases/download/v1.4.18/" + ROOT_WHEEL
 )
 ROOT_SHA256 = "68901c1f9e2778a8070e17e1cd31f2455428c394ade0c393019ef5483e4c351f"
 
@@ -32,7 +31,11 @@ def test_root_and_reporter_share_environment(tmp_path):
 
     def run(*args, cwd=tmp_path):
         result = subprocess.run(
-            list(map(str, args)), cwd=cwd, capture_output=True, text=True, timeout=180,
+            list(map(str, args)),
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            timeout=180,
         )
         assert result.returncode == 0, result.stdout + result.stderr
         return result.stdout
@@ -43,7 +46,7 @@ def test_root_and_reporter_share_environment(tmp_path):
     root_wheel.write_bytes(content)
     wheels = tmp_path / "wheels"
     run(uv, "build", "--wheel", "--out-dir", wheels, cwd=ROOT)
-    reporter_wheel, = wheels.glob("livingproof_capability_report-*.whl")
+    (reporter_wheel,) = wheels.glob("livingproof_capability_report-*.whl")
     environment = tmp_path / "environment"
     run(uv, "venv", "--python", sys.executable, "--no-python-downloads", environment)
     python = environment / "bin" / "python"

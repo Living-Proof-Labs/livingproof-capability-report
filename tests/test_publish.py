@@ -35,6 +35,7 @@ def example(tmp_path):
 def stored(manifest, links=None):
     return report_from_bundle(load_bundle(manifest), links)
 
+
 _ARTIFACT_URL = re.compile(r"actions/runs/\d+/artifacts", re.I)
 _DAY_COUNT = re.compile(r"\d+\s*days?", re.I)
 _RETENTION_DEFAULT = re.compile(r"retention\s*=\s*\d+")

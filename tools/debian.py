@@ -1,4 +1,5 @@
 """Build a pure-Python Architecture: all package; apt owns runtime dependencies."""
+
 import os
 import subprocess
 import sys
@@ -11,8 +12,22 @@ wheel = next(out.glob("livingproof_capability_report-*-py3-none-any.whl"))
 wheels = out / "wheels"
 wheels.mkdir(exist_ok=True)
 # These native wheels are ONLY for the architecture-specific container/offline wheelhouse.
-subprocess.run(["python3", "-m", "pip", "download", "--only-binary=:all:",
-                "--dest", str(wheels), "-r", "/requirements.txt", str(wheel), str(out / "livingproof_common-1.0.0-py3-none-any.whl")], check=True)
+subprocess.run(
+    [
+        "python3",
+        "-m",
+        "pip",
+        "download",
+        "--only-binary=:all:",
+        "--dest",
+        str(wheels),
+        "-r",
+        "/requirements.txt",
+        str(wheel),
+        str(out / "livingproof_common-1.0.0-py3-none-any.whl"),
+    ],
+    check=True,
+)
 root = Path("/tmp/debian-stage")
 packages = root / "usr/lib/python3/dist-packages"
 ofl = ""
@@ -21,12 +36,15 @@ with zipfile.ZipFile(wheel) as archive:
         name = Path(entry.filename)
         if name.is_absolute() or ".." in name.parts:
             raise SystemExit("Unsafe wheel path")
-        if not (name.parts[0] == "livingproof_capability_report"
-                or name.parts[0].endswith(".dist-info")):
+        if not (
+            name.parts[0] == "livingproof_capability_report" or name.parts[0].endswith(".dist-info")
+        ):
             raise SystemExit(f"Unexpected wheel content: {name}")
         data = archive.read(entry)
         if data.startswith(b"\x7fELF") or name.suffix in {".so", ".dll", ".dylib", ".pyc"}:
-            raise SystemExit("Native or interpreter-specific content cannot enter Architecture: all")
+            raise SystemExit(
+                "Native or interpreter-specific content cannot enter Architecture: all"
+            )
         if name.as_posix() == "livingproof_capability_report/fonts/OFL.txt":
             ofl = data.decode()
         if not entry.is_dir():
@@ -44,8 +62,10 @@ Depends: python3-livingproof-common (= 1.0.0), python3 (>= 3.11), python3-click 
 Maintainer: Living Proof Labs <rivet@rollerbot.ai>
 Description: Portable capability reports using distribution-managed Python dependencies
 """)
-for name, command in [("postinst", "py3compile -p livingproof-capability-report"),
-                      ("prerm", "py3clean -p livingproof-capability-report")]:
+for name, command in [
+    ("postinst", "py3compile -p livingproof-capability-report"),
+    ("prerm", "py3clean -p livingproof-capability-report"),
+]:
     script = control / name
     script.write_text(f"#!/bin/sh\nset -e\n{command}\n")
     script.chmod(0o755)
@@ -59,8 +79,15 @@ copyright.parent.mkdir(parents=True)
 if "SIL Open Font License" not in ofl:
     raise SystemExit("DM Sans SIL Open Font License is missing from the wheel")
 copyright.write_text(Path("/build/LICENSE").read_text().rstrip() + "\n\n" + ofl)
-subprocess.run(["dpkg-deb", "--root-owner-group", "--build", str(root),
-                str(out / f"livingproof-capability-report_{version}_all.deb")], check=True)
+subprocess.run(
+    [
+        "dpkg-deb",
+        "--root-owner-group",
+        "--build",
+        str(root),
+        str(out / f"livingproof-capability-report_{version}_all.deb"),
+    ],
+    check=True,
+)
 for path in out.rglob("*"):
-    os.chown(path, int(os.environ.get("OUTPUT_UID", "0")),
-             int(os.environ.get("OUTPUT_GID", "0")))
+    os.chown(path, int(os.environ.get("OUTPUT_UID", "0")), int(os.environ.get("OUTPUT_GID", "0")))

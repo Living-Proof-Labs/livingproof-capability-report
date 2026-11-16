@@ -190,6 +190,11 @@ def markdown(report, links=None, retention=None):
                 f"| {_robot(s['system'])} {s['system']['version']} | "
                 f"**{_label(s['grade'], 'summary grade')}** | {passed} | {needs} |"
             )
+        from .evaluators import markdown_line
+
+        contributing = markdown_line(report)
+        if contributing:
+            lines += ["", contributing]
         for s in runs:
             sample = results[s["result_ids"][0]]
             why = sections.why_lines(report, s)

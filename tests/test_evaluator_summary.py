@@ -75,7 +75,16 @@ def test_malicious_svg_is_not_inlined():
     ]
     for icon in attacks:
         assert acceptable_icon(icon) is None
-        card = _card(outputs=[{"title": "Workshop check", "short_title": "Workshop check", "tier": "observation", "icon": icon}])
+        card = _card(
+            outputs=[
+                {
+                    "title": "Workshop check",
+                    "short_title": "Workshop check",
+                    "tier": "observation",
+                    "icon": icon,
+                }
+            ]
+        )
         assert "alert(1)" not in card
         assert "example.invalid" not in card
         assert "&amp;" not in card or "Workshop" in card
@@ -84,7 +93,9 @@ def test_malicious_svg_is_not_inlined():
 
 
 def test_letter_fallbacks_and_exact_title():
-    omitted = _card(outputs=[{"title": "Robot health", "short_title": "Rob health", "tier": "verdict"}])
+    omitted = _card(
+        outputs=[{"title": "Robot health", "short_title": "Rob health", "tier": "verdict"}]
+    )
     assert ">R</span>" in omitted
     assert "<strong>Robot health</strong>" not in omitted or True
     assert "eval-name-full'>Robot health</span>" in omitted
@@ -128,7 +139,11 @@ def test_ordering_headline_plurals_and_all_quiet():
     assert "evaluators" not in all_quiet_line(1)
     views = views_from(
         [
-            _output("beta", tier="observation", findings=[{"text": "b0"}, {"text": "b1", "tier": "verdict"}]),
+            _output(
+                "beta",
+                tier="observation",
+                findings=[{"text": "b0"}, {"text": "b1", "tier": "verdict"}],
+            ),
             _output("Alpha", tier="health_finding", findings=[{"text": "a"}]),
             _output("Aaa", tier="urgent", findings=[{"text": "u"}]),
         ]
@@ -189,7 +204,9 @@ def test_a_failing_assessment_with_no_findings_is_called_out_and_a_pass_is_not()
     line = "<p class='assessment-failure'>12 successes, 60%; overall FAIL.</p>"
     assert line in failed
     assert failed.index(line) < failed.index("<details class='eval-disclosure'")
-    panel = failed[failed.index("<div class='eval-panel'>") : failed.index("<div class='stored-run'")]
+    panel = failed[
+        failed.index("<div class='eval-panel'>") : failed.index("<div class='stored-run'")
+    ]
     assert "Tier:" not in panel
     assert panel.count("No evaluator descriptor was stored.") == 1
     assert "display name" not in panel and "icon" not in panel
@@ -203,8 +220,15 @@ def test_a_failing_assessment_with_no_findings_is_called_out_and_a_pass_is_not()
     page = render(report(bundle("g1")), "html")
     visible = _visible(page)
     assert "No evaluator descriptor was stored." in visible
-    assert "display name" not in visible[visible.index("<div class='eval-panel'>"):visible.index("<div class='stored-run'")]
-    panel = visible[visible.index("<div class='eval-panel'>") : visible.index("<div class='stored-run'")]
+    assert (
+        "display name"
+        not in visible[
+            visible.index("<div class='eval-panel'>") : visible.index("<div class='stored-run'")
+        ]
+    )
+    panel = visible[
+        visible.index("<div class='eval-panel'>") : visible.index("<div class='stored-run'")
+    ]
     assert "Tier:" not in panel
     assert "icon" not in panel
     assert "eval-name-full'>Evaluator</span>" in visible

@@ -55,8 +55,7 @@ def _rules(css):
 
 def _properties(body):
     return {
-        name: value.strip()
-        for name, value in re.findall(r"(--[A-Za-z0-9-]+)\s*:\s*([^;]+);", body)
+        name: value.strip() for name, value in re.findall(r"(--[A-Za-z0-9-]+)\s*:\s*([^;]+);", body)
     }
 
 
@@ -76,9 +75,7 @@ def _modes(css):
     dark = _properties(dict(_rules(top["@media (prefers-color-scheme: dark)"]))[":root"])
     chosen_light = _properties(top["html:has(#theme-light:checked)"])
     chosen_dark = _properties(top["html:has(#theme-dark:checked)"])
-    printed = _properties(
-        dict(_rules(top["@media print"]))[":root, html:has(#theme-dark:checked)"]
-    )
+    printed = _properties(dict(_rules(top["@media print"]))[":root, html:has(#theme-dark:checked)"])
 
     def merge(*parts):
         environment = {}
