@@ -2,8 +2,8 @@
   "schema_version": "1.1.0",
   "producer": {
     "id": "capability-verifier",
-    "version": "0.0.0",
-    "commit": "209db38c3c7b14760cd969a370be46722f01dbe6"
+    "version": "1.19.0",
+    "commit": "cb7bfdfb22d3273005517b205886c1ac98c45b42"
   },
   "results": [
     {
@@ -325,8 +325,7 @@
               "crossed_exit"
             ]
           }
-        ],
-        "producer": "DEV: capability-verifier unreleased build at 209db38c3c7b14760cd969a370be46722f01dbe6; producer version 0.0.0 is a placeholder, not a release"
+        ]
       },
       "original_result": {
         "status": "PASS",
@@ -677,8 +676,7 @@
               "crossed_exit"
             ]
           }
-        ],
-        "producer": "DEV: capability-verifier unreleased build at 209db38c3c7b14760cd969a370be46722f01dbe6; producer version 0.0.0 is a placeholder, not a release"
+        ]
       },
       "original_result": {
         "status": "FAIL",
@@ -1035,8 +1033,7 @@
               "crossed_exit"
             ]
           }
-        ],
-        "producer": "DEV: capability-verifier unreleased build at 209db38c3c7b14760cd969a370be46722f01dbe6; producer version 0.0.0 is a placeholder, not a release"
+        ]
       },
       "original_result": {
         "status": "PASS",

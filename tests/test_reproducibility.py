@@ -1,7 +1,8 @@
 """Compared repeats are one outcome plus the stored statement.
 
-Fixtures are capability-verifier output at 209db38c3c7b14760cd969a370be46722f01dbe6
-(pull request 85). ``identical``, ``disagreeing`` and ``single`` were exported by
+Fixtures are capability-verifier release v1.19.0 output (commit
+cb7bfdfb22d3273005517b205886c1ac98c45b42, the first release with pull request 85),
+regenerated at that tag with ``LIVINGPROOF_VERIFIER_VERSION=1.19.0``. ``identical``, ``disagreeing`` and ``single`` were exported by
 ``tools/verify_hallway.py --bundle-version 1.1.0`` from
 ``tests/fixtures/hallway/evidence-2.0.0``. The disagreement edits trial 2 and sets
 the finding the way ``test_a_reproducibility_finding_is_not_a_robot_fail`` does.
@@ -381,3 +382,25 @@ def test_agreeing_single_seeded_and_no_key_actual_lines_are_unchanged():
         "seeded": "Run unitree-g1/stock: 2 successes, 67%; overall FAIL. 100% required.",
         "no-key": "Run unitree-g1/stock: 1 success, 33%; overall FAIL. 100% required.",
     }
+
+
+RELEASE_PRODUCER = {
+    "id": "capability-verifier",
+    "version": "1.19.0",
+    "commit": "cb7bfdfb22d3273005517b205886c1ac98c45b42",
+}
+
+
+def test_repeat_fixtures_come_from_the_capability_verifier_release_tag():
+    """Every repeat fixture names release v1.19.0, the first one with PR 85, and no dev build."""
+    names = sorted(path.name for path in FIXTURES.iterdir() if path.is_dir())
+    assert names == ["disagreeing", "identical", "pause", "robot-fail", "seeded", "single"]
+    for name in names:
+        for path in sorted((FIXTURES / name).rglob("*.json")):
+            text = path.read_text()
+            for banned in ("209db38", "DEV", '"0.0.0"', "placeholder"):
+                assert banned not in text, (path, banned)
+        bundle = _stored(name)
+        assert bundle["producer"] == RELEASE_PRODUCER, name
+        for result in bundle["results"]:
+            assert "producer" not in result["provenance"], (name, result["id"])
