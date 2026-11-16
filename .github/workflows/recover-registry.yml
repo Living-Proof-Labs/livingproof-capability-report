@@ -22,7 +22,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.4.0
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
@@ -54,7 +54,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.4.0
         with:
           persist-credentials: false
       - name: Publish previously absent multi-architecture tag
