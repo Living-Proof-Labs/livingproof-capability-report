@@ -1,10 +1,10 @@
 name: Publish verified saved v1.2.0 images
+# One-time publisher for the historical v1.2.0 images. It mutates the registry,
+# so it runs only when someone starts it explicitly. Pull requests (including
+# dependency updates that touch this file) must not try to republish 1.2.0.
+# The require_absent_image.py no-overwrite guard below stays in force.
 on:
-  pull_request:
-    paths: [.github/workflows/recover-registry.yml, tools/require_absent_image.py]
-  push:
-    branches: [main]
-    paths: [.github/workflows/recover-registry.yml, tools/require_absent_image.py]
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
