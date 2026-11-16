@@ -20,15 +20,15 @@ jobs:
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.4.0
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5.6.0
         with:
-          python-version: '3.12'
-      - uses: astral-sh/setup-uv@v6
+          python-version: '3.12.16'
+      - uses: astral-sh/setup-uv@v6.8.0
         with:
           version: '0.12.23'
       - uses: go-task/setup-task@a00fbb05ce67b35648be3c78cbc9fd85354c757e
@@ -60,7 +60,7 @@ jobs:
           REPORT_PATH: artifacts/tests.xml
           PUBLISH_CHECK: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
         run: python tools/test_results.py --name "$REPORT_NAME" --path "$REPORT_PATH" --publish-check "$PUBLISH_CHECK"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4.6.2
         if: always()
         with:
           name: reporter-tests-${{ matrix.architecture }}-${{ github.event.pull_request.head.sha || github.sha }}
@@ -77,7 +77,7 @@ jobs:
       - name: Generated compatibility evidence
         if: ${{ !cancelled() }}
         run: uv run --locked --no-sync python tools/compatibility_summary.py >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4.6.2
         if: ${{ always() && hashFiles('dist/**') != '' }}
         with:
           name: packages-${{ matrix.architecture }}-${{ github.event.pull_request.head.sha || github.sha }}
@@ -114,15 +114,15 @@ jobs:
       VERSION: ${{ needs.release.outputs.version }}
       RELEASE_TAG: ${{ needs.release.outputs.git-tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.4.0
         with:
           ref: ${{ needs.release.outputs.git-tag }}
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5.6.0
         with:
-          python-version: '3.12'
-      - uses: astral-sh/setup-uv@v6
+          python-version: '3.12.16'
+      - uses: astral-sh/setup-uv@v6.8.0
         with:
           version: '0.12.23'
       - uses: go-task/setup-task@a00fbb05ce67b35648be3c78cbc9fd85354c757e
@@ -144,7 +144,7 @@ jobs:
             gh release upload "$RELEASE_TAG" dist/*.whl dist/livingproof*.tar.gz dist/*.deb dist/requirements.txt --clobber
           fi
           gh release upload "$RELEASE_TAG" "dist/image-${{ matrix.architecture }}.tar" "dist/wheelhouse-${{ matrix.architecture }}.tar.gz" "dist/SHA256SUMS-${{ matrix.architecture }}" "dist/compatibility-${{ matrix.architecture }}.json" "dist/compatibility-${{ matrix.architecture }}.md" --clobber
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4.6.2
         if: always()
         with:
           name: release-packages-${{ needs.release.outputs.version }}-${{ matrix.architecture }}
@@ -203,7 +203,7 @@ jobs:
           docker run --rm "$image:$VERSION" --version
           docker run --rm --entrypoint /bin/sh "$image:$VERSION" -c 'livingproof-capability-report --help'
           echo "Native ${{ matrix.architecture }} anonymous consumption passed for $image:$VERSION" >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4.3.0
         with:
           name: release-packages-${{ needs.release.outputs.version }}-amd64
           path: downloaded
