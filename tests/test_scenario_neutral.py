@@ -75,9 +75,7 @@ def test_bundle_schema_accepts_1_0_0_and_rejects_an_invalid_bundle():
                 },
                 "system": {"id": "fixtures", "version": "1.0.0"},
                 "environment": {"id": "deterministic-fixture", "version": "1.0.0"},
-                "evidence": [
-                    {"id": "observation", "path": "evidence.json", "sha256": "a" * 64}
-                ],
+                "evidence": [{"id": "observation", "path": "evidence.json", "sha256": "a" * 64}],
                 "assessments": [
                     {
                         "id": "pause-rules",

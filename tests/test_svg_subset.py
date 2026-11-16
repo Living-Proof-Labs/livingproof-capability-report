@@ -65,7 +65,11 @@ def test_byte_cap_counts_utf8_bytes():
         ("use", _svg("<use href='#mark'/>"), "use"),
         ("text", _svg("<text>hi</text>"), "element 'text'"),
         ("onload", _svg("<rect ONLOAD='alert(1)' width='1' height='1' fill='none'/>"), "ONLOAD"),
-        ("onclick", _svg("<rect onclick='alert(1)' width='1' height='1' fill='none'/>"), "event attribute"),
+        (
+            "onclick",
+            _svg("<rect onclick='alert(1)' width='1' height='1' fill='none'/>"),
+            "event attribute",
+        ),
         (
             "href",
             _svg("<rect href='https://example.com/x' width='1' height='1' fill='none'/>"),
@@ -83,12 +87,20 @@ def test_byte_cap_counts_utf8_bytes():
         ("entity", _svg("<rect width='1' height='&amp;' fill='none'/>"), "entity"),
         ("numeric-entity", _svg("<rect width='1' height='&#60;' fill='none'/>"), "entity"),
         ("oversize", "<svg viewBox='0 0 24 24'>" + (" " * 8200) + "</svg>", "bytes"),
-        ("missing-viewBox", _svg("<rect width='1' height='1' fill='none'/>", view_box=False), "viewBox"),
+        (
+            "missing-viewBox",
+            _svg("<rect width='1' height='1' fill='none'/>", view_box=False),
+            "viewBox",
+        ),
         ("comment", _svg("<!-- x --><rect width='1' height='1' fill='none'/>"), "comment"),
         ("doctype", "<!DOCTYPE svg><svg viewBox='0 0 24 24'></svg>", "declaration"),
         ("not-svg", "<rect viewBox='0 0 24 24' width='1' height='1' fill='none'/>", "root"),
         ("black-fill", _svg("<rect width='1' height='1' fill='black'/>"), "black"),
-        ("style-attribute", _svg("<rect style='fill:red' width='1' height='1' fill='none'/>"), "style attribute"),
+        (
+            "style-attribute",
+            _svg("<rect style='fill:red' width='1' height='1' fill='none'/>"),
+            "style attribute",
+        ),
     ],
 )
 def test_svg_subset_rejects(name, icon, needle):

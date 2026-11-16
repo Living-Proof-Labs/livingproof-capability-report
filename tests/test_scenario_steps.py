@@ -60,7 +60,9 @@ def test_g1_fixture_step_rates_are_60_65_95_and_100():
             counts[assessment["evaluator"]]["n"] += 1
             if assessment["status"] == "PASS":
                 counts[assessment["evaluator"]]["PASS"] += 1
-    assert {name: (item["PASS"], round(100 * item["PASS"] / item["n"])) for name, item in counts.items()} == {
+    assert {
+        name: (item["PASS"], round(100 * item["PASS"] / item["n"])) for name, item in counts.items()
+    } == {
         "hallway-lateral-limit": (12, 60),
         "hallway-wall-contact": (13, 65),
         "hallway-exit-reached": (19, 95),
@@ -98,12 +100,16 @@ def test_g1_fixture_step_rates_are_60_65_95_and_100():
 def test_headline_and_rings_do_not_carry_the_wilson_interval():
     page = render(report(bundle("g1")), "html")
     verdict = page[page.index("<section class='verdict'") : page.index("<section id='summary'>")]
-    summary = page[page.index("<section id='summary'>") : page.index("<section class='run-detail'>")]
+    summary = page[
+        page.index("<section id='summary'>") : page.index("<section class='run-detail'>")
+    ]
     assert "Wilson" not in verdict and "95% interval" not in verdict and "39–78%" not in verdict
     assert "<dt>Wilson" not in summary and "39–78%" not in summary
     for label in _rings(page):
         assert "success" in label
-        assert "interval" not in label.lower() and "wilson" not in label.lower() and "–" not in label
+        assert (
+            "interval" not in label.lower() and "wilson" not in label.lower() and "–" not in label
+        )
     stored_report = report(bundle("g1"))
     text = (
         "95% confidence range for the success rate: "
@@ -141,7 +147,10 @@ def test_close_labels_mark_steps_one_trial_apart_and_ties_share_a_place():
     )
     small = _visible(render(stored(), "html"))
     assert "<span class='place tie'>=3</span>" in small
-    assert "required_passes" not in small[small.index("scenario-steps") : small.index("Steps, by success")]
+    assert (
+        "required_passes"
+        not in small[small.index("scenario-steps") : small.index("Steps, by success")]
+    )
     assert "pass bar" not in small.lower()
 
 
@@ -197,11 +206,22 @@ def test_trial_number_is_the_stored_seed_and_duration_comes_from_the_observation
         cell = f"<td data-label='Duration'><span class='cell-value'>{text}</span>"
         assert observed.count(cell) == count
     assert "<td data-label='Duration'><span class='cell-value'>12.00 s</span>" not in observed
-    rendered = CliRunner().invoke(cli, ["render", str(BUNDLE / "manifest.json"), "--format", "html"])
+    rendered = CliRunner().invoke(
+        cli, ["render", str(BUNDLE / "manifest.json"), "--format", "html"]
+    )
     assert rendered.exit_code == 0, rendered.output
-    assert rendered.output.count("<td data-label='Duration'><span class='cell-value'>11.50 s</span>") == 4
-    assert rendered.output.count("<td data-label='Duration'><span class='cell-value'>13.25 s</span>") == 4
-    assert rendered.output.count("<td data-label='Duration'><span class='cell-value'>8.75 s</span>") == 4
+    assert (
+        rendered.output.count("<td data-label='Duration'><span class='cell-value'>11.50 s</span>")
+        == 4
+    )
+    assert (
+        rendered.output.count("<td data-label='Duration'><span class='cell-value'>13.25 s</span>")
+        == 4
+    )
+    assert (
+        rendered.output.count("<td data-label='Duration'><span class='cell-value'>8.75 s</span>")
+        == 4
+    )
     assert "<script" not in rendered.output
 
 
@@ -303,7 +323,9 @@ def test_percent_text_is_not_zero_padded_and_a_check_needs_every_trial():
 def test_a_missing_step_says_not_assessed_and_depth_omits_an_unknown_time():
     data = bundle("g1")
     data["results"][0]["assessments"] = [
-        item for item in data["results"][0]["assessments"] if item["evaluator"] != "hallway-lateral-limit"
+        item
+        for item in data["results"][0]["assessments"]
+        if item["evaluator"] != "hallway-lateral-limit"
     ]
     missing = _row(_step(render(report(data), "html"), _label("g1", "hallway-lateral-limit")), 1)
     assert "Not assessed" in missing

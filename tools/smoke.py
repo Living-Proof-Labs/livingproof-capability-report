@@ -1,12 +1,21 @@
 """Exercise clean wheel, Debian and image installs with no source checkout."""
+
 import os
 import platform
 import subprocess
 from pathlib import Path
 
 network = ["--network", os.environ["PACKAGE_NETWORK"]] if "PACKAGE_NETWORK" in os.environ else []
-trust = (["-v", f"{os.environ['PACKAGE_CA_BUNDLE']}:/tmp/package-ca.pem:ro",
-          "-e", "PIP_CERT=/tmp/package-ca.pem"] if "PACKAGE_CA_BUNDLE" in os.environ else [])
+trust = (
+    [
+        "-v",
+        f"{os.environ['PACKAGE_CA_BUNDLE']}:/tmp/package-ca.pem:ro",
+        "-e",
+        "PIP_CERT=/tmp/package-ca.pem",
+    ]
+    if "PACKAGE_CA_BUNDLE" in os.environ
+    else []
+)
 architecture = {"x86_64": "amd64", "aarch64": "arm64"}[platform.machine()]
 root = Path(__file__).resolve().parents[1]
 version = os.environ.get("VERSION", "0.0.0")
@@ -15,17 +24,42 @@ dist = root / "dist"
 bundle = root / "examples/bundle"
 records = dist / "compatibility"
 records.mkdir(exist_ok=True)
-evidence = (f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/"
-            f"{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
-            if "GITHUB_RUN_ID" in os.environ else "local execution")
-probe = ["-v", f"{records}:/results", "-v", f"{root}/tools/record_compatibility.py:/probe.py:ro",
-         "-e", f"COMPATIBILITY_HOST_MACHINE={platform.machine()}",
-         "-e", f"COMPATIBILITY_RUNNER={os.environ.get('RUNNER_LABEL', 'local')}",
-         "-e", f"COMPATIBILITY_EVIDENCE={evidence}"]
+evidence = (
+    f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/"
+    f"{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+    if "GITHUB_RUN_ID" in os.environ
+    else "local execution"
+)
+probe = [
+    "-v",
+    f"{records}:/results",
+    "-v",
+    f"{root}/tools/record_compatibility.py:/probe.py:ro",
+    "-e",
+    f"COMPATIBILITY_HOST_MACHINE={platform.machine()}",
+    "-e",
+    f"COMPATIBILITY_RUNNER={os.environ.get('RUNNER_LABEL', 'local')}",
+    "-e",
+    f"COMPATIBILITY_EVIDENCE={evidence}",
+]
 # Normal Docker entrypoint receives only subcommands/options.
 subprocess.run(["docker", "run", *network, *trust, *probe, "--rm", image, "--help"], check=True)
-subprocess.run(["docker", "run", *network, *trust, *probe, "--rm", "-v", f"{bundle}:/input:ro", image,
-                "validate", "/input/manifest.json"], check=True)
+subprocess.run(
+    [
+        "docker",
+        "run",
+        *network,
+        *trust,
+        *probe,
+        "--rm",
+        "-v",
+        f"{bundle}:/input:ro",
+        image,
+        "validate",
+        "/input/manifest.json",
+    ],
+    check=True,
+)
 # Job containers may override ENTRYPOINT and invoke a shell; test separately.
 exercise = """set -eu
 livingproof-capability-report render /input/manifest.json --format json -o /tmp/report.json
@@ -35,17 +69,55 @@ livingproof-capability-report render /tmp/report.json --format html -o /tmp/repo
 livingproof-capability-report render /tmp/report.json --format csv -o /tmp/report.csv
 python -c 'import json; r=json.load(open("/tmp/report.json")); s=[d["status"] for d in r["decisions"]]; assert (s.count("PASS"), s.count("FAIL"), len(s)) == (12, 8, 20); assert r["summaries"][0]["grade"]=="FAIL"'
 """
-subprocess.run(["docker", "run", *network, *trust, *probe, "--rm", "--entrypoint", "/bin/sh", "-v",
-                f"{bundle}:/input:ro", image, "-c", exercise + "python /probe.py /results/image.json installed-image\n"], check=True)
-wheel = """set -eu
+subprocess.run(
+    [
+        "docker",
+        "run",
+        *network,
+        *trust,
+        *probe,
+        "--rm",
+        "--entrypoint",
+        "/bin/sh",
+        "-v",
+        f"{bundle}:/input:ro",
+        image,
+        "-c",
+        exercise + "python /probe.py /results/image.json installed-image\n",
+    ],
+    check=True,
+)
+wheel = (
+    """set -eu
 python -m venv /tmp/clean
 /tmp/clean/bin/pip install --no-index --find-links=/packages/wheels livingproof-capability-report=="$1"
 export PATH=/tmp/clean/bin:$PATH
 cd /tmp
-""" + exercise + "python /probe.py /results/wheel.json wheel\n"
-subprocess.run(["docker", "run", *network, *trust, *probe, "--rm", "-v", f"{dist}:/packages:ro", "-v",
-                f"{bundle}:/input:ro", "python:3.12.12-slim-bookworm", "sh", "-c",
-                wheel, "smoke", version], check=True)
+"""
+    + exercise
+    + "python /probe.py /results/wheel.json wheel\n"
+)
+subprocess.run(
+    [
+        "docker",
+        "run",
+        *network,
+        *trust,
+        *probe,
+        "--rm",
+        "-v",
+        f"{dist}:/packages:ro",
+        "-v",
+        f"{bundle}:/input:ro",
+        "python:3.12.12-slim-bookworm",
+        "sh",
+        "-c",
+        wheel,
+        "smoke",
+        version,
+    ],
+    check=True,
+)
 source = """set -eu
 python -m venv /tmp/from-source
 /tmp/from-source/bin/pip install --find-links=/packages/wheels /packages/livingproof_capability_report-*.tar.gz
@@ -53,9 +125,25 @@ cd /tmp
 /tmp/from-source/bin/livingproof-capability-report validate /input/manifest.json
 /tmp/from-source/bin/python /probe.py /results/source.json source-distribution
 """
-subprocess.run(["docker", "run", *network, *trust, *probe, "--rm", "-v", f"{dist}:/packages:ro", "-v",
-                f"{bundle}:/input:ro", "python:3.12.12-slim-bookworm", "sh", "-c", source],
-               check=True)
+subprocess.run(
+    [
+        "docker",
+        "run",
+        *network,
+        *trust,
+        *probe,
+        "--rm",
+        "-v",
+        f"{dist}:/packages:ro",
+        "-v",
+        f"{bundle}:/input:ro",
+        "python:3.12.12-slim-bookworm",
+        "sh",
+        "-c",
+        source,
+    ],
+    check=True,
+)
 debian = """set -eu
 apt-get update -qq
 apt-get install -y /packages/livingproof-capability-report_*_all.deb /packages/python3-livingproof-common_*_all.deb
@@ -77,6 +165,24 @@ cp /tmp/compatibility.json /results/"$1".json
 """
 for distribution in ("ubuntu:24.04", "debian:12-slim", "debian:13-slim"):
     print(f"Clean native {architecture} installation on {distribution}", flush=True)
-    subprocess.run(["docker", "run", *network, *trust, *probe, "--rm", "-v", f"{dist}:/packages:ro", "-v",
-                    f"{bundle}:/input:ro", distribution, "sh", "-c", debian, "smoke",
-                    distribution.replace(":", "-")], check=True)
+    subprocess.run(
+        [
+            "docker",
+            "run",
+            *network,
+            *trust,
+            *probe,
+            "--rm",
+            "-v",
+            f"{dist}:/packages:ro",
+            "-v",
+            f"{bundle}:/input:ro",
+            distribution,
+            "sh",
+            "-c",
+            debian,
+            "smoke",
+            distribution.replace(":", "-"),
+        ],
+        check=True,
+    )
