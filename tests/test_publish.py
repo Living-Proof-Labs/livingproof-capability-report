@@ -161,10 +161,15 @@ def test_expired_state_uses_the_caller_retention_value(tmp_path, retention):
     other = 30 if retention == 7 else 7
     assert phrase in page
     assert f"Evidence kept for {other} days" not in page
-    items = re.findall(r"<li class='is-kept'>.*?</li>", page, re.S)
+    # Pruned files say they expired (livingproof-verification#54); live files keep
+    # the kept-for note.
+    gone = f"Evidence expired after {retention} days"
+    assert f"Evidence expired after {other} days" not in page
+    assert "<li class='is-kept'>" not in page
+    items = re.findall(r"<li class='is-expired'>.*?</li>", page, re.S)
     assert len(items) >= 2
     kept = next(item for item in items if "video" in item)
-    assert phrase in kept
+    assert gone in kept
     assert "chip-warn" not in kept and "chip-fail" not in kept
     assert "role='alert'" not in kept
     assert "warning" not in kept.lower() and "error" not in kept.lower()
