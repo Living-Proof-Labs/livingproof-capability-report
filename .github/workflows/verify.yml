@@ -36,6 +36,10 @@ jobs:
           version: '3.54.0'
       - run: task setup
       - run: task verify
+      - name: Root CLI and reporter shared-environment regression
+        env:
+          LIVINGPROOF_NETWORK: '1'
+        run: uv run --locked --no-sync pytest tests/test_root_installation.py -q
       # Summary mode lists cases and does not create a check run.
       # continue-on-error keeps a reporter failure off the job result; the next step is the gate.
       - name: Individual tests in run summary
