@@ -141,7 +141,8 @@ def validate_command(manifest):
     default=None,
     help=(
         "Days the site keeps evidence files. The public page says "
-        "'Evidence kept for N days' using this value, for live and pruned files. "
+        "'Evidence kept for N days' for live files and 'Evidence expired after N days' "
+        "for pruned files, using this value. "
         "Required when a link is expired. There is no default."
     ),
 )

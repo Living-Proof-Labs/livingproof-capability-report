@@ -16,8 +16,9 @@ Links change no digest and no grade. Each ``--evidence-links`` file is a JSON ob
 
 ``path`` is a relative site path. The public page renders that string exactly.
 ``poster`` and ``why`` are shown only when the caller supplies them. ``expired``
-true means the site has pruned the file: the page shows "Evidence kept for N days"
-from the retention value passed to render, and does not point at the file. The
+true means the site has pruned the file: the page shows "Evidence expired after N
+days" (class ``is-expired``) from the retention value passed to render, and does not
+point at the file. Live files keep "Evidence kept for N days". The
 reporter has no retention default. An optional https ``url`` stays in report.json.
 A GitHub Actions artifact address is not rendered on the public page.
 
@@ -46,6 +47,7 @@ _ARTIFACT_URL = re.compile(
     re.I,
 )
 _KEPT = "Evidence kept for {retention} days"
+_EXPIRED = "Evidence expired after {retention} days"
 _FIELDS = {"label", "url", "kind", "seed", "status", "path", "expired", "poster", "why"}
 
 
@@ -82,15 +84,24 @@ def check_retention(value):
     return value
 
 
-def kept_phrase(retention):
-    """Success-framed wording. The number comes only from the caller."""
+def _days(retention):
     days = check_retention(retention)
     if days is None:
         raise ValueError(
             "Expired evidence needs a retention value supplied by the caller; "
             "the reporter has no default"
         )
-    return _KEPT.format(retention=days)
+    return days
+
+
+def kept_phrase(retention):
+    """Wording for live evidence. The number comes only from the caller."""
+    return _KEPT.format(retention=_days(retention))
+
+
+def expired_phrase(retention):
+    """Wording for a file the site has pruned. The number comes only from the caller."""
+    return _EXPIRED.format(retention=_days(retention))
 
 
 def ensure_retention(report, retention):
@@ -217,7 +228,7 @@ def seed_status(report, result_ids, seed):
 
 def _markdown_piece(entry, retention):
     if entry.get("expired"):
-        return f"{entry['label']} ({kept_phrase(retention)})"
+        return f"{entry['label']} ({expired_phrase(retention)})"
     target = entry.get("path") or entry.get("url")
     if target:
         return f"[{entry['label']}]({target})"
@@ -327,7 +338,7 @@ def _display_label(report, entry):
 
 
 def html_links(entries, retention):
-    """Trial-cell evidence: a supplied path, or the kept-for state. Never an artifact URL."""
+    """Trial-cell evidence: a supplied path, or the expired state. Never an artifact URL."""
     parts = []
     for entry in entries:
         if not isinstance(entry, dict):
@@ -335,7 +346,8 @@ def html_links(entries, retention):
         label = _safe(entry.get("label") or "")
         if entry.get("expired"):
             text = f"{_esc(label)} " if label else ""
-            parts.append(f"<span class='evidence-kept'>{text}{_esc(kept_phrase(retention))}</span>")
+            phrase = _esc(expired_phrase(retention))
+            parts.append(f"<span class='evidence-expired'>{text}{phrase}</span>")
             continue
         target = html_target(entry)
         if target:
@@ -352,8 +364,10 @@ def _html_item(report, entry, retention):
     lead = f"<p class='evidence-label'>{_esc(label)}</p>" if label else ""
     why_html = f"<p class='evidence-why'>{_esc(why)}</p>" if why else ""
     if entry.get("expired"):
-        phrase = _esc(kept_phrase(retention))
-        return f"<li class='is-kept'>{lead}{why_html}<p class='evidence-kept'>{phrase}</p></li>"
+        phrase = _esc(expired_phrase(retention))
+        return (
+            f"<li class='is-expired'>{lead}{why_html}<p class='evidence-expired'>{phrase}</p></li>"
+        )
     target = html_target(entry)
     if entry.get("kind") == "video" and entry.get("path") and target:
         poster = entry.get("poster")
@@ -379,7 +393,12 @@ def html_block(report, retention):
     links = [entry for entry in stored.get("links", []) if isinstance(entry, dict)]
     parts = ["<h2>Evidence</h2>"]
     if retention is not None:
-        parts.append(f"<p class='evidence-kept-note'>{_esc(kept_phrase(retention))}</p>")
+        if links and all(entry.get("expired") for entry in links):
+            # Every file is gone: the card says so instead of "kept".
+            note = f"<p class='evidence-expired-note'>{_esc(expired_phrase(retention))}</p>"
+        else:
+            note = f"<p class='evidence-kept-note'>{_esc(kept_phrase(retention))}</p>"
+        parts.append(note)
     items = []
     run = stored.get("run")
     if isinstance(run, str) and run and not is_artifact_reference(run):

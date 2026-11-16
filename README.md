@@ -454,12 +454,15 @@ to feature and does not write a coverage sentence of its own. Kinds are `log`, `
 that url is a GitHub Actions artifact address, the public page does not show it or the
 word artifact. Entries with an empty URL, no path and no expired flag are dropped.
 
-Set `"expired": true` on a file the site has pruned. The page then shows a
-success-framed state, `Evidence kept for N days`, and does not link or play that file.
+Set `"expired": true` on a file the site has pruned. The page then shows
+`Evidence expired after N days` (class `is-expired`) for that file, in its trial chip
+and its Evidence item, and does not link or play it. When every file of a run has
+expired, the Evidence card note says the same instead of "kept".
 Pass the same `N` the site uses to prune, once, with `--evidence-retention N`. The
 reporter has no default and will not render an expired file without it. The same value
 is the note on live evidence. For example, `--evidence-retention 7` reads "Evidence
-kept for 7 days" and `--evidence-retention 30` reads "Evidence kept for 30 days".
+kept for 7 days" on live files and "Evidence expired after 7 days" on pruned ones, and
+`--evidence-retention 30` reads "Evidence kept for 30 days".
 
 `--history-href` and `--history-label` add one navigation slot on the HTML page, so the
 styled report can be published with no wrapper around it. Href is a relative site path
