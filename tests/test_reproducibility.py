@@ -287,6 +287,103 @@ def test_a_robot_fail_stays_a_fail_beside_the_finding():
     assert NOT_STORED not in table and "successes," not in table
 
 
+def _actual_lines(report):
+    """The robot card's Actual line in HTML, Markdown and the terminal table."""
+    page = render(report, "html")
+    html = re.findall(r"<p><strong>Actual:</strong> ([^<]*)</p>", page)
+    markdown = [
+        line.split(":** ", 1)[1]
+        for line in render(report, "markdown").splitlines()
+        if line.startswith("**Actual")
+    ]
+    table = [
+        line.removeprefix("  Actual: ")
+        for line in render(report, "table").splitlines()
+        if line.startswith("  Actual: ")
+    ]
+    return [unescape(line) for line in html], markdown, table
+
+
+def test_disagreeing_repeats_never_say_no_trial_failed_and_quote_the_stored_finding():
+    report = _report("disagreeing")
+    block = report["summaries"][0]["reproducibility"]
+    detail = block["finding"]["detail"]
+    assert block["identical"] is False and "statement" not in block
+    html, markdown, table = _actual_lines(report)
+    expected = f"The repeats disagreed. {detail}"
+    assert html == [expected]
+    assert markdown == [expected]
+    assert table == [expected]
+    for text in (render(report, "html"), render(report, "markdown"), render(report, "table")):
+        assert "No trial failed" not in text
+        assert RATE.search(text) is None
+
+
+def test_the_terminal_run_line_carries_the_stored_finding_when_repeats_disagree():
+    for name, grade in (("disagreeing", "INSUFFICIENT_EVIDENCE"), ("robot-fail", "FAIL")):
+        report = _report(name)
+        detail = report["summaries"][0]["reproducibility"]["finding"]["detail"]
+        lines = render(report, "table").splitlines()
+        run = next(line for line in lines if line.startswith("Run "))
+        assert run == f"Run unitree-g1/stock: overall {grade}. {detail}", name
+
+
+def test_a_robot_fail_with_disagreeing_repeats_keeps_its_failures_and_says_they_disagreed():
+    report = _report("robot-fail")
+    detail = report["summaries"][0]["reproducibility"]["finding"]["detail"]
+    html, markdown, table = _actual_lines(report)
+    assert html == [
+        f"1 failures; primary failure: hallway-lateral-limit in 1 (trials 2). "
+        f"The repeats disagreed. {detail}"
+    ]
+    assert (
+        markdown
+        == table
+        == [
+            f"1 failures; primary failure: lateral limit exceeded in 1 (trial 2). "
+            f"The repeats disagreed. {detail}"
+        ]
+    )
+
+
+def test_agreeing_single_seeded_and_no_key_actual_lines_are_unchanged():
+    no_key = report_from_bundle(load_bundle(HALLWAY / "manifest.json"))
+    assert _actual_lines(_report("identical")) == (
+        ["No trial failed."],
+        ["No trial failed."],
+        ["No trial failed."],
+    )
+    single = "No trial failed: 1 success, 100%."
+    assert _actual_lines(_report("single")) == ([single], [single], [single])
+    seeded = "1 failure, 33%; primary failure: lateral limit exceeded in 1 (seed 5)."
+    assert _actual_lines(_report("seeded")) == (
+        ["1 failure, 33%; primary failure: hallway-lateral-limit in 1 (seeds 5)."],
+        [seeded],
+        [seeded],
+    )
+    key = "2 failures, 67%; primary failure: lateral limit exceeded in 2 (trials 2, 3)."
+    assert _actual_lines(no_key) == (
+        ["2 failures, 67%; primary failure: hallway-lateral-limit in 2 (trials 2, 3)."],
+        [key],
+        [key],
+    )
+    runs = {
+        name: next(line for line in render(report, "table").splitlines() if line.startswith("Run "))
+        for name, report in (
+            ("identical", _report("identical")),
+            ("single", _report("single")),
+            ("seeded", _report("seeded")),
+            ("no-key", no_key),
+        )
+    }
+    assert runs == {
+        "identical": "Run unitree-g1/stock: PASS. 3 of 3 repeats agree.",
+        "single": "Run unitree-g1/stock: 1 success, 100%; overall PASS. 100% required.",
+        "seeded": "Run unitree-g1/stock: 2 successes, 67%; overall FAIL. 100% required.",
+        "no-key": "Run unitree-g1/stock: 1 success, 33%; overall FAIL. 100% required.",
+    }
+
+
 RELEASE_PRODUCER = {
     "id": "capability-verifier",
     "version": "1.19.0",
