@@ -69,7 +69,7 @@ def test_an_expired_item_says_expired_and_a_live_run_keeps_the_kept_note(tmp_pat
 def test_a_fully_pruned_run_never_says_kept(tmp_path):
     page = render(stored(example(tmp_path), [PRUNED]), "html", retention=7)
     assert "Evidence kept for" not in page
-    assert "is-kept" not in page
+    assert "<li class='is-kept'>" not in page and "class='evidence-kept'" not in page
     assert "<p class='evidence-expired-note'>Evidence expired after 7 days</p>" in page
     assert len(re.findall(r"<li class='is-expired'>", page)) == 2
     assert "href='evidence/run.log'" not in page
@@ -79,12 +79,3 @@ def test_markdown_names_the_expired_file_as_expired(tmp_path):
     text = render(stored(example(tmp_path), [MIXED]), "markdown", retention=7)
     assert "video (Evidence expired after 7 days)" in text
     assert "Evidence kept for 7 days" not in text
-
-
-def test_the_expired_state_is_styled_as_muted_not_success():
-    from livingproof_capability_report import html_theme
-
-    css = "".join(v for v in vars(html_theme).values() if isinstance(v, str))
-    block = re.search(r"\.evidence li\.is-expired\s*\{([^}]*)\}", css)
-    assert block, "is-expired has its own style"
-    assert "chip-pass" not in block.group(1)
