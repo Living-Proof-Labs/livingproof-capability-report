@@ -284,3 +284,25 @@ def test_a_robot_fail_stays_a_fail_beside_the_finding():
     table = render(report, "table")
     assert "overall FAIL." in table
     assert NOT_STORED not in table and "successes," not in table
+
+
+RELEASE_PRODUCER = {
+    "id": "capability-verifier",
+    "version": "1.19.0",
+    "commit": "cb7bfdfb22d3273005517b205886c1ac98c45b42",
+}
+
+
+def test_repeat_fixtures_come_from_the_capability_verifier_release_tag():
+    """Every repeat fixture names release v1.19.0, the first one with PR 85, and no dev build."""
+    names = sorted(path.name for path in FIXTURES.iterdir() if path.is_dir())
+    assert names == ["disagreeing", "identical", "pause", "robot-fail", "seeded", "single"]
+    for name in names:
+        for path in sorted((FIXTURES / name).rglob("*.json")):
+            text = path.read_text()
+            for banned in ("209db38", "DEV", '"0.0.0"', "placeholder"):
+                assert banned not in text, (path, banned)
+        bundle = _stored(name)
+        assert bundle["producer"] == RELEASE_PRODUCER, name
+        for result in bundle["results"]:
+            assert "producer" not in result["provenance"], (name, result["id"])
