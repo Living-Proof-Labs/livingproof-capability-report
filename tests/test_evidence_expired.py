@@ -50,7 +50,7 @@ PRUNED = {
 }
 
 
-@pytest.mark.parametrize("retention", [7, 30])
+@pytest.mark.parametrize("retention", [1, 7, 30])
 def test_an_expired_item_says_expired_and_a_live_run_keeps_the_kept_note(tmp_path, retention):
     page = render(stored(example(tmp_path), [MIXED]), "html", retention=retention)
     expired = f"Evidence expired after {retention} days"
@@ -75,7 +75,24 @@ def test_a_fully_pruned_run_never_says_kept(tmp_path):
     assert "href='evidence/run.log'" not in page
 
 
-def test_markdown_names_the_expired_file_as_expired(tmp_path):
+@pytest.mark.parametrize("retention", [1, 7, 30])
+def test_markdown_names_the_expired_file_as_expired(tmp_path, retention):
+    text = render(stored(example(tmp_path), [MIXED]), "markdown", retention=retention)
+    assert f"video (Evidence expired after {retention} days)" in text
+    assert "Evidence kept for" not in text
+
+
+def test_the_pr_comment_carries_the_expired_markdown_phrase(tmp_path):
+    from livingproof_capability_report.comment import body
+
     text = render(stored(example(tmp_path), [MIXED]), "markdown", retention=7)
-    assert "video (Evidence expired after 7 days)" in text
-    assert "Evidence kept for 7 days" not in text
+    posted = body([text])
+    assert "video (Evidence expired after 7 days)" in posted
+    assert "Evidence kept for" not in posted
+
+
+def test_zero_retention_is_refused(tmp_path):
+    report = stored(example(tmp_path), [PRUNED])
+    for fmt in ("html", "markdown"):
+        with pytest.raises(ValueError, match="positive number of days"):
+            render(report, fmt, retention=0)

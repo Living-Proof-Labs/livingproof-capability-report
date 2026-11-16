@@ -122,7 +122,7 @@ def test_relative_evidence_paths_are_rendered_exactly(tmp_path):
     _assert_public(page)
 
 
-@pytest.mark.parametrize("retention", [7, 30])
+@pytest.mark.parametrize("retention", [1, 7, 30])
 def test_expired_state_uses_the_caller_retention_value(tmp_path, retention):
     links = [
         {
