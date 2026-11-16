@@ -134,7 +134,10 @@ error that points to the verifier: assess the evidence with capability-verifier 
 or later, which writes bundle 1.1.0, and render that. There is no averaging and no
 overall numeric score. Aggregation groups exact spec, system and environment contexts.
 Step names, limit lines and failure wording come from the bundle's scenario
-description and the stored evaluator results. A directory passed as `--output`
+description and the stored evaluator results. When an observed or required
+value is not a number (a list of places passed, a word), the HTML step card writes it
+out, with places as `<place> at <t> s` and `(required …)` in place of a limit.
+A directory passed as `--output`
 with `--format markdown` is written as `<scenario>.markdown`, using the scenario
 id on that description (or the result capability when the description has none).
 

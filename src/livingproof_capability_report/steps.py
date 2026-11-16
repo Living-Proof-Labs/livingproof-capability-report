@@ -198,6 +198,26 @@ def _measure(kind, value, unit):
     return fmt_m(value)
 
 
+def _listed(value):
+    """A non-numeric observed or required value as text: places, names or a word.
+
+    A place check stores the places passed through as ``[{"place": "<id>", "time": 3.88}]``
+    and the required places as ``["<id>"]``.
+    """
+    if isinstance(value, list):
+        if not value:
+            return "none"
+        return ", ".join(_listed(item) for item in value)
+    if isinstance(value, dict) and isinstance(value.get("place"), str):
+        moment = value.get("time")
+        if _number(moment):
+            return f"{esc(value['place'])} at {esc(fmt_s(moment))}"
+        return esc(value["place"])
+    if isinstance(value, dict):
+        return esc(json.dumps(value, sort_keys=True))
+    return esc(value)
+
+
 def _observed(step, details, status, limits):
     kind = step["kind"]
     observed = details.get("observed")
@@ -208,6 +228,12 @@ def _observed(step, details, status, limits):
     unit = _unit(kind, limits, details)
     if observed is None and limit is None:
         return "—"
+    if not all(value is None or _number(value) for value in (observed, limit)):
+        # Not a measurement (a list of places, a word): write it out, never as metres.
+        text = "—" if observed is None else _listed(observed)
+        if limit is not None:
+            text += f" (required {_listed(limit)})"
+        return text
     return f"{_measure(kind, observed, unit)} (limit {_measure(kind, limit, unit)})"
 
 
