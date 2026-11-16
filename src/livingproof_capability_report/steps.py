@@ -396,6 +396,25 @@ def stored_finding_text(block):
     return ""
 
 
+def disagreement_text(summary):
+    """Stored statement and finding when compared repeats disagreed, else None.
+
+    Only ``identical`` set to false counts. Agreeing repeats, a single trial and
+    a run without a ``reproducibility`` key keep their wording. No count is added.
+    """
+    block = compared_block(summary)
+    if block is None or block.get("identical") is not False:
+        return None
+    parts = ["The repeats disagreed."]
+    statement = repeat_statement(summary)
+    if statement:
+        parts.append(statement if statement.endswith(".") else statement + ".")
+    finding = stored_finding_text(block)
+    if finding:
+        parts.append(finding if finding.endswith(".") else finding + ".")
+    return " ".join(parts)
+
+
 def failure_count(failed, total):
     return _counted(failed, total, "failure")
 

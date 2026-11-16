@@ -243,7 +243,7 @@ def render(
     if format == "table":
         text = terminal_table(rows, aggregate(bundle["results"]))
         from . import sections
-        from .steps import repeat_statement, success_summary
+        from .steps import compared_block, repeat_statement, stored_finding_text, success_summary
 
         details = []
         for s in report.get("summaries", []):
@@ -255,6 +255,12 @@ def render(
                 summary = success_summary(
                     s.get("k"), s.get("n"), s.get("grade"), s.get("required_passes")
                 )
+            block = compared_block(s)
+            finding = (
+                stored_finding_text(block) if block and block.get("identical") is False else ""
+            )
+            if finding and finding not in summary:
+                summary = f"{summary} {finding}" if summary else finding
             line = f"Run {s['system']['id']}:"
             details.append(f"{line} {summary}" if summary else line)
             if sections.stored_run(report, s).get("failure_summary"):
