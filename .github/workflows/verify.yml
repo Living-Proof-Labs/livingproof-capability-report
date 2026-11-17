@@ -20,15 +20,15 @@ jobs:
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.4.0
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5.6.0
         with:
-          python-version: '3.12'
-      - uses: astral-sh/setup-uv@v6
+          python-version: '3.12.16'
+      - uses: astral-sh/setup-uv@v6.8.0
         with:
           version: '0.12.23'
       - uses: go-task/setup-task@a00fbb05ce67b35648be3c78cbc9fd85354c757e
@@ -36,8 +36,15 @@ jobs:
           version: '3.54.0'
       - run: task setup
       - run: task verify
+      - name: Root CLI and reporter shared-environment regression
+        env:
+          LIVINGPROOF_NETWORK: '1'
+        run: uv run --locked --no-sync pytest tests/test_root_installation.py -q
+      # Summary mode lists cases and does not create a check run.
+      # continue-on-error keeps a reporter failure off the job result; the next step is the gate.
       - name: Individual tests in run summary
         if: ${{ !cancelled() }}
+        continue-on-error: true
         uses: dorny/test-reporter@d1b5dff021aa968b288b02285a8bf47471c5928a
         with:
           name: Reporter tests (${{ matrix.architecture }})
@@ -47,18 +54,17 @@ jobs:
           collapsed: never
           fail-on-error: 'true'
           fail-on-empty: 'true'
-      - name: Individual test check and annotations
-        if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
-        uses: dorny/test-reporter@d1b5dff021aa968b288b02285a8bf47471c5928a
-        with:
-          name: Reporter tests (${{ matrix.architecture }})
-          path: artifacts/tests.xml
-          reporter: python-xunit
-          use-actions-summary: 'false'
-          collapsed: never
-          fail-on-error: 'true'
-          fail-on-empty: 'true'
-      - uses: actions/upload-artifact@v4
+      - name: JUnit gate and completed check run
+        if: ${{ !cancelled() }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          REPORT_NAME: Reporter tests (${{ matrix.architecture }})
+          REPORT_PATH: artifacts/tests.xml
+          PUBLISH_CHECK: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+        run: python tools/test_results.py --name "$REPORT_NAME" --path "$REPORT_PATH" --publish-check "$PUBLISH_CHECK"
+      - uses: actions/upload-artifact@v4.6.2
         if: always()
         with:
           name: reporter-tests-${{ matrix.architecture }}-${{ github.event.pull_request.head.sha || github.sha }}
@@ -75,7 +81,7 @@ jobs:
       - name: Generated compatibility evidence
         if: ${{ !cancelled() }}
         run: uv run --locked --no-sync python tools/compatibility_summary.py >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4.6.2
         if: ${{ always() && hashFiles('dist/**') != '' }}
         with:
           name: packages-${{ matrix.architecture }}-${{ github.event.pull_request.head.sha || github.sha }}
@@ -91,7 +97,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: write
-    uses: Living-Proof-Labs/collaboration-guidelines/.github/workflows/semantic-release.yml@v3.0.0
+    uses: Living-Proof-Labs/collaboration-guidelines/.github/workflows/semantic-release.yml@v9.6.3
     with:
       draft-release: true
   publish:
@@ -113,15 +119,15 @@ jobs:
       VERSION: ${{ needs.release.outputs.version }}
       RELEASE_TAG: ${{ needs.release.outputs.git-tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.4.0
         with:
           ref: ${{ needs.release.outputs.git-tag }}
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5.6.0
         with:
-          python-version: '3.12'
-      - uses: astral-sh/setup-uv@v6
+          python-version: '3.12.16'
+      - uses: astral-sh/setup-uv@v6.8.0
         with:
           version: '0.12.23'
       - uses: go-task/setup-task@a00fbb05ce67b35648be3c78cbc9fd85354c757e
@@ -137,12 +143,13 @@ jobs:
         run: uv run --locked --no-sync python tools/compatibility_summary.py >> "$GITHUB_STEP_SUMMARY"
       - name: Record exact CI-tested local image identity
         run: docker image inspect "ghcr.io/living-proof-labs/livingproof-capability-report:$VERSION-${{ matrix.architecture }}" --format '{{.Id}}' > "dist/image-id-${{ matrix.architecture }}.txt"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4.6.2
         if: always()
         with:
           name: release-packages-${{ needs.release.outputs.version }}-${{ matrix.architecture }}
           retention-days: 14
           path: dist/
+          if-no-files-found: error
       - name: Publish exact version through the repository token
         env:
           GH_TOKEN: ${{ github.token }}
@@ -159,13 +166,8 @@ jobs:
       packages: write
     env:
       VERSION: ${{ needs.release.outputs.version }}
-      RELEASE_TAG: ${{ needs.release.outputs.git-tag }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.release.outputs.git-tag }}
-          persist-credentials: false
       - name: Publish one versioned multi-architecture manifest
         run: |
           echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
@@ -173,9 +175,14 @@ jobs:
           docker manifest create "$image:$VERSION" "$image:$VERSION-amd64" "$image:$VERSION-arm64"
           docker manifest push "$image:$VERSION"
           docker logout ghcr.io
+      - uses: actions/checkout@v4.4.0
+        with:
+          ref: ${{ needs.release.outputs.git-tag }}
+          fetch-depth: 0
+          persist-credentials: false
       - name: Resolve anonymous registry manifest
         run: python3 tools/registry_release.py resolve "$VERSION"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4.6.2
         with:
           name: registry-${{ needs.release.outputs.version }}
           retention-days: 14
@@ -196,10 +203,10 @@ jobs:
     env:
       VERSION: ${{ needs.release.outputs.version }}
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4.3.0
         with:
           name: registry-${{ needs.release.outputs.version }}
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4.3.0
         with:
           name: release-packages-${{ needs.release.outputs.version }}-${{ matrix.architecture }}
           path: native
@@ -214,9 +221,9 @@ jobs:
           test "$(docker image inspect "$reference" --format '{{.Id}}')" = "$(cat native/image-id-${{ matrix.architecture }}.txt)"
           docker run --rm "$reference" --version | grep -F "$VERSION"
           docker run --rm --entrypoint /bin/sh "$reference" -c 'livingproof-capability-report --help && python -m pip check'
-          docker run --rm --entrypoint python "$reference" -c 'import importlib.metadata as m, sys; assert m.version("livingproof-capability-report") == sys.argv[1]; print({n:m.version(n) for n in ("livingproof-capability-report", "livingproof-common", "click", "jsonschema")})' "$VERSION"
+          docker run --rm --entrypoint /opt/report/bin/python "$reference" -c 'import importlib.metadata as m, sys; assert m.version("livingproof-capability-report") == sys.argv[1]; names=("livingproof-capability-report", "livingproof-common", "click", "jsonschema", "defusedxml"); print({n: m.version(n) for n in names})' "$VERSION"
           echo "Native ${{ matrix.architecture }} anonymous immutable consumption passed for $reference; local image ID equals the exact CI-tested image." >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4.3.0
         with:
           name: release-packages-${{ needs.release.outputs.version }}-amd64
           path: downloaded
@@ -245,15 +252,16 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       RELEASE_TAG: ${{ needs.release.outputs.git-tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.4.0
         with:
           ref: ${{ needs.release.outputs.git-tag }}
+          fetch-depth: 0
           persist-credentials: false
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4.3.0
         with:
           name: release-packages-${{ needs.release.outputs.version }}-amd64
           path: downloaded
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4.3.0
         with:
           name: release-packages-${{ needs.release.outputs.version }}-arm64
           path: arm64
@@ -262,8 +270,8 @@ jobs:
           cp arm64/wheelhouse-arm64.tar.gz arm64/compatibility-arm64.json arm64/compatibility-arm64.md downloaded/
           python3 tools/release_assets.py downloaded public
       - name: Attach verified packages
-        run: gh release upload "$RELEASE_TAG" public/* --repo "$GITHUB_REPOSITORY"
-      - uses: actions/download-artifact@v4
+        run: gh release upload "$RELEASE_TAG" public/* --repo "$GITHUB_REPOSITORY" --clobber
+      - uses: actions/download-artifact@v4.3.0
         with:
           name: registry-${{ needs.release.outputs.version }}
       - name: Append verified immutable image instructions

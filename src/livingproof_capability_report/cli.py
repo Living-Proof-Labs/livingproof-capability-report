@@ -1,20 +1,23 @@
 """Thin Click group, reusable as a future parent's nested report command."""
+
 from pathlib import Path
 
 import click
 from jsonschema import ValidationError
 
-from .core import decode, grade, load_bundle, render
+from .core import decode, load_bundle, markdown_filename, render, require_decisions
 
 
 def errors(function):
     from functools import wraps
+
     @wraps(function)
     def invoke(*args, **kwargs):
         try:
             return function(*args, **kwargs)
         except (OSError, ValueError, KeyError, TypeError, ValidationError) as exc:
             raise click.ClickException(str(exc)) from exc
+
     return invoke
 
 
@@ -22,6 +25,7 @@ def show_version(ctx, param, value):
     if not value or ctx.resilient_parsing:
         return
     from .version import current_version
+
     identity, package_version, source = current_version()
     click.echo(f"livingproof-capability-report, version {identity}")
     click.echo(f"Package: {package_version}; identity source: {source}")
@@ -29,26 +33,31 @@ def show_version(ctx, param, value):
 
 
 @click.group()
-@click.option("--version", is_flag=True, is_eager=True, expose_value=False,
-              callback=show_version,
-              help="Show release or development identity, package version and provenance source.")
+@click.option(
+    "--version",
+    is_flag=True,
+    is_eager=True,
+    expose_value=False,
+    callback=show_version,
+    help="Show release or development identity, package version and provenance source.",
+)
 def report():
-    """Validate a bundle, grade its evidence, then render the saved report.
+    """Validate a bundle, then render the capability verifier's stored decisions.
 
-    Start with a bundle manifest: it contains version information, evidence
-    paths and assessment references. Individual observation files are evidence
-    referenced by that manifest, not standalone reporter input.
+    Start with a bundle 1.1.0 manifest written by capability-verifier: it contains version
+    information, evidence paths, assessments, and the verifier's per-result decisions and
+    run assessments. This reporter never grades; a bundle 1.0.0 (no decisions) is refused.
 
     Run this example from the repository root or extracted source archive:
 
     \b
     livingproof-capability-report validate examples/bundle/manifest.json
-    livingproof-capability-report grade examples/bundle/manifest.json -o report.json
+    livingproof-capability-report render examples/bundle/manifest.json --format json -o report.json
     livingproof-capability-report render report.json
 
-    For your own bundle, substitute its manifest path. Validate checks structure
-    and evidence integrity; grade saves decisions; render displays them without
-    regrading. Output files must be new; choose another name when rerunning.
+    For your own bundle, substitute its manifest path. Validate checks structure and evidence
+    integrity; render shows the stored decisions as they are. Output files must be new;
+    choose another name when rerunning.
     """
 
 
@@ -65,76 +74,148 @@ def validate_command(manifest):
 
     \b
     livingproof-capability-report validate examples/bundle/manifest.json
-    livingproof-capability-report grade examples/bundle/manifest.json -o report.json
+    livingproof-capability-report render examples/bundle/manifest.json --format json -o report.json
     livingproof-capability-report render report.json
 
-    Validation checks integrity; grade saves decisions; render displays them.
+    Validation checks integrity; render displays the verifier's stored decisions.
     """
     loaded = load_bundle(manifest)
     click.echo("Valid bundle structure")
     for result, evidence in loaded["evidence_state"].items():
         for name, state in evidence.items():
             click.echo(f"{result}/{name}: {state}")
-    if any(state != "verified" for states in loaded["evidence_state"].values()
-           for state in states.values()):
+    if any(
+        state != "verified"
+        for states in loaded["evidence_state"].values()
+        for state in states.values()
+    ):
         raise click.ClickException("Evidence is incomplete or changed")
-
-
-@report.command("grade")
-@click.argument("manifest", type=click.Path(exists=True, dir_okay=False, path_type=Path))
-@click.option("--human", type=click.Path(exists=True, dir_okay=False, path_type=Path))
-@click.option("--previous", type=click.Path(exists=True, dir_okay=False, path_type=Path),
-              help="Retain a completed report and append a new grade revision.")
-@click.option("--require-pass", is_flag=True, help="Write report, then exit nonzero unless all pass.")
-@click.option("--policy", default="all-required-v1@1.0.0", show_default=True)
-@click.option("--output", "-o", required=True, type=click.Path(path_type=Path))
-@errors
-def grade_command(manifest, human, previous, require_pass, policy, output):
-    """Grade a bundle MANIFEST into a new JSON report (no overwriting).
-
-    Use the bundle manifest, not an individual observation. From the repository
-    root or extracted source archive, validate first, then save and view a report:
-
-    \b
-    livingproof-capability-report validate examples/bundle/manifest.json
-    livingproof-capability-report grade examples/bundle/manifest.json -o report.json
-    livingproof-capability-report render report.json
-
-    Choose a new output filename when rerunning.
-    """
-    result = grade(load_bundle(manifest), policy, decode(human.read_text()) if human else None,
-                   decode(previous.read_text()) if previous else None)
-    with output.open("x", encoding="utf-8") as stream:
-        stream.write(render(result))
-    click.echo(str(output))
-    if require_pass and any(d["status"] != "PASS" for d in result["decisions"]):
-        raise click.ClickException("Report retained; not all coordinates passed")
 
 
 @report.command("render")
 @click.argument("report_file", type=click.Path(exists=True, dir_okay=False, path_type=Path))
-@click.option("--format", type=click.Choice(["table", "json", "html", "csv"]), default=None,
-              help="Default: table on stdout; HTML when --output is supplied (v1 compatibility).")
-@click.option("--output", "-o", type=click.Path(path_type=Path),
-              help="Write a new file; otherwise print to stdout. Existing files are never overwritten.")
+@click.option(
+    "--format",
+    type=click.Choice(["table", "json", "html", "csv", "markdown"]),
+    default=None,
+    help="Default: table on stdout; HTML when --output is supplied (v1 compatibility).",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(path_type=Path),
+    help="Write a new file; otherwise print to stdout. Existing files are never overwritten.",
+)
+@click.option("--report-url", help="Markdown only: link to the full report.")
+@click.option("--clips-url", help="Markdown only: link to all clips.")
+@click.option("--lock-diff-url", help="Markdown only: link to the verification.lock.json diff.")
+@click.option(
+    "--evidence-links",
+    "evidence_links",
+    multiple=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help=(
+        "Bundle 1.1.0 input only: JSON file of evidence links. "
+        "Each link may set path to a relative site path, rendered exactly on the public page. "
+        "Set expired true when the site has pruned that file. "
+        "An optional https url is kept in report.json and is omitted from the public page "
+        "when it is a GitHub Actions artifact address. Kinds: artifact, video, mcap, log, note."
+    ),
+)
+@click.option(
+    "--history-href",
+    default=None,
+    help=(
+        "HTML only: address for the run-history slot, a relative site path or https URL. "
+        "Rendered only together with --history-label. Omit both to render no slot."
+    ),
+)
+@click.option(
+    "--history-label",
+    default=None,
+    help="HTML only: visible label for the run-history slot. Required with --history-href.",
+)
+@click.option(
+    "--evidence-retention",
+    type=int,
+    default=None,
+    help=(
+        "Days the site keeps evidence files. The public page says "
+        "'Evidence kept for N days' for live files and 'Evidence expired after N days' "
+        "for pruned files, using this value. "
+        "Required when a link is expired. There is no default."
+    ),
+)
 @errors
-def render_command(report_file, format, output):
-    """Render saved decisions; never regrade or overwrite existing files.
+def render_command(
+    report_file,
+    format,
+    output,
+    report_url,
+    clips_url,
+    lock_diff_url,
+    evidence_links,
+    history_href,
+    history_label,
+    evidence_retention,
+):
+    """Render stored decisions; never grade or overwrite existing files.
 
-    REPORT_FILE is the JSON report created by grade, not the bundle manifest or
-    an observation. Create it first with the bundled example from the repository
-    root or extracted source archive:
+    REPORT_FILE is a bundle 1.1.0 manifest from capability-verifier, or a JSON report saved
+    from one with ``--format json``. The verifier's decisions and run assessments are
+    rendered as they are; nothing is graded. A bundle 1.0.0 has no decisions and is refused:
+    assess it with capability-verifier first. From the repository root or extracted source
+    archive:
 
     \b
-    livingproof-capability-report validate examples/bundle/manifest.json
-    livingproof-capability-report grade examples/bundle/manifest.json -o report.json
+    livingproof-capability-report render examples/bundle/manifest.json --format json -o report.json
     livingproof-capability-report render report.json
     livingproof-capability-report render report.json --format html -o report.html
+    livingproof-capability-report render examples/bundle/manifest.json --format markdown -o report.md
 
     Default stdout is a terminal table. Choose new output filenames when rerunning.
+    A directory passed to ``--output`` with ``--format markdown`` is filled with
+    ``<scenario>.markdown``, named from the scenario id in the bundle.
     """
+    from . import assessed
+
+    stored = decode(report_file.read_text(encoding="utf-8"))
+    require_decisions(stored)
+    observations = None
+    evaluator_results = None
+    if assessed.is_assessed(stored):
+        loaded = load_bundle(report_file)
+        stored = assessed.report_from_bundle(
+            loaded,
+            [decode(p.read_text(encoding="utf-8")) for p in evidence_links] or None,
+        )
+        from .evaluators import load_evidence_results
+        from .steps import durations_by_result
+
+        observations = durations_by_result(loaded["bundle"], report_file.parent)
+        evaluator_results = load_evidence_results(loaded["bundle"], report_file.parent)
+    elif evidence_links:
+        raise ValueError("--evidence-links applies to a bundle 1.1.0 manifest only")
     selected_format = format or ("html" if output is not None else "table")
-    content = render(decode(report_file.read_text(encoding="utf-8")), selected_format)
+    links = {"report": report_url, "clips": clips_url, "lock_diff": lock_diff_url}
+    history = None
+    if history_href or history_label:
+        history = {"href": history_href, "label": history_label}
+    content = render(
+        stored,
+        selected_format,
+        links if any(links.values()) else None,
+        observations=observations,
+        evaluator_results=evaluator_results,
+        history=history,
+        retention=evidence_retention,
+    )
+    if output is not None and output.is_dir():
+        if selected_format != "markdown":
+            raise click.ClickException(
+                "A directory --output is only for --format markdown; pass a file name"
+            )
+        output = output / markdown_filename(stored)
     if output is None:
         click.echo(content, nl=False, color=False)
         return
@@ -143,33 +224,42 @@ def render_command(report_file, format, output):
     click.echo(str(output))
 
 
-@report.command("human-template")
-@click.argument("manifest", type=click.Path(exists=True, dir_okay=False, path_type=Path))
-@click.option("--result", "result_id", required=True)
-@click.option("--output", "-o", required=True, type=click.Path(path_type=Path))
-@click.option("--assessment-id", default="human-review", show_default=True)
-@click.option("--reviewer", help="Self-declared reviewer identity; enables human-review evaluator.")
-@click.option("--recorded-at", help="Review timestamp, required with --reviewer.")
+@report.command("comment")
+@click.argument(
+    "reports", nargs=-1, required=True, type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option("--repo", required=True, help="OWNER/NAME of the pull request's repository.")
+@click.option("--pr", required=True, type=int, help="Pull request number.")
+@click.option("--dry-run", is_flag=True, help="Read existing comments; print, post nothing.")
+@click.option(
+    "--comments",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="With --dry-run: a JSON list of existing comments instead of the API (offline).",
+)
 @errors
-def human_template(manifest, result_id, output, assessment_id, reviewer, recorded_at):
-    """Create an insufficient assessment for a person to review and complete."""
-    import json
-    from .core import digest
-    bundle = load_bundle(manifest)["bundle"]
-    selected = next((r for r in bundle["results"] if r["id"] == result_id), None)
-    if selected is None:
-        raise ValueError("Unknown result identifier")
-    if bool(reviewer) != bool(recorded_at):
-        raise ValueError("Supply both --reviewer and --recorded-at")
-    contribution = {"schema_version": "1.0.0", "assessments": [{
-        "result_id": result_id, "result_sha256": digest(selected), "assessment": {
-            "id": assessment_id, "evaluator": "human-review" if reviewer else "human-fixture",
-            "kind": "human",
-            "version": "1.0.0", "mandatory": False, "status": "INSUFFICIENT_EVIDENCE",
-            "rationale": "Review the referenced evidence and record your reasoning here",
-            "evidence_ids": [e["id"] for e in selected["evidence"]],
-            "provenance": {"reviewer": reviewer or "Replace with reviewer identity",
-                           "recorded_at": recorded_at or "Replace with review date",
-                           "source": "human file contribution; identity is self-declared"}}}]}
-    with output.open("x", encoding="utf-8") as stream:
-        stream.write(json.dumps(contribution, indent=2) + "\n")
+def comment_command(reports, repo, pr, dry_run, comments):
+    """Post or update the one PR comment holding the markdown REPORTS (render output).
+
+    Each REPORT is a markdown file from ``render --format markdown``; they are joined, sorted
+    by path, under the hidden marker. The comment carrying the marker is updated in place.
+    """
+    from . import comment
+
+    text = comment.body(p.read_text(encoding="utf-8") for p in sorted(reports))
+    if comments is not None:
+        if not dry_run:
+            raise ValueError("--comments needs --dry-run")
+        listed = decode(comments.read_text(encoding="utf-8"))
+
+        def call(method, path, payload=None):
+            return listed, ""
+    else:
+        secret = comment.token()
+
+        def call(method, path, payload=None):
+            return comment.http(method, path, payload, secret)
+
+    method, path = comment.publish(repo, pr, text, call, dry_run)
+    click.echo(f"{'would ' if dry_run else ''}{method} {path} ({len(text)} chars)")
+    if dry_run:
+        click.echo(text, nl=False)

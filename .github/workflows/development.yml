@@ -13,7 +13,7 @@ jobs:
         runner: [ubuntu-24.04, ubuntu-24.04-arm]
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.4.0
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
@@ -25,6 +25,7 @@ jobs:
       - run: task dev:docs
       - name: Individual container tests in run summary
         if: ${{ !cancelled() }}
+        continue-on-error: true
         uses: dorny/test-reporter@d1b5dff021aa968b288b02285a8bf47471c5928a
         with:
           name: Container reporter tests (${{ matrix.runner }})
@@ -34,7 +35,7 @@ jobs:
           collapsed: never
           fail-on-error: 'true'
           fail-on-empty: 'true'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4.6.2
         if: always()
         with:
           name: development-tests-${{ matrix.runner }}

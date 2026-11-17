@@ -1,0 +1,84 @@
+{
+  "$comment": "Built from robot-capability-specs v2.2.1 scenario-description.schema.json. No walk-corner description is released. Quantities are the positive numbers that schema requires, not measured results. Step names are the ones agreed for this scenario.",
+  "format": "livingproof-scenario-description/0.1",
+  "scenario": {
+    "id": "walk-corner",
+    "revision": "0.1.0"
+  },
+  "mission": {
+    "title": "Walk around the corner",
+    "description": "The robot walks down one hallway, turns the corner, and reaches the end of the next hallway.",
+    "success_criteria": [
+      {
+        "evaluator": "turns-the-corner",
+        "text": "Turns the corner"
+      },
+      {
+        "evaluator": "stays-on-route",
+        "text": "Stays on the route"
+      },
+      {
+        "evaluator": "clears-walls",
+        "text": "Clears the walls"
+      },
+      {
+        "evaluator": "stays-upright",
+        "text": "Stays upright"
+      },
+      {
+        "evaluator": "reaches-exit",
+        "text": "Reaches the exit in time"
+      }
+    ],
+    "grading": "One run is one or more identical trials. A grading policy turns completed trial outcomes into the run grade.",
+    "time_limit_explained": "The time limit is the value resolved for this scenario."
+  },
+  "world": {
+    "id": "corner-place",
+    "content_version": "0.1.0",
+    "title": "Corner",
+    "description": "Two passages meet at a corner.",
+    "dimensions": {
+      "clear_width": {"value": 1, "unit": "m"},
+      "length": {"value": 1, "unit": "m"},
+      "wall_height": {"value": 1, "unit": "m"},
+      "wall_thickness": {"value": 1, "unit": "m"}
+    }
+  },
+  "parameters": {
+    "route_length": {"value": 1, "unit": "m"},
+    "command_speed": {"value": 1, "unit": "m/s"},
+    "time_limit": {"value": 1, "unit": "s", "formula": "resolved from the scenario parameters"},
+    "trials": {"count": 1, "retries": false},
+    "wall_clearance": {
+      "humanoid": {"value": 1, "unit": "m"},
+      "quadruped": {"value": 1, "unit": "m"}
+    }
+  },
+  "limits": {
+    "lateral_limit": {
+      "unit": "m",
+      "formula": "resolved from the scenario parameters",
+      "inputs": {"clear_width": "world clear width"},
+      "text": "How far the robot may drift from the route."
+    },
+    "exit_segment": {
+      "unit": "m",
+      "formula": "resolved from the scenario parameters",
+      "inputs": {"clear_width": "world clear width"},
+      "text": "Where the exit counts."
+    },
+    "fall_height": {
+      "unit": "m",
+      "formula": "resolved from the scenario parameters",
+      "inputs": {"fall_base_height": "configuration profile"},
+      "text": "The lowest base height that still counts as upright."
+    },
+    "fits_width": {
+      "unit": "m",
+      "formula": "resolved from the scenario parameters",
+      "inputs": {"clear_width": "world clear width"},
+      "text": "Whether the robot fits before any trial."
+    }
+  }
+}

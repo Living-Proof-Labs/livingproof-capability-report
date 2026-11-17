@@ -1,15 +1,18 @@
 # Living Proof Labs capability report
 
+**Start here: [documentation](https://docs.livingprooflabs.com/livingproof-capability-report/).**
+
 Documentation previews: [build and verification guide](docs/verification.md) (14-day CI artifacts).
-Public manual activation is pending; see the [Pages plan](.github/PAGES.md).
 
 [![Tests, builds and compatibility](https://github.com/Living-Proof-Labs/livingproof-capability-report/actions/workflows/verify.yml/badge.svg?branch=main)](https://github.com/Living-Proof-Labs/livingproof-capability-report/actions/workflows/verify.yml)
-[![Latest release](https://img.shields.io/github/v/release/Living-Proof-Labs/livingproof-capability-report)](https://github.com/Living-Proof-Labs/livingproof-capability-report/releases/latest)
+[![Package release](https://img.shields.io/github/v/release/Living-Proof-Labs/livingproof-capability-report)](https://github.com/Living-Proof-Labs/livingproof-capability-report/releases/latest)
 [![License](https://img.shields.io/github/license/Living-Proof-Labs/livingproof-capability-report)](LICENSE)
 
 An installable Python library and thin Click command group for portable capability
-results. Validate evidence bundles, grade under an explicit versioned policy, and
-render stored decisions as lossless JSON, offline HTML or explicitly flattened CSV.
+results. Validate evidence bundles and render the decisions that
+[capability-verifier](https://github.com/Living-Proof-Labs/capability-verifier) stored in
+them as lossless JSON, offline HTML, markdown or explicitly flattened CSV. The reporter
+never grades.
 This is a deterministic fixture demonstration, not robot safety certification.
 No server, simulator, source checkout or Task installation is needed by consumers.
 
@@ -18,8 +21,8 @@ No server, simulator, source checkout or Task installation is needed by consumer
 Download the wheel or Debian package and `SHA256SUMS` from
 [Releases](https://github.com/Living-Proof-Labs/livingproof-capability-report/releases).
 The Debian package is `Architecture: all`: it ships only pure-Python reporter
-files and metadata. Apt installs architecture-appropriate `python3-click` and
-`python3-jsonschema` dependencies. All files are managed by dpkg; no pip writes
+files and metadata. Apt installs architecture-appropriate `python3-click`,
+`python3-jsonschema`, and `python3-defusedxml` dependencies. All files are managed by dpkg; no pip writes
 into system Python, private interpreter, native wheel or vendored virtual
 environment is included. The native support matrix is documented below.
 
@@ -60,6 +63,11 @@ For an explicit offline image export, first pull the release's digest for the
 required platform, tag it locally, and save that local tag with `docker save`.
 The receiving machine can use `docker load` with that archive.
 
+Version 1.2.0 initially encountered a `write_package` denial. The
+[recovery workflow](https://github.com/Living-Proof-Labs/livingproof-capability-report/actions/workflows/recover-registry.yml)
+verifies and publishes that version's original saved images. Those historical
+assets remain available. Later routine releases do not attach image archives.
+
 See [release notes](https://github.com/Living-Proof-Labs/livingproof-capability-report/releases)
 for immutable image instructions verified by both native architecture jobs.
 
@@ -70,38 +78,37 @@ from the extracted source archive containing `examples/`):
 
 ```sh
 livingproof-capability-report validate examples/bundle/manifest.json
-livingproof-capability-report grade examples/bundle/manifest.json -o report.json
+livingproof-capability-report render examples/bundle/manifest.json --format json -o report.json
 livingproof-capability-report render report.json
 livingproof-capability-report render report.json --format html -o report.html
 livingproof-capability-report render report.json --format csv -o report.csv
 ```
 
-`validate` checks the manifest structure and evidence digests; `grade` saves the
-policy decisions; `render` displays the saved report (a terminal table by default).
-For your own portable bundle, replace `examples/bundle/manifest.json` with its
-manifest path. Installed packages do not require a checkout to report your bundle.
+`validate` checks the manifest structure and evidence digests; `render` reads the
+verifier's stored decisions from a bundle 1.1.0 manifest (or a saved `report.json`)
+and displays them (a terminal table by default). For your own bundle, replace
+`examples/bundle/manifest.json` with its manifest path. Installed packages do not
+require a checkout to report your bundle.
 
-The **manifest** describes the results, contract versions, assessments and
-relative evidence paths with their digests. An **observation**, such as
-`examples/bundle/evidence/pass.json`, contains measurements referenced by that
-manifest. It is not standalone reporter input: pass the manifest to `validate`
-and `grade`, and the generated report to `render`. Do not add `schema_version`
-to observation files to make them look like manifests. Keep the evidence files
-at the relative paths declared by their manifest.
+The example is a walk-hallway run written by capability-verifier: 20 seeded trials of
+the stock Unitree G1, 12 of which pass. The **manifest** describes the results, contract
+versions, assessments, the verifier's decisions and run assessment, and relative evidence
+paths with their digests. Evidence files, such as `examples/bundle/evidence/stock-seed-01.json`,
+are referenced by that manifest; they are not standalone reporter input. Keep them at the
+relative paths declared by their manifest.
 
-Outputs must be new files. Rendering never invokes grading or silently substitutes
-a newer policy. JSON retains the entire source manifest, original producer
-results, assessments, evidence references, contributed human assessments,
-integrity observations, exact-context groups and stored decisions. Evidence bytes
-stay in the portable bundle. HTML is self-contained, escaped, script-free and
-usable offline. CSV is deliberately flattened: one decision per row, with
-spreadsheet-formula protection; it is not a round-trip representation.
+Outputs must be new files. Rendering never grades or silently substitutes a newer
+policy. JSON retains the entire source manifest, original producer results,
+assessments, evidence references, integrity observations, exact-context groups and
+stored decisions. Evidence bytes stay in the portable bundle. HTML is self-contained,
+escaped, script-free and usable offline. CSV is deliberately flattened: one decision
+per row, with spreadsheet-formula protection; it is not a round-trip representation.
 
 Importable API:
 
 ```python
-from livingproof_capability_report import load_bundle, grade, render
-saved = grade(load_bundle("examples/bundle/manifest.json"))
+from livingproof_capability_report import load_bundle, render, report_from_bundle
+saved = report_from_bundle(load_bundle("examples/bundle/manifest.json"))
 html = render(saved, "html")
 ```
 
@@ -114,67 +121,112 @@ Version v1.3.0 predates this metadata; it remains usable standalone.
 
 ## Bundle and grading contract
 
-Version 1.0.0 manifests use the packaged `bundle.schema.json`. Each result includes
-an identifier, released catalog tag and commit, capability/revision, system and
+Grading belongs to capability-verifier. It assesses the evidence and writes a bundle with
+`schema_version` 1.1.0 that carries its decisions; this reporter only checks and renders
+them ([reporter #30](https://github.com/Living-Proof-Labs/livingproof-capability-report/issues/30)).
+
+The packaged `bundle.schema.json` stays in this repository. Its `$id` is the schema's
+address and its `version` is `1.1.0`, the newest bundle `schema_version` it accepts.
+It accepts `schema_version` 1.0.0 and 1.1.0. Each result
+includes an identifier, released catalog tag and commit, capability/revision, system and
 environment versions, relative evidence paths with SHA-256 digests, assessments,
 provenance and the original producer result. Unknown extension fields are retained.
 Duplicate JSON keys, non-finite numbers, undeclared evidence references, absolute
 paths, traversal and symlinks are rejected. URLs are never fetched. Digests detect
 changed bytes; they do not authenticate who produced the evidence.
 
-Policy `all-required-v1@1.0.0` supports the exact catalog versions below and declared
-evaluator versions: pause-rules 1.0.0/1.1.0, mock-ai 1.0.0 and human-fixture 1.0.0.
-Mock-agent results are scripted fixtures, not model calls. Exactly one assessment
-from each member is required; the deterministic assessment must be mandatory.
-An observed failure wins even if another member or evidence is missing. Otherwise,
-missing/changed evidence, missing/duplicate members or insufficient assessments
-remain INSUFFICIENT_EVIDENCE. Unsupported contracts, evaluators or policies are
-INCOMPATIBLE, not failures. There is no averaging and no overall numeric score.
-Aggregation groups exact spec, system and environment contexts separately from grading.
+A 1.0.0 bundle still validates, but it has no decisions, so `render` refuses it with an
+error that points to the verifier: assess the evidence with capability-verifier v1.9.0
+or later, which writes bundle 1.1.0, and render that. There is no averaging and no
+overall numeric score. Aggregation groups exact spec, system and environment contexts.
+Step names, limit lines and failure wording come from the bundle's scenario
+description and the stored evaluator results. When an observed or required
+value is not a number (a list of places passed, a word), the HTML step card writes it
+out, with places as `<place> at <t> s` and `(required …)` in place of a limit.
+A directory passed as `--output`
+with `--format markdown` is written as `<scenario>.markdown`, using the scenario
+id on that description (or the result capability when the description has none).
+
+## Version 2.0.0: render the verifier's grading (bundle 1.1.0)
+
+Reporter 2.0.0 is a major release. capability-verifier (from the release that adds
+`--bundle-version 1.1.0`) grades walk-hallway evidence itself and writes the outcome
+into a bundle with `schema_version` 1.1.0: each result carries a `decision` (status,
+reason, structured failures, assessor types, policy), and the bundle carries an
+`assessment` in robot-capability-specs' `livingproof-run-assessment/0.1` format (every
+decision, plus per run k of N, the Wilson 95% interval, the grade and its rationale).
+
+    livingproof-capability-report render bundle/manifest.json --format json -o report.json
+    livingproof-capability-report render bundle/manifest.json --format markdown -o report.md
+
+`render` accepts that manifest directly and computes nothing: statuses, k, N, interval and
+grade are shown as stored. `report.json` is the same report document 1.x `grade` wrote
+(`summaries` keep the `wilson95` pair), so `report.md` and the `comment` body are
+byte-identical to what 1.x produced from the same evidence. `--evidence-links` adds CI
+links (see below). A missing or malformed required field is an error naming the field
+and the result. Evidence is still checked: a stored PASS whose evidence is missing or
+changed is refused.
+
+What changes for callers:
+
+- The packaged bundle schema accepts `schema_version` 1.0.0 and 1.1.0.
+- `grade`, `human-template`, the policies (`--policy`, `--human`, `--previous`,
+  `--require-pass`) and the `grade` Python function are removed
+  ([#30](https://github.com/Living-Proof-Labs/livingproof-capability-report/issues/30)).
+  Bundles 1.0.0 are refused by `render`; produce 1.1.0 with capability-verifier instead.
+- Saved `report.json` files from earlier releases, including grade revisions, still
+  render as stored.
+- How human reviews apply to 1.1.0 bundles is not decided yet.
+
+## What the HTML report shows
+
+`--format html` opens with a summary card: the stored success ring, the success
+count and percentage (for example "12 successes, 60%"), the
+mission title when the feature spec has one, and one mark per evaluator result.
+Finding rows appear only when a result's descriptor lists them. The ring is the
+stored rate. A finding that is not in the verdict tier does not change it. Opening
+a mark shows that result's descriptor (title, version, purpose, source, tier, and
+detail text) and, for the run record, the sections below. Those sections use the
+feature spec (`description`), the run assessment, and descriptor text. A spec
+sentence that restates a plan, such as `description.mission.grading`, is not
+shown: a stock sentence can still say "20 runs" on a 3-trial assessment. The
+acceptance line is that required count as a percentage of `n`, for example
+"90% required". Step names are
+the spec's `success_criteria` text. The stored Wilson 95% interval, when the
+assessment has one, is muted text in the run detail, not on the ring. Today's
+bundles do not carry a descriptor yet, so the mark uses the fallback name and
+the letter disc and says so.
+
+Every value is read from the stored report and its source bundle and HTML-escaped;
+nothing is regraded or recomputed, and a field the report does not carry is left out.
+The trial table (Result, Catalog, Revision, Environment, Status, Reason) follows.
+The collapsed `<details>` block embeds the stored JSON. Addresses that point at a
+GitHub Actions artifact are left out of that public copy; `report.json` still keeps
+them. `--format table`
+prints the policy and grade revision as trailing lines; `--format csv` adds `policy` and
+`grade_revision` columns only when the decisions carry `assessment_details`.
 
 ## Compatibility evidence
 
-The example bundle is produced by
-[capability-verifier v1.1.0](https://github.com/Living-Proof-Labs/capability-verifier/tree/v1.1.0).
-It preserves the existing producer behavior from v1.0.2 and adds portable export.
-The catalog's original v1.1.1 and additive v1.2.0 releases contain different contracts;
-the strict revision does not replace or relabel the original fixtures.
-
-| Catalog / pause revision | Fixture version / observation | Stored grade |
-| --- | --- | --- |
-| [v1.1.1](https://github.com/Living-Proof-Labs/robot-capability-specs/tree/v1.1.1) / 1.0.0 (500 ms) | 1.0.0 / 120 ms | PASS |
-| [v1.2.0](https://github.com/Living-Proof-Labs/robot-capability-specs/tree/v1.2.0) / 2.0.0 (250 ms) | 1.0.0 / 120 ms | PASS |
-| v1.1.1 / 1.0.0 | 2.0.0 / 300 ms | PASS |
-| v1.2.0 / 2.0.0 | 2.0.0 / 300 ms | FAIL |
-| Either contract | 1.0.0 / mandatory inhibition false | FAIL |
-| Either contract | 1.0.0 / elapsed time missing | INSUFFICIENT_EVIDENCE |
+`examples/bundle` is a walk-hallway bundle 1.1.0 in the layout capability-verifier
+writes: stock Unitree G1, catalog v1.6.0, 20 seeds, 12 PASS and 8 FAIL, run grade FAIL
+(18 of 20 needed). Its rendered markdown and report are pinned in
+`tests/fixtures/hallway-expected`; they were produced by the 1.x `grade` path before it
+was removed, so the tests show `render` reproduces that output byte for byte from the
+stored decisions. The earlier pause example (a 1.0.0 bundle) was removed with grading.
 
 ## Contribute a human assessment
 
-For a result missing its human assessment, generate a separate editable file:
-
-```sh
-livingproof-capability-report human-template bundle/manifest.json \
-  --result RESULT_ID -o human.json
-```
-
-Read the referenced evidence. Fill in your identity, review date, rationale and
-`status` (PASS, FAIL or INSUFFICIENT_EVIDENCE) in `human.json`. Keep the result digest,
-result identifier, evaluator/version and evidence identifiers unchanged. Then:
-
-```sh
-livingproof-capability-report grade bundle/manifest.json --human human.json -o reviewed.json
-```
-
-The file is bound to the exact original result digest. It is a self-declared review,
-not authenticated approval. The original bundle and original assessments are retained.
-This policy adds missing assessments; it does not silently replace existing reviews.
-Adding a second human assessment makes membership insufficient (any retained FAIL
-still wins). Resolving conflicting reviews requires a future explicit policy.
-The bundled examples already include recorded human fixtures, so adding a human
-review to them demonstrates duplicate handling rather than filling a missing review.
+The `human-template` command and human re-grading were removed with the reporter's
+grading ([#30](https://github.com/Living-Proof-Labs/livingproof-capability-report/issues/30)).
+How human reviews are recorded for bundle 1.1.0 is not decided yet; reports saved by
+earlier releases keep their human contributions and still render.
 
 ## Contributors and delivery
+
+Read [Contribute](CONTRIBUTING.md) for the deliberately adopted
+[collaboration-guidelines v6.0.0](https://github.com/Living-Proof-Labs/collaboration-guidelines/tree/v6.0.0)
+and local instructions. This guidance pin is separate from the release workflow below.
 
 Install Python 3.12, uv, Docker and Task 3.54.0, then use `task setup`, `task verify`,
 `VERSION=0.0.0 task package` and `VERSION=0.0.0 task smoke` from a fresh checkout.
@@ -182,8 +234,10 @@ Task delegates to locked native tools. `PACKAGE_NETWORK=host` optionally selects
 Docker networking for environments that require it; no daemon configuration changes.
 Packaging uses the official Python build backend, pip, venv and `dpkg-deb`.
 
-CI attaches wheel, source archive, Debian package, native dependency wheelhouses, saved images
-and SHA-256 checksums. The shared release workflow is pinned to
+CI attaches the wheel, source archive, Debian packages, native dependency wheelhouses,
+compatibility reports and SHA-256 checksums after anonymous registry verification.
+Image archives are 14-day CI artifacts and are not routine release attachments.
+The shared release workflow is pinned to
 [collaboration-guidelines v3.0.0](https://github.com/Living-Proof-Labs/collaboration-guidelines/tree/v3.0.0).
 Release builds install the exact published package version. Clean containers test
 wheel and Debian installations without mounting source. A normal `docker run`
@@ -237,9 +291,12 @@ source archive and `all.deb`, plus architecture-specific images and wheelhouses.
 
 ## Test results in GitHub
 
-The verify job uploads JUnit results even when tests fail. Its run summary and
-Reporter tests check show individual tests and failure annotations. Fork pull
-requests receive the summary and artifact without a write-token check. This
+The verify job uploads JUnit results even when tests fail. The job summary lists
+individual cases. The Reporter tests check is created already completed, so a
+failed follow-up update cannot leave it in progress. A missing or unreadable
+report fails the job. A failure to create or update that check is a warning and
+does not by itself fail the job. Fork pull requests receive the summary and
+artifact without a write-token check. Raw reports are retained for 14 days. This
 provides per-run history for comparison; this integration does not implement a
 historical trends dashboard or promise automatic trend correlation.
 
@@ -292,86 +349,11 @@ grant is provisioned by these checks.
 
 ## Retain human reviews as grade revisions
 
-The opt-in `all-required-v2@1.0.0` policy accepts multiple assessments for each
-required role (deterministic, mock-agent and human). The default remains
-`all-required-v1@1.0.0`; its membership rules and existing command exit behavior
-are unchanged. Bundle, human contribution and report versions remain `1.0.0`.
-No producer changes are required. Assessments retain evaluator identity/version,
-assessment identifier, evidence references, rationale, status and provenance.
-Mock-agent entries are fixture conclusions, never real model calls; the new
-policy explicitly marks them `fixture: true` in its explanation.
-
-The new policy supports the existing pinned pause contracts and evaluator versions,
-plus `human-review@1.0.0` with nonempty, self-declared `reviewer` and `recorded_at`
-provenance. It evaluates each run separately. Unsupported contracts, evaluators or
-policies yield `INCOMPATIBLE`, even if a retained assessment failed; the failure
-is still visible in the explanation. For supported inputs any retained failure
-wins, including mandatory failures. Otherwise every declared evidence digest must
-verify, all three roles must be present, every assessment must pass with evidence
-references, and at least one deterministic assessment must be mandatory. There
-is no majority vote or automatic replacement of dissent or insufficient reviews.
-
-```sh
-livingproof-capability-report grade bundle/manifest.json \
-  --policy all-required-v2@1.0.0 -o initial.json
-livingproof-capability-report human-template bundle/manifest.json \
-  --result RESULT_ID --assessment-id review-2026-10-26 \
-  --reviewer 'Reviewer name' --recorded-at '2026-10-26T00:00:00Z' -o human.json
-# Complete the rationale and conclusion in human.json, then:
-livingproof-capability-report grade bundle/manifest.json \
-  --policy all-required-v2@1.0.0 --previous initial.json --human human.json \
-  -o revision-2.json
-```
-
-The new report embeds the complete `previous_report` and its
-`previous_report_sha256`, increments `grade_revision`, and retains cumulative
-human contributions alongside the unchanged `source_bundle` and `evidence_state`.
-A revision requires the same original bundle and recorded evidence integrity
-labels; a change in those labels requires a separate report. These labels do not
-snapshot evidence bytes (see the integrity limitation below). Contributions bind to the original
-result digest, cannot introduce undeclared references, and cannot reuse an
-assessment identifier within a run. Prior reports remain renderable without
-regrading, including when their policy is no longer supported. These digests
-identify content; they do not authenticate reviewers or sign reports.
-
-New-policy decisions add `coordinate`, `assessment_details`, `evidence_groups`,
-`mandatory_failures` and `dissent`. Evidence groups associate references with
-assessment identifiers within a specific run, never combine grades across runs.
-JSON and HTML retain full history. Terminal output explains current decisions;
-CSV adds policy, revision, assessments and evidence groups as quoted JSON cells
-for new-policy reports, while legacy CSV columns remain unchanged.
-
-For continuous integration, `grade --require-pass` writes the report first and
-then exits 1 if any coordinate is not `PASS` (including incompatibility or
-insufficient evidence). Ordinary `grade` keeps its historical success-on-write
-behavior. Tests exercise the nonzero path and retain its JSON, HTML, CSV and
-terminal reports under `artifacts/`; both verification workflows upload artifacts
-regardless of test success. Expected failing capability cases are successful tests
-only when the asserted command actually fails and retains its report. Unexpected
-test failures continue to fail Task and continuous integration.
-
-The compatibility matrix producer can declare an execution mismatch through the
-existing extensible provenance field, without changing bundle version:
-
-```json
-{"provenance": {"compatibility": {
-  "status": "INCOMPATIBLE", "scope": "execution",
-  "reason": "Released executor supports pause revision 1.0.0 only"
-}}}
-```
-
-Both policies recognize this declaration before capability grading. It must have
-that status/scope and a nonempty reason; malformed declarations are rejected.
-Empty assessments or `original_result.status` alone do not establish execution
-incompatibility. Run and fixture provenance are preserved unchanged.
-
-Revision integrity checks compare the recorded labels (`verified`, `missing`,
-`digest_mismatch`), not snapshots of evidence bytes. Different contents that both
-mismatch the declared digest have the same label and can produce a linked
-revision; both grades remain insufficient unless a retained failure takes
-precedence. History preserves the original declared evidence digests and prior
-integrity observations, but does not prove that missing or mismatched evidence
-bytes stayed unchanged. Use a separate bundle/report to record changed evidence.
+Grade revisions (`all-required-v2@1.0.0`, `--previous`, `--require-pass`) were
+removed with the reporter's grading. Earlier reports that embed a `previous_report`
+and `grade_revision` still render their own stored decisions without regrading; the
+embedded history is kept in JSON but no longer checked or rendered. For a CI gate, use
+the verifier's run grade in the bundle's `assessment`.
 
 ## Identify the version you are testing
 
@@ -429,3 +411,84 @@ No current timestamp is included. Identical source observations and package
 versions produce identical provenance JSON. The installed-package smoke tests
 check its retention and CLI agreement for wheels, source distributions, Debian
 packages and container images.
+
+## Walk-hallway results
+
+capability-verifier grades walk-hallway trials one per result and stores each decision
+in the bundle, with the failed checks' structured fields
+`{check, observed, limit, unit, t, seed, wall}`. A seeded run's assessment gives k of N,
+the Wilson 95% interval, the required passes and the run grade. A run that compared its
+repeats stores one grade and a `reproducibility` object instead of a rate: null `k`,
+`n`, `required_passes` and Wilson bounds, plus `reproducibility.statement` when the
+repeats agree. The report keeps each run as a `summaries` entry and shows only those
+stored fields.
+
+    livingproof-capability-report render bundle/manifest.json --format markdown -o summary.md
+
+writes a PR-comment summary in Art's layout. It starts with a stable
+`<!-- livingproof-verification -->` marker so CI can update one comment in place. Then it gives
+a header (scenario, the plan's trial count, speed, pass bar, lock sha), a grade table, a plain verdict and
+"Why runs failed" bullets (each seed counted once, under its first failure). When the
+result's provenance says the repeats were compared, that count is labelled as repeats
+rather than `N=`, and the verdict and Passed cell are the stored agreement statement
+instead of a success rate. Per-seed tables
+are in `<details>`, followed by a footer. Thumbnails appear only when results carry
+`provenance.assets`. `--report-url`, `--clips-url` and `--lock-diff-url` add a links row.
+
+`livingproof-capability-report comment --repo OWNER/NAME --pr N reports/*/report.md` posts the
+rendered markdown as one pull-request comment under `<!-- livingproof-capability-report -->`,
+updating that comment in place on later runs. It uses `GITHUB_TOKEN` (needs
+`pull-requests: write`) and the REST API directly; `--dry-run` posts nothing.
+
+`render MANIFEST --evidence-links FILE` (repeatable; bundle 1.1.0 manifest only) stores
+evidence links in the report under `evidence_links`, outside the source bundle, so no
+digest or grade changes. This file is the one caller input for evidence paths:
+
+```json
+{"run": "https://github.com/OWNER/REPO/actions/runs/1",
+ "links": [
+   {"label": "logs", "path": "evidence/logs.txt", "kind": "log"},
+   {"label": "MCAP", "path": "evidence/seed-01.mcap", "kind": "mcap", "seed": 1, "status": "PASS"},
+   {"label": "video", "path": "evidence/seed-01.mp4", "poster": "evidence/seed-01.jpg",
+    "why": "Typical pass", "kind": "video", "seed": 1, "status": "PASS"},
+   {"label": "coverage", "path": "evidence/coverage.txt", "kind": "note"},
+   {"label": "video", "path": "evidence/seed-04.mp4", "kind": "video",
+    "seed": 4, "status": "FAIL", "expired": true}]}
+```
+
+`path` is a relative site path (or a site-root path such as `/runs/current/evidence/log.txt`).
+The public page copies that string into `href` or, for a live video, into the player
+`src`. It is not joined to a hidden base and it is not rewritten. `poster` and `why`
+are optional and appear only when present; the reporter does not choose which videos
+to feature and does not write a coverage sentence of its own. Kinds are `log`, `mcap`,
+`video`, `note` and `artifact`. An optional https `url` is kept in `report.json`. When
+that url is a GitHub Actions artifact address, the public page does not show it or the
+word artifact. Entries with an empty URL, no path and no expired flag are dropped.
+
+Set `"expired": true` on a file the site has pruned. The page then shows
+`Evidence expired after N days` (class `is-expired`) for that file, in its trial chip
+and its Evidence item, and does not link or play it. When every file of a run has
+expired, the Evidence card note says the same instead of "kept".
+Pass the same `N` the site uses to prune, once, with `--evidence-retention N`. The
+reporter has no default and will not render an expired file without it. The same value
+is the note on live evidence. For example, `--evidence-retention 7` reads "Evidence
+kept for 7 days" on live files and "Evidence expired after 7 days" on pruned ones, and
+`--evidence-retention 30` reads "Evidence kept for 30 days".
+
+`--history-href` and `--history-label` add one navigation slot on the HTML page, so the
+styled report can be published with no wrapper around it. Href is a relative site path
+or an https URL, rendered exactly. Omit both and the page has no slot; the reporter
+does not invent a link. Supplying only one of them is an error.
+
+```
+livingproof-capability-report render bundle/manifest.json --format html -o report.html \
+  --evidence-links links.json --evidence-retention 7 \
+  --history-href ../ --history-label "Run history"
+```
+
+These three flags also apply when rendering a saved `report.json` to HTML, except
+`--evidence-links`, which still applies only while reading a bundle 1.1.0 manifest.
+Absent flags keep the previous render, except that a public page no longer shows a
+GitHub Actions artifact address. Markdown still lists a stored https url when no
+`path` was supplied, so an existing links file keeps its pull-request text. Rendering
+refuses a per-trial link whose status disagrees with the stored decision for that seed.

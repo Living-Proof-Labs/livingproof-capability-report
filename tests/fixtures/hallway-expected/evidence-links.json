@@ -1,0 +1,43 @@
+{
+  "run": "https://github.com/Living-Proof-Labs/livingproof-unitree-g1/actions/runs/7",
+  "links": [
+    {
+      "label": "evidence",
+      "url": "https://github.com/Living-Proof-Labs/livingproof-unitree-g1/actions/runs/7/artifacts/1",
+      "kind": "artifact"
+    },
+    {
+      "label": "MCAP, all trials",
+      "url": "https://github.com/Living-Proof-Labs/livingproof-unitree-g1/actions/runs/7/artifacts/2",
+      "kind": "mcap"
+    },
+    {
+      "label": "video",
+      "url": "https://github.com/Living-Proof-Labs/livingproof-unitree-g1/actions/runs/7/artifacts/3",
+      "kind": "video",
+      "seed": 1,
+      "status": "PASS"
+    },
+    {
+      "label": "MCAP",
+      "url": "https://github.com/Living-Proof-Labs/livingproof-unitree-g1/actions/runs/7/artifacts/4",
+      "kind": "mcap",
+      "seed": 1,
+      "status": "PASS"
+    },
+    {
+      "label": "video",
+      "url": "https://github.com/Living-Proof-Labs/livingproof-unitree-g1/actions/runs/7/artifacts/5",
+      "kind": "video",
+      "seed": 4,
+      "status": "FAIL"
+    },
+    {
+      "label": "video",
+      "url": "",
+      "kind": "video",
+      "seed": 2,
+      "status": "FAIL"
+    }
+  ]
+}

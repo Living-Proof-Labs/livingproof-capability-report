@@ -1,0 +1,676 @@
+{
+  "schema_version": "1.1.0",
+  "producer": {
+    "id": "capability-verifier",
+    "version": "1.24.0",
+    "commit": "f1ca679eddfa55440f0988e1e4591c0ea85dabac"
+  },
+  "results": [
+    {
+      "id": "stock-seed-01",
+      "spec": {
+        "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+        "tag": "v2.3.0",
+        "commit": "57317e617014a6df97bb7fba9d92a890af8d42e5",
+        "capability": "walk-corner",
+        "revision": "0.1.0"
+      },
+      "system": {
+        "id": "unitree-g1/stock",
+        "version": "1.1.1"
+      },
+      "environment": {
+        "id": "hallway-corner",
+        "version": "0.1.0"
+      },
+      "evidence": [
+        {
+          "id": "stock-seed-01",
+          "path": "evidence/trial-01.json",
+          "sha256": "8337886b0509110df270dc34c6a78d6c3632dad46c05aac733f55a2e813f5424"
+        }
+      ],
+      "assessments": [
+        {
+          "id": "stock-seed-01/corner-exit-reached",
+          "evaluator": "corner-exit-reached",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "exit at 12.26 s <= 27.00 s (14.74 s spare) (trial 1)",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-01"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "corner-exit-reached",
+              "version": "1.0.0"
+            },
+            "details": {
+              "observed": 12.26,
+              "threshold": 27.0,
+              "time": 12.26,
+              "margin": 14.74
+            }
+          }
+        },
+        {
+          "id": "stock-seed-01/corner-turned",
+          "evaluator": "corner-turned",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "passed through corner before the exit (trial 1)",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-01"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "corner-turned",
+              "version": "1.0.0"
+            },
+            "details": {
+              "observed": [
+                {
+                  "place": "corner",
+                  "time": 3.88
+                }
+              ],
+              "threshold": [
+                "corner"
+              ],
+              "time": 12.26
+            }
+          }
+        },
+        {
+          "id": "stock-seed-01/corner-route-limit",
+          "evaluator": "corner-route-limit",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "route distance 0.13 m <= 0.49 m, largest at 5.92 s (trial 1)",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-01"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "corner-route-limit",
+              "version": "1.0.0"
+            },
+            "details": {
+              "observed": 0.1325,
+              "threshold": 0.49,
+              "time": 5.92,
+              "peak_time": 5.92,
+              "margin": 0.3575
+            }
+          }
+        },
+        {
+          "id": "stock-seed-01/corner-wall-contact",
+          "evaluator": "corner-wall-contact",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "no wall contact; closest 0.250 m at 0.00 s (trial 1)",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-01"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "corner-wall-contact",
+              "version": "1.0.0"
+            },
+            "details": {
+              "observed": 0,
+              "threshold": 0,
+              "time": 0.0,
+              "margin": 0.25
+            }
+          }
+        },
+        {
+          "id": "stock-seed-01/corner-fall",
+          "evaluator": "corner-fall",
+          "kind": "deterministic",
+          "version": "1.0.0",
+          "status": "PASS",
+          "rationale": "base height 0.75 m >= 0.50 m, lowest at 4.44 s (trial 1)",
+          "mandatory": true,
+          "evidence_ids": [
+            "stock-seed-01"
+          ],
+          "provenance": {
+            "assessor": {
+              "type": "deterministic",
+              "id": "corner-fall",
+              "version": "1.0.0"
+            },
+            "details": {
+              "observed": 0.7464,
+              "threshold": 0.5,
+              "time": 4.44,
+              "margin": 0.2464
+            }
+          }
+        }
+      ],
+      "provenance": {
+        "run_id": "walk-corner-unitree-g1-stock-20261116T172642Z",
+        "plan": {
+          "trials": {
+            "count": 1
+          }
+        },
+        "thresholds": {
+          "time_limit": 27.0,
+          "lateral_limit": 0.49,
+          "half_width": 0.75,
+          "fall_height": 0.5
+        },
+        "limits": {
+          "lateral_limit": {
+            "value": 0.49,
+            "unit": "m",
+            "formula": "clear_width / 2 - robot_width / 2",
+            "inputs": {
+              "clear_width": 1.5,
+              "robot_width": 0.52,
+              "robot_width_source": "robot.profile.dimensions.width"
+            }
+          },
+          "exit_segment": {
+            "value": 0.75,
+            "unit": "m",
+            "formula": "|y| <= clear_width / 2",
+            "inputs": {
+              "clear_width": 1.5
+            }
+          },
+          "time_limit": {
+            "value": 27.0,
+            "unit": "s",
+            "formula": "2 * route_length / command_speed + 5 s",
+            "inputs": {
+              "route_length": 5.5,
+              "command_speed": 0.5
+            }
+          },
+          "fall_height": {
+            "value": 0.5,
+            "unit": "m",
+            "formula": "configuration.profile.locomotion.fall_base_height",
+            "inputs": {}
+          },
+          "fits_width": {
+            "met": true,
+            "unit": "m",
+            "formula": "robot_width + 2 * wall_clearance <= clear_width",
+            "inputs": {
+              "robot_width": 0.52,
+              "robot_class": "humanoid",
+              "wall_clearance": 0.05,
+              "clear_width": 1.5
+            },
+            "detail": "0.52 + 2 x 0.05 = 0.620 m <= 1.5 m (recomputed by the verifier)"
+          }
+        },
+        "policy": {
+          "id": "all-required-v1",
+          "version": "1.0.0"
+        },
+        "lock": {
+          "path": "verification.lock.json",
+          "sha256": "c2e636d5b18abb7ea95ba3bc233192d74f4e279761d67ddba6a76fff10dd7041",
+          "content": {
+            "format": "livingproof-verification-lock/1.0.0",
+            "scenario": "walk-corner@0.1.0",
+            "releases": {
+              "specs": {
+                "repository": "Living-Proof-Labs/robot-capability-specs",
+                "tag": "v2.3.0",
+                "commit": "57317e617014a6df97bb7fba9d92a890af8d42e5"
+              },
+              "runner": {
+                "repository": "Living-Proof-Labs/livingproof-sim-mujoco",
+                "tag": "v3.2.1",
+                "commit": "f9c326f370cc3e54bf38932bfb332455dc4b5ef1"
+              },
+              "verifier": {
+                "repository": "Living-Proof-Labs/capability-verifier",
+                "tag": "v1.24.0",
+                "commit": "f1ca679eddfa55440f0988e1e4591c0ea85dabac",
+                "image": "ghcr.io/living-proof-labs/capability-verifier-hallway",
+                "digest": "sha256:931ce2ac77a986e00bd41f035780bb25267a97f85336204815a6da7baec3a5c0"
+              },
+              "reporter": {
+                "repository": "Living-Proof-Labs/livingproof-capability-report",
+                "tag": "v3.10.1",
+                "commit": "6585ff70e2464d5727a3de8530dfd1dae3a9d75b",
+                "image": "ghcr.io/living-proof-labs/livingproof-capability-report",
+                "digest": "sha256:c09875208154991ea2e8af5e550e7f3a68c04a724bd2c146989249108956becd"
+              }
+            },
+            "world": {
+              "id": "hallway-corner",
+              "version": "0.1.0",
+              "repository": "Living-Proof-Labs/livingproof-worlds",
+              "tag": "v1.3.0",
+              "commit": "12915e34e6ad1dfe376ec2fcb49d5afb957caff9",
+              "sha256": "8393881e8b38a090f51c3a424ca444623a901f642f75186cb4d41ac7482898f5"
+            },
+            "configurations": [
+              {
+                "name": "stock",
+                "version": "1.1.1",
+                "path": "configurations/stock.json",
+                "sha256": "8baf584eb025fa4408aad20a81521b73bc068a3a7e613dfeeb8f03d24eb02b5e"
+              },
+              {
+                "name": "playground",
+                "version": "1.0.1",
+                "path": "configurations/playground.json",
+                "sha256": "1fef76d2e5b6eb0ab7627d1f93333e8ca2ec01249a5b1d1f68876186f0657e89"
+              }
+            ],
+            "plan": {
+              "trials": {
+                "count": 1
+              }
+            }
+          }
+        },
+        "simulator": {
+          "simulator": {
+            "id": "mujoco",
+            "version": "3.17.0",
+            "adapter": "livingproof-sim-mujoco",
+            "adapter_commit": "f9c326f370cc3e54bf38932bfb332455dc4b5ef1"
+          },
+          "runner": {
+            "version": "3.2.1",
+            "tag": "v3.2.1",
+            "commit": "f9c326f370cc3e54bf38932bfb332455dc4b5ef1"
+          },
+          "base_body": "pelvis",
+          "walls": [
+            "wall-outer-first",
+            "wall-outer-second",
+            "wall-inner-first",
+            "wall-inner-second"
+          ],
+          "source_commit": "68725986336c38d25a5ea421f895d9d796aed7f1"
+        },
+        "summary": {
+          "k": 1,
+          "n": 1,
+          "required_passes": 1,
+          "wilson95": [
+            0.2065,
+            1.0
+          ],
+          "grade": "PASS",
+          "aggregation": {
+            "id": "k-of-n-wilson95",
+            "version": "1.0.0"
+          }
+        },
+        "reproducibility": {
+          "compared": false,
+          "identical": null,
+          "finding": null
+        },
+        "repeat_records": [
+          {
+            "index": 1,
+            "path": "trials/trial-01.json",
+            "sha256": "8337886b0509110df270dc34c6a78d6c3632dad46c05aac733f55a2e813f5424",
+            "trajectory_sha256": "833c6c8df35c377d111b75b7c50eea9e6609202d686cfad92e8a05c6c7e5b487",
+            "outcome": "crossed_exit",
+            "wall_clock_s": 7.265
+          }
+        ]
+      },
+      "original_result": {
+        "status": "PASS",
+        "index": 1,
+        "seed": 1
+      },
+      "decision": {
+        "status": "PASS",
+        "reason": "All required evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
+        ],
+        "primary_failure": null,
+        "secondary_failures": [],
+        "policy": {
+          "id": "all-required-v1",
+          "version": "1.0.0"
+        }
+      },
+      "evaluator_results": [
+        {
+          "format": "livingproof-evaluator-result/1.1.0",
+          "evaluator": {
+            "id": "livingproof-scenario",
+            "version": "0.1.dev1",
+            "kind": "scenario",
+            "execution": "deterministic",
+            "display_name": "Scenario",
+            "publisher": "Living Proof Labs",
+            "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\"><g stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M6.5 7L10.5 11L17.5 4\"/><rect x=\"4\" y=\"9\" width=\"16\" height=\"11\" rx=\"4\"/></g><g fill=\"currentColor\"><circle cx=\"8.5\" cy=\"14.5\" r=\"1.5\"/><circle cx=\"15.5\" cy=\"14.5\" r=\"1.5\"/></g></svg>"
+          },
+          "inputs": [
+            {
+              "role": "observation",
+              "uri": "trials/trial-01.json",
+              "sha256": "8337886b0509110df270dc34c6a78d6c3632dad46c05aac733f55a2e813f5424"
+            },
+            {
+              "role": "manifest",
+              "uri": "manifest.json",
+              "sha256": "9d83b3b6d14ec4f47902e5840fcd146ce8e5dae113048cb585ab6ab456b8219c"
+            },
+            {
+              "role": "thresholds",
+              "uri": "thresholds.json",
+              "sha256": "d975c723c68fc1cca1f3f0cefa86549feaf6669b3c520ce2a8438e04f4a9891e"
+            }
+          ],
+          "timestamps": {
+            "started_at": "2026-11-16T17:27:29Z",
+            "completed_at": "2026-11-16T17:27:29Z"
+          },
+          "scenario": {
+            "trial_id": "stock-seed-01",
+            "steps": [
+              {
+                "id": "corner-exit-reached",
+                "verdict": "PASS",
+                "summary": "exit at 12.26 s <= 27.00 s (14.74 s spare) (trial 1)"
+              },
+              {
+                "id": "corner-turned",
+                "verdict": "PASS",
+                "summary": "passed through corner before the exit (trial 1)"
+              },
+              {
+                "id": "corner-route-limit",
+                "verdict": "PASS",
+                "summary": "route distance 0.13 m <= 0.49 m, largest at 5.92 s (trial 1)"
+              },
+              {
+                "id": "corner-wall-contact",
+                "verdict": "PASS",
+                "summary": "no wall contact; closest 0.250 m at 0.00 s (trial 1)"
+              },
+              {
+                "id": "corner-fall",
+                "verdict": "PASS",
+                "summary": "base height 0.75 m >= 0.50 m, lowest at 4.44 s (trial 1)"
+              }
+            ]
+          },
+          "descriptor": {
+            "title": "Scenario",
+            "short_title": "Scenario",
+            "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\"><g stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M6.5 7L10.5 11L17.5 4\"/><rect x=\"4\" y=\"9\" width=\"16\" height=\"11\" rx=\"4\"/></g><g fill=\"currentColor\"><circle cx=\"8.5\" cy=\"14.5\" r=\"1.5\"/><circle cx=\"15.5\" cy=\"14.5\" r=\"1.5\"/></g></svg>",
+            "icon_accessible_name": "Scenario",
+            "purpose": "Checks each step of the scenario against the limits in its spec.",
+            "version": "0.1.dev1",
+            "tier": "verdict",
+            "findings": []
+          }
+        }
+      ]
+    }
+  ],
+  "assessment": {
+    "format": "livingproof-run-assessment/0.1",
+    "policy": {
+      "id": "all-required-v1",
+      "version": "1.0.0"
+    },
+    "aggregation": {
+      "id": "k-of-n-wilson95",
+      "version": "1.0.0"
+    },
+    "decisions": [
+      {
+        "result_id": "stock-seed-01",
+        "status": "PASS",
+        "reason": "All required evaluators and every retained assessment pass",
+        "failures": [],
+        "assessor_types": [
+          "deterministic"
+        ],
+        "primary_failure": null,
+        "secondary_failures": []
+      }
+    ],
+    "runs": [
+      {
+        "capability": "walk-corner",
+        "spec": {
+          "repository": "https://github.com/Living-Proof-Labs/robot-capability-specs",
+          "tag": "v2.3.0",
+          "commit": "57317e617014a6df97bb7fba9d92a890af8d42e5",
+          "capability": "walk-corner",
+          "revision": "0.1.0"
+        },
+        "system": {
+          "id": "unitree-g1/stock",
+          "version": "1.1.1"
+        },
+        "environment": {
+          "id": "hallway-corner",
+          "version": "0.1.0"
+        },
+        "run_id": "walk-corner-unitree-g1-stock-20261116T172642Z",
+        "k": 1,
+        "n": 1,
+        "required_passes": 1,
+        "interval": {
+          "method": "wilson",
+          "level": 0.95,
+          "lower": 0.2065,
+          "upper": 1.0
+        },
+        "grade": "PASS",
+        "rationale": "1/1 PASS, needs 1",
+        "result_ids": [
+          "stock-seed-01"
+        ],
+        "failures": [],
+        "prototype": null,
+        "failure_summary": {
+          "failed_trials": 0,
+          "by_primary": []
+        },
+        "worst": [
+          {
+            "check": "corner-route-limit",
+            "worst": "max",
+            "unit": "m",
+            "observed": 0.1325,
+            "seed": 1,
+            "t": 5.92,
+            "result_id": "stock-seed-01"
+          },
+          {
+            "check": "corner-wall-contact",
+            "worst": "max",
+            "unit": "m",
+            "observed": null,
+            "seed": null,
+            "t": null,
+            "result_id": null
+          },
+          {
+            "check": "corner-fall",
+            "worst": "min",
+            "unit": "m",
+            "observed": 0.7464,
+            "seed": 1,
+            "t": 4.44,
+            "result_id": "stock-seed-01"
+          },
+          {
+            "check": "corner-exit-reached",
+            "worst": "max",
+            "unit": "s",
+            "observed": 12.26,
+            "seed": 1,
+            "t": 12.26,
+            "result_id": "stock-seed-01",
+            "missing": 0
+          }
+        ]
+      }
+    ]
+  },
+  "description": {
+    "source": {
+      "path": "specs/scenarios/walk-corner/description.json",
+      "sha256": "be8de80e1a7b6f2273cee7abf7303d2e78a407ba0a5f11f9d06ed8cbed7c252c",
+      "commit": "57317e617014a6df97bb7fba9d92a890af8d42e5"
+    },
+    "$comment": "Human-readable text for walk-corner 0.1.0 on hallway-corner 0.1.0 (specs #40, Part B step 9). Text only; README.md stays normative. success_criteria are in journey order, and each text starts with the card label from Art's answer on #40. world.dimensions.length is the length of route-centreline, because the world has no single straight length.",
+    "format": "livingproof-scenario-description/0.1",
+    "scenario": {
+      "id": "walk-corner",
+      "revision": "0.1.0"
+    },
+    "mission": {
+      "title": "Walk around the corner",
+      "description": "The robot walks down one hallway, turns the corner, and reaches the end of the next hallway. It starts at the entrance and gets there its own way: its adapter chooses how to steer it. It must pass through the corner and reach the exit, 5.5 m along the route, within 27 s, staying upright, never touching a wall, and staying within its limit of the route.",
+      "success_criteria": [
+        {
+          "evaluator": "corner-turned",
+          "text": "Turns the corner: passes through the corner square before reaching the exit."
+        },
+        {
+          "evaluator": "corner-route-limit",
+          "text": "Stays on the route: never strays further from the route than its limit."
+        },
+        {
+          "evaluator": "corner-wall-contact",
+          "text": "Clears the walls: never touches a wall."
+        },
+        {
+          "evaluator": "corner-fall",
+          "text": "Stays upright: the base never drops below the fall height."
+        },
+        {
+          "evaluator": "corner-exit-reached",
+          "text": "Reaches the exit in time: 5.5 m along the route, within 27 s, crossing it inside the exit segment."
+        }
+      ],
+      "grading": "One run is one or more identical trials at the exact nominal pose. The default is 1. A grading policy turns completed trial outcomes into the run grade. ERROR is a test-system status reported on the job and on the trial. It is never a robot grade and is never counted as a robot fail. If no trial completes because of test-system errors, the run is not evaluated and the grade is INSUFFICIENT_EVIDENCE. A failed trial is not retried.",
+      "time_limit_explained": "27 s is twice the time the route takes at the reference speed of 0.5 m/s, plus 5 s (2 \u00d7 5.5 m \u00f7 0.5 m/s + 5 s)."
+    },
+    "world": {
+      "id": "hallway-corner",
+      "content_version": "0.1.0",
+      "title": "Corner hallway",
+      "description": "Two straight, empty hallways, each 1.50 m wide between the walls, meeting at a right angle, with 2.50 m-high walls. The route runs 6.00 m down the middle of both: 3.00 m to the centre of the corner square, then 3.00 m to the exit. Nothing else is in it: the test is whether the robot can get around the corner.",
+      "dimensions": {
+        "clear_width": {
+          "value": 1.5,
+          "unit": "m"
+        },
+        "length": {
+          "value": 6.0,
+          "unit": "m"
+        },
+        "wall_height": {
+          "value": 2.5,
+          "unit": "m"
+        },
+        "wall_thickness": {
+          "value": 0.15,
+          "unit": "m"
+        }
+      }
+    },
+    "parameters": {
+      "route_length": {
+        "value": 5.5,
+        "unit": "m"
+      },
+      "command_speed": {
+        "value": 0.5,
+        "unit": "m/s"
+      },
+      "time_limit": {
+        "value": 27,
+        "unit": "s",
+        "formula": "2 \u00d7 route_length \u00f7 command_speed + 5 s"
+      },
+      "trials": {
+        "count": 1,
+        "retries": false
+      },
+      "wall_clearance": {
+        "humanoid": {
+          "value": 0.05,
+          "unit": "m"
+        },
+        "quadruped": {
+          "value": 0.1,
+          "unit": "m"
+        }
+      }
+    },
+    "limits": {
+      "lateral_limit": {
+        "unit": "m",
+        "formula": "clear_width \u00f7 2 \u2212 robot_width \u00f7 2",
+        "inputs": {
+          "clear_width": "world clear width",
+          "robot_width": "robot profile dimensions.width"
+        },
+        "text": "How far the robot's centre may stray from the route before its side would reach a wall in a straight hallway: half the clear width minus half the robot's width. Outside the corner it is measured from the turn point, so there it is stricter than the walls.",
+        "sentence": "{robot} may stray up to {value} m from the route: half the {clear_width} m hallway, minus half its {robot_width} m width."
+      },
+      "exit_segment": {
+        "unit": "m",
+        "formula": "clear_width \u00f7 2",
+        "inputs": {
+          "clear_width": "world clear width"
+        },
+        "text": "The exit counts only when the robot's base crosses it between the walls, within half the clear width of the route."
+      },
+      "fall_height": {
+        "unit": "m",
+        "formula": "locomotion.fall_base_height",
+        "inputs": {
+          "fall_base_height": "configuration profile locomotion.fall_base_height"
+        },
+        "text": "The lowest base height that still counts as upright, declared by the selected configuration."
+      },
+      "fits_width": {
+        "unit": "m",
+        "formula": "robot_width + 2 \u00d7 wall_clearance \u2264 clear_width",
+        "inputs": {
+          "robot_width": "robot profile dimensions.width",
+          "wall_clearance": "parameters.wall_clearance for the robot class",
+          "clear_width": "world clear width"
+        },
+        "text": "Checked before any trial: the robot fits when its width plus the wall clearance on each side (0.05 m for a humanoid, 0.10 m for a quadruped) is at most the clear width. A robot that does not fit is UNSUPPORTED, not run.",
+        "sentence": "{robot} fits: {robot_width} m + 2 \u00d7 {wall_clearance} m \u2264 {clear_width} m."
+      }
+    }
+  }
+}
