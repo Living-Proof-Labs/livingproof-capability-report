@@ -1,0 +1,73 @@
+{
+  "format": "livingproof-evaluator-result/1.1.0",
+  "evaluator": {
+    "id": "livingproof-scenario",
+    "version": "1.3.0",
+    "kind": "scenario",
+    "execution": "deterministic",
+    "display_name": "Scenario",
+    "publisher": "Living Proof Labs",
+    "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\"><g stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M6.5 7L10.5 11L17.5 4\"/><rect x=\"4\" y=\"9\" width=\"16\" height=\"11\" rx=\"4\"/></g><g fill=\"currentColor\"><circle cx=\"8.5\" cy=\"14.5\" r=\"1.5\"/><circle cx=\"15.5\" cy=\"14.5\" r=\"1.5\"/></g></svg>"
+  },
+  "inputs": [
+    {
+      "role": "observation",
+      "uri": "trials/trial-01.json",
+      "sha256": "2adb9c7841b4f6fdbf78f1eedb4ee559061821a181c5534f5658a58c4f8bc311"
+    },
+    {
+      "role": "manifest",
+      "uri": "manifest.json",
+      "sha256": "8331126fc73a99a145bd9c897203854b720c7f87de77773aa9e0c10996faa5e0"
+    },
+    {
+      "role": "thresholds",
+      "uri": "thresholds.json",
+      "sha256": "5f8dc1629ff5dab079ef82bb4401168c2c3ed68d279ab391eebc2885ab0e4fae"
+    }
+  ],
+  "timestamps": {
+    "started_at": "2026-11-17T17:53:35Z",
+    "completed_at": "2026-11-17T17:53:35Z"
+  },
+  "scenario": {
+    "trial_id": "stock-seed-01",
+    "steps": [
+      {
+        "id": "corner-exit-reached",
+        "verdict": "PASS",
+        "summary": "exit at 13.16 s <= 27.00 s (13.84 s spare) (trial 1)"
+      },
+      {
+        "id": "corner-turned",
+        "verdict": "PASS",
+        "summary": "passed through corner before the exit (trial 1)"
+      },
+      {
+        "id": "corner-route-limit",
+        "verdict": "PASS",
+        "summary": "route distance 0.16 m <= 0.48 m, largest at 6.42 s (trial 1)"
+      },
+      {
+        "id": "corner-wall-contact",
+        "verdict": "PASS",
+        "summary": "no wall contact; closest 0.250 m at 0.00 s (trial 1)"
+      },
+      {
+        "id": "corner-fall",
+        "verdict": "PASS",
+        "summary": "base height 0.64 m >= 0.44 m, lowest at 9.36 s (trial 1)"
+      }
+    ]
+  },
+  "descriptor": {
+    "title": "Scenario",
+    "short_title": "Scenario",
+    "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\"><g stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M6.5 7L10.5 11L17.5 4\"/><rect x=\"4\" y=\"9\" width=\"16\" height=\"11\" rx=\"4\"/></g><g fill=\"currentColor\"><circle cx=\"8.5\" cy=\"14.5\" r=\"1.5\"/><circle cx=\"15.5\" cy=\"14.5\" r=\"1.5\"/></g></svg>",
+    "icon_accessible_name": "Scenario",
+    "purpose": "Checks each step of the scenario against the limits in its spec.",
+    "version": "1.3.0",
+    "tier": "verdict",
+    "findings": []
+  }
+}
