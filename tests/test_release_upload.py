@@ -8,12 +8,17 @@ WORKFLOWS = Path(__file__).resolve().parents[1] / ".github/workflows"
 
 def test_every_release_upload_replaces_assets_so_a_rerun_still_publishes():
     uploads = [
-        line
-        for path in WORKFLOWS.glob("*.yml")
+        (path.name, line.strip().removeprefix("run:").strip())
+        for path in sorted(WORKFLOWS.glob("*.yml"))
         for line in path.read_text().splitlines()
         if "gh release upload" in line
     ]
-    assert len(uploads) >= 4 and all("--clobber" in line for line in uploads)
+    assert [name for name, _line in uploads] == ["verify-saved-release.yml", "verify.yml"]
+    assert all("--clobber" in line for _name, line in uploads)
+    assert all("image-" not in line for _name, line in uploads)
+    assert uploads[1][1] == (
+        'gh release upload "$RELEASE_TAG" public/* --repo "$GITHUB_REPOSITORY" --clobber'
+    )
 
 
 def test_only_test_report_publishing_may_continue_on_error():
