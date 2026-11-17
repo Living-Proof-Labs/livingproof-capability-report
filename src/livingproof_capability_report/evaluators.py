@@ -179,6 +179,31 @@ def _view(
     }
 
 
+def _percentage(value):
+    if type(value) is int and 0 <= value <= 100:
+        return value
+    if type(value) is float and 0 <= value <= 100:
+        return value
+    return None
+
+
+def _apply_integrity(view, document):
+    """Surface stored run-level integrity status, percentage and scope when present."""
+    integrity = document.get("integrity")
+    if not isinstance(integrity, dict):
+        return
+    run = integrity.get("run") if isinstance(integrity.get("run"), dict) else {}
+    status = _visible(run.get("test_system_status"))
+    if status:
+        view["status"] = status
+    percentage = _percentage(run.get("percentage"))
+    if percentage is not None:
+        view["percentage"] = percentage
+    scope = _visible(run.get("scope")) or _visible(integrity.get("scope"))
+    if scope:
+        view["scope"] = scope
+
+
 def resolve_one(document):
     """One mark from a result envelope or a bare descriptor (example data)."""
     if is_result(document):
@@ -200,7 +225,7 @@ def resolve_one(document):
         if not details and not findings:
             details = _visible(fields.get("success_copy"))
         identity = evaluator.get("id") if isinstance(evaluator.get("id"), str) else title
-        return _view(
+        view = _view(
             title=title,
             short_title=_visible(fields.get("short_title")),
             icon=icon,
@@ -215,6 +240,8 @@ def resolve_one(document):
             missing_descriptor=descriptor is None,
             identity=identity,
         )
+        _apply_integrity(view, document)
+        return view
     title = _visible(document.get("title")) or FALLBACK_TITLE
     findings = _findings(document.get("findings"))
     details = _visible(document.get("details_copy"))
@@ -335,6 +362,29 @@ def _embedded(result):
     return [doc for doc in docs if is_result(doc)]
 
 
+def _integrity_documents(report, summary):
+    """Run-level integrity results keyed by ``evaluator.id``, bound to this run only."""
+    run_id = summary.get("run_id")
+    if not isinstance(run_id, str) or not run_id:
+        return []
+    bundle = report.get("source_bundle")
+    assessment = bundle.get("assessment") if isinstance(bundle, dict) else None
+    stored = assessment.get("integrity_results") if isinstance(assessment, dict) else None
+    if not isinstance(stored, dict):
+        return []
+    docs = []
+    for item in stored.values():
+        candidates = item if isinstance(item, list) else [item]
+        for document in candidates:
+            if not is_result(document):
+                continue
+            integrity = document.get("integrity")
+            run = integrity.get("run") if isinstance(integrity, dict) else None
+            if isinstance(run, dict) and run.get("id") == run_id:
+                docs.append(document)
+    return docs
+
+
 def documents_for_summary(report, summary, evidence_results=None):
     by_id = {
         result["id"]: result
@@ -352,6 +402,7 @@ def documents_for_summary(report, summary, evidence_results=None):
     extra = summary.get("evaluator_results")
     if isinstance(extra, list):
         docs.extend(item for item in extra if is_result(item))
+    docs.extend(_integrity_documents(report, summary))
     return docs
 
 
@@ -533,6 +584,18 @@ def _panel(view):
     bits = [f"<h4>{esc(view['title'])}</h4>"]
     if view["version"]:
         bits.append(f"<p class='meta'>{esc(view['version'])}</p>")
+    if view.get("status"):
+        bits.append(f"<p class='meta'>Status: {esc(view['status'])}</p>")
+    percentage = view.get("percentage")
+    if percentage is not None:
+        shown = (
+            str(int(percentage))
+            if type(percentage) is float and percentage.is_integer()
+            else str(percentage)
+        )
+        bits.append(f"<p class='meta'>{esc(shown)}%</p>")
+    if view.get("scope"):
+        bits.append(f"<p class='meta'>Scope: {esc(view['scope'])}</p>")
     if view["purpose"]:
         bits.append(f"<p class='purpose'>{esc(view['purpose'])}</p>")
     if view["source"]:
