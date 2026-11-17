@@ -102,7 +102,9 @@ def test_a_failed_integrity_result_is_shown_and_does_not_change_the_grade():
     docs = documents_for_summary(report, report["summaries"][0])
     assert _ids(docs) == ["livingproof-scenario", "livingproof-run-integrity"]
 
-    front = _visible(summary_front(report, "<p class='stored-status'>Stored overall status: PASS</p>"))
+    front = _visible(
+        summary_front(report, "<p class='stored-status'>Stored overall status: PASS</p>")
+    )
     assert "eval-name-full'>Run Integrity</span>" in front
     assert "Status: ERROR" in front
     assert "0%" in front or "0.0%" in front
