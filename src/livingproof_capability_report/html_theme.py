@@ -1368,5 +1368,8 @@ def page(
             evidence=evidence,
             full=full,
         )
-        + "</main></body></html>\n"
+        + "</main>"
+        "<footer class='wrap'><p class='foot'>"
+        "<a href='https://docs.livingprooflabs.com/reading-reports.html'>"
+        "How to read this report</a></p></footer></body></html>\n"
     )
