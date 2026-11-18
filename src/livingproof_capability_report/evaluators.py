@@ -685,7 +685,11 @@ def _callouts(views, *, quiet):
 # With it:
 #   - aria-selected follows the open details element;
 #   - Left/Right move focus between tabs (wrapping), Home/End to the first/last;
-#   - tabindex roves: the focused tab, else the open one, else the first, is 0.
+#   - tabindex roves: the tab last focused is the one Tab stop; until a tab has
+#     been focused it is the open one, else the first. Only focusing a tab moves
+#     the stop, never the asynchronous toggle event, so where Shift+Tab re-enters
+#     the row does not depend on whether a toggle was delivered before or after
+#     focus left it.
 # The keys only move focus (manual activation). Enter/Space open or close the
 # focused tab, as for a native summary, so panels never open as a side effect
 # of moving, and the selected one can still be closed.
@@ -693,11 +697,12 @@ _TABS_SCRIPT = (
     "<script data-eval-tabs>(function(s){"
     "var w=s.parentNode.querySelector(':scope > .eval-row');"
     "function t(){return Array.from(w.querySelectorAll(':scope > .eval-disclosure > summary'))}"
-    "function f(){var a=t(),o=a.find(function(x){return x===document.activeElement})"
-    "||a.find(function(x){return x.parentNode.open})||a[0];"
+    "var c;"
+    "function f(){var a=t(),o=a.indexOf(c)<0?a.find(function(x){return x.parentNode.open})||a[0]:c;"
     "a.forEach(function(x){x.setAttribute('aria-selected',x.parentNode.open?'true':'false');"
     "x.tabIndex=x===o?0:-1})}"
-    "w.addEventListener('toggle',f,true);w.addEventListener('focusin',f);"
+    "w.addEventListener('toggle',f,true);"
+    "w.addEventListener('focusin',function(e){if(t().indexOf(e.target)>=0)c=e.target;f()});"
     "w.addEventListener('keydown',function(e){var a=t(),i=a.indexOf(e.target),"
     "n={ArrowRight:i+1,ArrowLeft:i-1,Home:0,End:a.length-1}[e.key];"
     "if(i<0||n===undefined)return;e.preventDefault();a[(n+a.length)%a.length].focus()});"
