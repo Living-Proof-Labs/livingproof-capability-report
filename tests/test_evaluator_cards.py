@@ -285,10 +285,10 @@ def test_the_script_is_self_contained_and_makes_no_network_calls_or_loads_anythi
         "function", "var", "return", "if", "undefined", "Array", "from", "find", "forEach",
         "indexOf", "focus", "preventDefault", "addEventListener", "querySelector",
         "querySelectorAll", "setAttribute", "tabIndex", "parentNode", "open", "target", "key",
-        "document", "activeElement", "currentScript", "ArrowRight", "ArrowLeft", "Home", "End",
+        "document", "currentScript", "ArrowRight", "ArrowLeft", "Home", "End",
         "length", "aria", "selected", "true", "false", "scope", "eval", "row", "disclosure",
         "summary", "toggle", "focusin", "keydown", "data", "tabs", "s", "w", "t", "f", "a", "o",
-        "x", "e", "i", "n",
+        "x", "e", "i", "n", "c",
     }  # fmt: skip
     literals = set(re.findall(r"'([^']*)'", script))
     assert literals == {
@@ -311,9 +311,11 @@ def test_the_script_is_self_contained_and_makes_no_network_calls_or_loads_anythi
 def test_the_script_only_reads_and_writes_inside_its_own_container():
     script = _script(_front(_two_evaluators()))
     assert "document.currentScript" in script and "s.parentNode" in script
-    # Selectors are scoped to the row; the only document-level read is the focused element.
-    assert script.count("document.") == 2
-    assert "document.activeElement" in script
+    # Selectors are scoped to the row; the only document-level read is currentScript.
+    # The Tab stop follows focusin events, not document.activeElement, so it never
+    # depends on when a toggle event is delivered relative to focus leaving the row.
+    assert script.count("document.") == 1
+    assert "activeElement" not in script
     assert re.findall(r"querySelector(?:All)?\('([^']*)'", script) == [
         ":scope > .eval-row",
         ":scope > .eval-disclosure > summary",
@@ -766,9 +768,55 @@ def test_arrow_keys_move_focus_with_wrapping_home_and_end_and_never_open_a_panel
     page.keyboard.press("Enter")
     assert _visible_panels(page) == []
 
+    # The browser delivers each `toggle` (which updates aria-selected) a moment after the
+    # Enter that caused it. Wait for the last one before moving focus, so the sequence
+    # below is not racing a toggle that is still in flight.
+    _selected(page, ["false"] * 3)
     # With a tab focused, Tab leaves the row rather than visiting the other tabs.
     tabs.nth(1).focus()
     page.keyboard.press("Tab")
     assert not any(focused for _, focused in state())
     page.keyboard.press("Shift+Tab")
     assert state()[1] == [0, True]
+
+
+def test_the_tab_stop_is_the_last_focused_tab_even_when_a_toggle_lands_after_focus_left(
+    chromium, tmp_path
+):
+    """The browser delivers `toggle` asynchronously, after the Enter that caused it.
+
+    The row used to recompute its Tab stop from `document.activeElement` on every
+    toggle, so a close that landed after Tab had left the row moved the stop to the
+    first tab and Shift+Tab re-entered there. That made the arrow-key test flaky.
+    Here the late toggles are produced on purpose, after focus has left, and each is
+    awaited, so the outcome is deterministic and independent of event timing.
+    """
+    path = _marks_page(3, tmp_path)
+    page = chromium.new_page(viewport={"width": 1280, "height": 800})
+    page.goto(path.as_uri())
+    tabs = page.locator("summary[role=tab]")
+    stops = "() => [...document.querySelectorAll('summary[role=tab]')].map(e => e.tabIndex)"
+
+    tabs.nth(1).focus()
+    page.keyboard.press("Tab")  # focus leaves the row
+    page.wait_for_function("() => document.activeElement === document.body")
+    assert page.evaluate(stops) == [-1, 0, -1]
+    # A late toggle: another tab opens, then closes, while focus is outside the row.
+    tabs.nth(2).evaluate("e => { e.parentNode.open = true }")
+    _selected(page, ["false", "false", "true"])
+    assert page.evaluate(stops) == [-1, 0, -1]  # opening elsewhere does not move the stop
+    tabs.nth(2).evaluate("e => { e.parentNode.open = false }")
+    _selected(page, ["false", "false", "false"])
+    assert page.evaluate(stops) == [-1, 0, -1]  # nor does closing it (it used to jump to the first)
+    page.keyboard.press("Shift+Tab")
+    assert page.evaluate(
+        "() => document.activeElement === document.querySelectorAll('summary[role=tab]')[1]"
+    )
+
+    # Before any tab has been focused the stop is still the open one, else the first.
+    fresh = chromium.new_page(viewport={"width": 1280, "height": 800})
+    fresh.goto(path.as_uri())
+    assert fresh.evaluate(stops) == [0, -1, -1]
+    fresh.locator("summary[role=tab]").nth(2).evaluate("e => { e.parentNode.open = true }")
+    _selected(fresh, ["false", "false", "true"])
+    assert fresh.evaluate(stops) == [-1, -1, 0]
