@@ -1131,6 +1131,10 @@ details[open] > .step-summary .disclose-open { display: inline; }
 .eval-tabpanel { display: none; margin-top: 0.7rem; min-width: 0; }
 .eval-disclosure > .eval-tabpanel { margin-top: 0.7rem; }
 .eval-disclosure[open] > .eval-tabpanel { display: block; }
+/* A mark past the generated panel rules: when open, its details takes the whole
+   row and the panel opens full width under its (still 180px) tab. */
+.eval-disclosure.eval-inline[open] { flex: 1 0 100%; width: 100%; }
+.eval-disclosure.eval-inline > summary.eval-mark { width: var(--eval-card-width); }
 .eval-panel {
   box-sizing: border-box;
   padding: 0.75rem 0.85rem 0.85rem;

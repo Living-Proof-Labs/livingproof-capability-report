@@ -582,14 +582,16 @@ def _mark(view, group, column):
         f"aria-labelledby='{esc(tab_id)}'>{_panel(view)}"
         f"<div class='stored-run'>{view.get('body_html') or ''}</div></div>"
     )
+    inline = column > html_theme.MAX_PANEL_TABS
     tab = (
-        f"<details class='eval-disclosure' name='{esc(group)}' role='none'>"
+        f"<details class='eval-disclosure{' eval-inline' if inline else ''}' "
+        f"name='{esc(group)}' role='none'>"
         f"<summary class='{klass}' role='tab' id='{esc(tab_id)}' "
         f"aria-controls='{esc(panel_id)}' aria-selected='false'>"
         f"<span class='eval-face' role='img' aria-label='{esc(accessible)}'>{face}</span>"
         f"{names}</summary>"
     )
-    if column > html_theme.MAX_PANEL_TABS:
+    if inline:
         # No generated rule picks this panel; it opens inside its own details.
         return f"{tab}{panel}</details>", ""
     return f"{tab}</details>", panel
@@ -673,14 +675,33 @@ def _callouts(views, *, quiet):
     return "".join(bits)
 
 
-# Keeps the aria-selected values of the tabs in step with the open details
-# element. The page works without it: opening, closing, the one-open-at-a-time
-# rule and the selected look all come from the details element and CSS.
+# Progressive enhancement for the tabs, self-contained: it reads and writes
+# attributes of its own .evaluators container and listens to events inside it.
+# It makes no network request and loads nothing. The page works without it:
+# opening, closing, the one-open-at-a-time rule and the selected look come from
+# the details element and CSS. Without it only these stay as loaded:
+#   - aria-selected (always "false"), and
+#   - arrow/Home/End keys and the roving tabindex (every tab is a Tab stop).
+# With it:
+#   - aria-selected follows the open details element;
+#   - Left/Right move focus between tabs (wrapping), Home/End to the first/last;
+#   - tabindex roves: the focused tab, else the open one, else the first, is 0.
+# The keys only move focus (manual activation). Enter/Space open or close the
+# focused tab, as for a native summary, so panels never open as a side effect
+# of moving, and the selected one can still be closed.
 _TABS_SCRIPT = (
-    "<script data-eval-tabs>(function(s){var r=s.parentNode;function f(){"
-    "r.querySelectorAll(':scope > .eval-row > .eval-disclosure').forEach(function(d){"
-    "d.firstElementChild.setAttribute('aria-selected',d.open?'true':'false')})}"
-    "r.addEventListener('toggle',f,true);f()})(document.currentScript)</script>"
+    "<script data-eval-tabs>(function(s){"
+    "var w=s.parentNode.querySelector(':scope > .eval-row');"
+    "function t(){return Array.from(w.querySelectorAll(':scope > .eval-disclosure > summary'))}"
+    "function f(){var a=t(),o=a.find(function(x){return x===document.activeElement})"
+    "||a.find(function(x){return x.parentNode.open})||a[0];"
+    "a.forEach(function(x){x.setAttribute('aria-selected',x.parentNode.open?'true':'false');"
+    "x.tabIndex=x===o?0:-1})}"
+    "w.addEventListener('toggle',f,true);w.addEventListener('focusin',f);"
+    "w.addEventListener('keydown',function(e){var a=t(),i=a.indexOf(e.target),"
+    "n={ArrowRight:i+1,ArrowLeft:i-1,Home:0,End:a.length-1}[e.key];"
+    "if(i<0||n===undefined)return;e.preventDefault();a[(n+a.length)%a.length].focus()});"
+    "f()})(document.currentScript)</script>"
 )
 
 

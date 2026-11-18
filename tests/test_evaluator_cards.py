@@ -223,13 +223,117 @@ def test_the_stored_run_sits_in_the_host_panel_and_the_panel_heading_is_the_titl
     assert hosts[0]["text"].startswith("Scenario")
 
 
-def test_only_one_small_script_keeps_aria_selected_in_step_and_the_page_works_without_it():
+def _script(front):
+    start = front.index("<script data-eval-tabs>") + len("<script data-eval-tabs>")
+    return front[start : front.index("</script>", start)]
+
+
+# Anything that could reach outside the page or load more code. Matched on the
+# script text. The allow-list below also fails on any identifier not in it, so a
+# renamed or assembled call (``self.fetch``, ``a["fet"+"ch"]``) cannot slip in.
+_NETWORK_AND_LOADING = (
+    "fetch",
+    "XMLHttpRequest",
+    "import",
+    "WebSocket",
+    "WebTransport",
+    "EventSource",
+    "sendBeacon",
+    "Worker",
+    "serviceWorker",
+    "Image",
+    "Audio",
+    "Request",
+    "src",
+    "href",
+    "http",
+    "//",
+    "navigator",
+    "location",
+    "window",
+    "top",
+    "parent.",
+    "frames",
+    "postMessage",
+    "cookie",
+    "localStorage",
+    "sessionStorage",
+    "indexedDB",
+    "Function",
+    "setTimeout",
+    "setInterval",
+    "document.write",
+    "innerHTML",
+    "outerHTML",
+    "insertAdjacent",
+    "createElement",
+    "appendChild",
+    "open(",
+)
+
+
+def test_the_script_is_self_contained_and_makes_no_network_calls_or_loads_anything():
     front = _front(_two_evaluators())
     assert front.count("<script") == 1 == front.count("<script data-eval-tabs>")
-    script = front[front.index("<script") : front.index("</script>")]
-    assert "aria-selected" in script and "toggle" in script
-    for banned in ("fetch(", "XMLHttpRequest", "eval(", "innerHTML", "src=", "location", "cookie"):
-        assert banned not in script
+    assert "<script src" not in front and "<script type" not in front
+    script = _script(front)
+    for banned in _NETWORK_AND_LOADING:
+        assert banned not in script, banned
+    assert not re.search(r"(?<![\w.-])eval\s*\(", script)
+    # Allow-list: every global or member the script touches is one of these.
+    allowed = {
+        "function", "var", "return", "if", "undefined", "Array", "from", "find", "forEach",
+        "indexOf", "focus", "preventDefault", "addEventListener", "querySelector",
+        "querySelectorAll", "setAttribute", "tabIndex", "parentNode", "open", "target", "key",
+        "document", "activeElement", "currentScript", "ArrowRight", "ArrowLeft", "Home", "End",
+        "length", "aria", "selected", "true", "false", "scope", "eval", "row", "disclosure",
+        "summary", "toggle", "focusin", "keydown", "data", "tabs", "s", "w", "t", "f", "a", "o",
+        "x", "e", "i", "n",
+    }  # fmt: skip
+    literals = set(re.findall(r"'([^']*)'", script))
+    assert literals == {
+        ":scope > .eval-row",
+        ":scope > .eval-disclosure > summary",
+        "aria-selected",
+        "true",
+        "false",
+        "toggle",
+        "focusin",
+        "keydown",
+    }, literals
+    assert '"' not in script and "`" not in script
+    quoted = re.sub(r"'[^']*'", "''", script)
+    words = set(re.findall(r"[A-Za-z_$][\w$]*", quoted))
+    assert words <= allowed, sorted(words - allowed)
+    assert len(script) < 1400
+
+
+def test_the_script_only_reads_and_writes_inside_its_own_container():
+    script = _script(_front(_two_evaluators()))
+    assert "document.currentScript" in script and "s.parentNode" in script
+    # Selectors are scoped to the row; the only document-level read is the focused element.
+    assert script.count("document.") == 2
+    assert "document.activeElement" in script
+    assert re.findall(r"querySelector(?:All)?\('([^']*)'", script) == [
+        ":scope > .eval-row",
+        ":scope > .eval-disclosure > summary",
+    ]
+
+
+def test_the_markup_carries_no_roving_tabindex_so_with_scripts_off_every_tab_is_a_tab_stop():
+    nodes, tabs, _panels = _tabs(_front(_two_evaluators()))
+    assert all("tabindex" not in tab["attrs"] for tab in tabs)
+    assert all("onclick" not in n["attrs"] and "onkeydown" not in n["attrs"] for n in nodes)
+
+
+def test_the_script_handles_arrows_home_and_end_and_leaves_activation_to_the_native_summary():
+    script = _script(_front(_two_evaluators()))
+    for key in ("ArrowRight", "ArrowLeft", "Home", "End"):
+        assert key in script
+    assert "preventDefault" in script and "focus()" in script
+    # Moving focus never opens a panel: no code path writes the details' open state.
+    assert ".open=" not in script and ".open =" not in script and "click" not in script
+    assert "tabIndex" in script and "aria-selected" in script
     # Without it the details element still opens, closes and styles the open tab.
     assert "[open] > summary.eval-mark" in html_theme.stylesheet()
 
@@ -252,6 +356,8 @@ def test_a_mark_past_the_generated_panel_rules_keeps_its_panel_inside_its_own_de
     outside = [p for p in panels if p["parent"]["attrs"].get("class") == "eval-tabpanels"]
     inside = [p for p in panels if p["parent"]["tag"] == "details"]
     assert (len(outside), len(inside)) == (limit, 2)
+    inline_classes = [_classes(d) for d in _find(nodes, "details") if "eval-inline" in _classes(d)]
+    assert len(inline_classes) == 2
     css = html_theme.stylesheet()
     assert f".eval-disclosure:nth-child({limit})[open]" in css
     assert f".eval-disclosure:nth-child({limit + 1})[open]" not in css
@@ -470,3 +576,149 @@ def test_in_a_browser_marks_are_180px_open_one_at_a_time_and_aria_selected_follo
     finally:
         browser.close()
         manager.stop()
+
+
+def _marks_page(count, tmp_path):
+    documents = []
+    for index in range(count):
+        document = copy.deepcopy(SCENARIO)
+        document["evaluator"]["id"] = f"evaluator-{index + 1}"
+        document["descriptor"]["title"] = f"Check {index + 1}"
+        document["descriptor"]["findings"] = []
+        documents.append(document)
+    markup = render_marks(views_from(documents), group=GROUP)
+    return _page(markup, tmp_path)
+
+
+def _visible_panels(page):
+    return page.eval_on_selector_all(
+        ".eval-tabpanel",
+        "els => els.filter(e => e.getClientRects().length).map(e => e.getAttribute('id'))",
+    )
+
+
+@pytest.fixture
+def chromium():
+    manager, browser = _chromium()
+    try:
+        yield browser
+    finally:
+        browser.close()
+        manager.stop()
+
+
+def test_with_scripts_off_one_panel_opens_at_a_time_and_only_aria_selected_goes_stale(
+    chromium, tmp_path
+):
+    path = _marks_page(3, tmp_path)
+    context = chromium.new_context(
+        java_script_enabled=False, viewport={"width": 1280, "height": 800}
+    )
+    page = context.new_page()
+    page.goto(path.as_uri())
+    tabs = page.locator("summary[role=tab]")
+    assert tabs.count() == 3
+    assert _visible_panels(page) == []
+    tabs.nth(0).click()
+    assert _visible_panels(page) == [f"{GROUP}-panel-1"]
+    tabs.nth(1).click()
+    assert _visible_panels(page) == [f"{GROUP}-panel-2"]
+    tabs.nth(1).click()
+    assert _visible_panels(page) == []
+    tabs.nth(2).click()
+    assert _visible_panels(page) == [f"{GROUP}-panel-3"]
+    # Only the ARIA state stays as loaded, and no tab is taken out of the Tab order.
+    assert [tabs.nth(i).get_attribute("aria-selected") for i in range(3)] == ["false"] * 3
+    assert [tabs.nth(i).get_attribute("tabindex") for i in range(3)] == [None] * 3
+    context.close()
+
+
+@pytest.mark.parametrize("scripts", [True, False], ids=["scripts-on", "scripts-off"])
+def test_the_25th_and_26th_marks_still_open_and_close_their_panels(chromium, tmp_path, scripts):
+    limit = html_theme.MAX_PANEL_TABS
+    path = _marks_page(limit + 2, tmp_path)
+    context = chromium.new_context(
+        java_script_enabled=scripts, viewport={"width": 1280, "height": 900}
+    )
+    page = context.new_page()
+    page.goto(path.as_uri())
+    tabs = page.locator("summary[role=tab]")
+    assert tabs.count() == limit + 2
+    last, after = limit, limit + 1  # zero-based: the 25th and 26th marks
+
+    tabs.nth(last).click()
+    assert _visible_panels(page) == [f"{GROUP}-panel-{limit + 1}"]
+    # The panel opens full width under the row, not squeezed into its 180px tab.
+    box = page.locator(f"#{GROUP}-panel-{limit + 1}").bounding_box()
+    assert box["width"] > 600
+    if scripts:
+        page.wait_for_function(
+            "() => document.querySelectorAll('summary[role=tab]')[24].getAttribute('aria-selected') === 'true'"
+        )
+    # The selected chrome (details[open] > summary) still applies to the 25th tab.
+    border = "e => getComputedStyle(e).borderColor"
+    assert tabs.nth(last).evaluate(border) != tabs.nth(after).evaluate(border)
+
+    tabs.nth(after).click()  # exclusive: the 26th replaces the 25th
+    assert _visible_panels(page) == [f"{GROUP}-panel-{limit + 2}"]
+    tabs.nth(5).click()  # a panel under the row replaces an inline one
+    assert _visible_panels(page) == [f"{GROUP}-panel-6"]
+    tabs.nth(last).click()
+    assert _visible_panels(page) == [f"{GROUP}-panel-{limit + 1}"]
+    tabs.nth(last).click()  # clicking the open one closes it
+    assert _visible_panels(page) == []
+    context.close()
+
+
+def test_arrow_keys_move_focus_with_wrapping_home_and_end_and_never_open_a_panel(
+    chromium, tmp_path
+):
+    path = _marks_page(3, tmp_path)
+    page = chromium.new_page(viewport={"width": 1280, "height": 800})
+    page.goto(path.as_uri())
+    tabs = page.locator("summary[role=tab]")
+
+    def state():
+        return page.evaluate(
+            "() => [...document.querySelectorAll('summary[role=tab]')]"
+            ".map(e => [e.tabIndex, e === document.activeElement])"
+        )
+
+    # Roving tabindex from load: the first tab is the one Tab stop.
+    assert [t for t, _ in state()] == [0, -1, -1]
+    tabs.nth(0).focus()
+    page.keyboard.press("ArrowRight")
+    assert state() == [[-1, False], [0, True], [-1, False]]
+    page.keyboard.press("ArrowRight")
+    page.keyboard.press("ArrowRight")  # wraps to the first
+    assert state() == [[0, True], [-1, False], [-1, False]]
+    page.keyboard.press("ArrowLeft")  # wraps to the last
+    assert state() == [[-1, False], [-1, False], [0, True]]
+    page.keyboard.press("Home")
+    assert state()[0] == [0, True]
+    page.keyboard.press("End")
+    assert state()[2] == [0, True]
+    # Moving focus opened nothing and selected nothing.
+    assert _visible_panels(page) == []
+    assert [tabs.nth(i).get_attribute("aria-selected") for i in range(3)] == ["false"] * 3
+
+    # Enter opens the focused tab, and again closes it, as for a native summary.
+    page.keyboard.press("Enter")
+    page.wait_for_function(
+        "() => document.querySelectorAll('summary[role=tab]')[2].getAttribute('aria-selected') === 'true'"
+    )
+    assert _visible_panels(page) == [f"{GROUP}-panel-3"]
+    page.keyboard.press("ArrowLeft")  # moving away leaves it open and selected
+    assert _visible_panels(page) == [f"{GROUP}-panel-3"]
+    assert tabs.nth(2).get_attribute("aria-selected") == "true"
+    page.keyboard.press("Enter")
+    assert _visible_panels(page) == [f"{GROUP}-panel-2"]
+    page.keyboard.press("Enter")
+    assert _visible_panels(page) == []
+
+    # With a tab focused, Tab leaves the row rather than visiting the other tabs.
+    tabs.nth(1).focus()
+    page.keyboard.press("Tab")
+    assert not any(focused for _, focused in state())
+    page.keyboard.press("Shift+Tab")
+    assert state()[1] == [0, True]
