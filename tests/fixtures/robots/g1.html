@@ -1003,11 +1003,12 @@ details[open] > .step-summary .disclose-open { display: inline; }
   color: var(--text-muted);
 }
 .eval-row {
-  --eval-gap: 0.3rem;
-  display: grid;
-  grid-template-columns: repeat(var(--eval-count, 1), minmax(0, 1fr));
-  justify-items: center;
-  align-items: start;
+  --eval-card-width: 11.25rem; /* 180px */
+  --eval-gap: 0.45rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: stretch;
   gap: var(--eval-gap);
   margin: 0;
   padding: 0;
@@ -1016,17 +1017,22 @@ details[open] > .step-summary .disclose-open { display: inline; }
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.28rem;
   text-align: center;
   min-width: 0;
+  box-sizing: border-box;
   width: 100%;
+  height: 100%;
   margin: 0;
-  padding: 0.3rem 0.25rem;
+  padding: 0.55rem 0.45rem 0.5rem;
   border-radius: 0.65rem;
   border: 1px solid transparent;
   background: transparent;
   color: inherit;
   font: inherit;
+  letter-spacing: normal;
+  text-transform: none;
 }
 .eval-mark .eval-face {
   position: relative;
@@ -1058,7 +1064,22 @@ details[open] > .step-summary .disclose-open { display: inline; }
   box-shadow: 0 0 0 2px var(--surface);
 }
 .eval-mark .pip svg { width: 0.62rem; height: 0.62rem; display: block; }
-.eval-mark.is-speaking {
+.eval-fallback { font-weight: 700; font-size: 0.95rem; line-height: 1; }
+/* A mark is a tab. Its details element holds only the summary; the panel is a
+   sibling of the row so it stays full width and outside the scrolling row. */
+.eval-disclosure {
+  flex: 0 0 var(--eval-card-width);
+  width: var(--eval-card-width);
+  min-width: 0;
+}
+.eval-disclosure > summary.eval-mark { list-style: none; cursor: pointer; }
+.eval-disclosure[open] > summary.eval-mark { margin-bottom: 0; }
+.eval-disclosure > summary.eval-mark::-webkit-details-marker,
+.eval-disclosure > summary.eval-mark::marker { content: ""; }
+.eval-disclosure > summary.eval-mark::after,
+.eval-disclosure[open] > summary.eval-mark::after { content: none; float: none; }
+/* Speaking: this evaluator has something to say. Not the selected state. */
+.eval-disclosure:not([open]) > summary.eval-mark.is-speaking {
   background: color-mix(in srgb, var(--speak) 10%, var(--surface));
   border-color: color-mix(in srgb, var(--speak) 45%, var(--border));
 }
@@ -1067,29 +1088,84 @@ details[open] > .step-summary .disclose-open { display: inline; }
   background: color-mix(in srgb, var(--speak) 16%, var(--surface));
 }
 .eval-mark.is-speaking .eval-name { color: var(--text); font-weight: 650; }
-.eval-fallback { font-weight: 700; font-size: 0.95rem; line-height: 1; }
-.eval-disclosure { min-width: 0; width: 100%; }
-.eval-disclosure > summary.eval-mark { list-style: none; cursor: pointer; }
-.eval-disclosure > summary.eval-mark::-webkit-details-marker,
-.eval-disclosure > summary.eval-mark::marker { content: ""; }
-.eval-disclosure > summary.eval-mark::after,
-.eval-disclosure[open] > summary.eval-mark::after { content: none; float: none; }
-.eval-disclosure[open] > summary.eval-mark { margin-bottom: 0; }
-.eval-panel, .stored-run {
-  box-sizing: border-box;
-  width: 100cqw;
-  margin-top: 0.45rem;
-  margin-left: calc((1 - var(--col, 1)) * (100cqw + var(--eval-gap, 0.3rem)) / var(--eval-count, 1));
+/* Hover */
+.eval-disclosure > summary.eval-mark:hover {
+  background: color-mix(in srgb, var(--bg-muted) 85%, var(--surface));
+  border-color: var(--border-strong);
+}
+.eval-disclosure > summary.eval-mark:hover .eval-name { color: var(--text); }
+/* Selected: only the open mark, tied to the panel below by a connector. */
+.eval-disclosure[open] > summary.eval-mark {
+  background: color-mix(in srgb, var(--link) 9%, var(--surface));
+  border-color: color-mix(in srgb, var(--link) 70%, var(--border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--link) 35%, transparent);
+  position: relative;
+  z-index: 1;
+}
+.eval-disclosure[open] > summary.eval-mark .eval-face {
+  color: var(--link);
+  background: color-mix(in srgb, var(--link) 14%, var(--surface));
+}
+.eval-disclosure[open] > summary.eval-mark .eval-name { color: var(--text); font-weight: 650; }
+.eval-disclosure[open] > summary.eval-mark.is-speaking .eval-face { color: var(--speak-text); }
+.eval-disclosure[open] > summary.eval-mark::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -0.72rem;
+  width: 0.85rem;
+  height: 0.85rem;
+  background: color-mix(in srgb, var(--link) 9%, var(--surface));
+  border-right: 1.5px solid color-mix(in srgb, var(--link) 70%, var(--border));
+  border-bottom: 1.5px solid color-mix(in srgb, var(--link) 70%, var(--border));
+  transform: translateX(-50%) rotate(45deg);
+  z-index: 2;
+}
+.eval-disclosure > summary.eval-mark:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+/* Browser floor: the first MAX_PANEL_TABS panels are revealed only by :has()
+   (Chrome 105, Safari 15.4, Firefox 121). In an older browser an open panel for
+   mark 1 to 24 stays display:none; the tab still opens, closes and shows the
+   selected chrome, and marks past that open their panel through the details
+   element itself, which needs no :has().
+   Panels are closed unless their tab is open. The open tab's position picks the
+   panel (rules generated below for the first MAX_PANEL_TABS marks); a mark past
+   that keeps its panel inside its own details element. */
+.eval-tabpanel { display: none; margin-top: 0.7rem; min-width: 0; }
+.eval-disclosure > .eval-tabpanel { margin-top: 0.7rem; }
+.eval-disclosure[open] > .eval-tabpanel { display: block; }
+/* A mark past the generated panel rules: when open, its details takes the whole
+   row and the panel opens full width under its (still 180px) tab. */
+.eval-disclosure.eval-inline[open] { flex: 1 0 100%; width: 100%; }
+.eval-disclosure.eval-inline > summary.eval-mark {
+  width: var(--eval-card-width);
+  height: auto; /* not the 100% of a tab in a row: the open details also holds the panel */
 }
 .eval-panel {
-  padding: 0.75rem 0.85rem 0.8rem;
+  box-sizing: border-box;
+  padding: 0.75rem 0.85rem 0.85rem;
   border-radius: 0.65rem;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg-muted) 55%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--link) 55%, var(--border));
+  border-top: 3px solid var(--link);
+  background: color-mix(in srgb, var(--link) 5%, var(--surface));
 }
-.eval-panel h4 { margin: 0 0 0.2rem; font-size: 0.95rem; }
+.eval-panel h4 { margin: 0 0 0.2rem; font-size: 0.95rem; color: var(--link); }
 .eval-panel .purpose, .eval-panel .more { margin: 0.35rem 0 0; }
 .eval-panel .meta, .descriptor-note { margin: 0.2rem 0 0; color: var(--text-muted); font-size: 0.86rem; }
+.stored-run { box-sizing: border-box; margin-top: 0.45rem; }
+/* Narrow screens: marks keep their width and the row scrolls sideways. */
+@media (max-width: 640px) {
+  .eval-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.85rem;
+    scrollbar-width: thin;
+  }
+  .eval-row .eval-disclosure { flex-shrink: 0; }
+  .eval-tabpanel, .eval-disclosure > .eval-tabpanel { margin-top: 0; }
+}
 .callout-ok, .callout-headline, .assessment-failure { margin: 0.75rem 0 0; }
 .callout-headline, .assessment-failure { font-weight: 650; }
 .assessment-failure {
@@ -1113,7 +1189,32 @@ details[open] > .step-summary .disclose-open { display: inline; }
 .callout-icon svg { width: 1.15rem; height: 1.15rem; display: block; }
 .callout-body .finding-text, .callout-body .finding-meta { margin: 0; }
 .callout-body .finding-meta { color: var(--text-muted); font-size: 0.78rem; }
-.b-grid { display: grid; gap: 0.85rem; }</style><body><header class='masthead'><div class='masthead-inner'><div class='masthead-top'><p class='eyebrow'>Living Proof Labs</p><fieldset class='theme'><legend>Colour theme</legend><label><input type='radio' name='theme' id='theme-system' value='system' checked> System</label><label><input type='radio' name='theme' id='theme-light' value='light'> Light</label><label><input type='radio' name='theme' id='theme-dark' value='dark'> Dark</label></fieldset></div><div class='hero'><div><h1>Living Proof Labs capability report</h1><p class='lede'>Fixture evidence, not robot safety certification. Stored decisions; no regrading. Incompatible environments and revisions remain separate.</p></div><div class='grades'><div class='grade'>
+.b-grid { display: grid; gap: 0.85rem; }
+.evaluators:has(> .eval-row > .eval-disclosure:nth-child(1)[open]) > .eval-tabpanels > .eval-tabpanel:nth-child(1) { display: block; }
+.evaluators:has(> .eval-row > .eval-disclosure:nth-child(2)[open]) > .eval-tabpanels > .eval-tabpanel:nth-child(2) { display: block; }
+.evaluators:has(> .eval-row > .eval-disclosure:nth-child(3)[open]) > .eval-tabpanels > .eval-tabpanel:nth-child(3) { display: block; }
+.evaluators:has(> .eval-row > .eval-disclosure:nth-child(4)[open]) > .eval-tabpanels > .eval-tabpanel:nth-child(4) { display: block; }
+.evaluators:has(> .eval-row > .eval-disclosure:nth-child(5)[open]) > .eval-tabpanels > .eval-tabpanel:nth-child(5) { display: block; }
+.evaluators:has(> .eval-row > .eval-disclosure:nth-child(6)[open]) > .eval-tabpanels > .eval-tabpanel:nth-child(6) { display: block; }
+.evaluators:has(> .eval-row > .eval-disclosure:nth-child(7)[open]) > .eval-tabpanels > .eval-tabpanel:nth-child(7) { display: block; }
+.evaluators:has(> .eval-row > .eval-disclosure:nth-child(8)[open]) > .eval-tabpanels > .eval-tabpanel:nth-child(8) { display: block; }
+.evaluators:has(> .eval-row > .eval-disclosure:nth-child(9)[open]) > .eval-tabpanels > .eval-tabpanel:nth-child(9) { display: block; }
+.evaluators:has(> .eval-row > .eval-disclosure:nth-child(10)[open]) > .eval-tabpanels > .eval-tabpanel:nth-child(10) { display: block; }
+.evaluators:has(> .eval-row > .eval-disclosure:nth-child(11)[open]) > .eval-tabpanels > .eval-tabpanel:nth-child(11) { display: block; }
+.evaluators:has(> .eval-row > .eval-disclosure:nth-child(12)[open]) > .eval-tabpanels > .eval-tabpanel:nth-child(12) { display: block; }
+.evaluators:has(> .eval-row > .eval-disclosure:nth-child(13)[open]) > .eval-tabpanels > .eval-tabpanel:nth-child(13) { display: block; }
+.evaluators:has(> .eval-row > .eval-disclosure:nth-child(14)[open]) > .eval-tabpanels > .eval-tabpanel:nth-child(14) { display: block; }
+.evaluators:has(> .eval-row > .eval-disclosure:nth-child(15)[open]) > .eval-tabpanels > .eval-tabpanel:nth-child(15) { display: block; }
+.evaluators:has(> .eval-row > .eval-disclosure:nth-child(16)[open]) > .eval-tabpanels > .eval-tabpanel:nth-child(16) { display: block; }
+.evaluators:has(> .eval-row > .eval-disclosure:nth-child(17)[open]) > .eval-tabpanels > .eval-tabpanel:nth-child(17) { display: block; }
+.evaluators:has(> .eval-row > .eval-disclosure:nth-child(18)[open]) > .eval-tabpanels > .eval-tabpanel:nth-child(18) { display: block; }
+.evaluators:has(> .eval-row > .eval-disclosure:nth-child(19)[open]) > .eval-tabpanels > .eval-tabpanel:nth-child(19) { display: block; }
+.evaluators:has(> .eval-row > .eval-disclosure:nth-child(20)[open]) > .eval-tabpanels > .eval-tabpanel:nth-child(20) { display: block; }
+.evaluators:has(> .eval-row > .eval-disclosure:nth-child(21)[open]) > .eval-tabpanels > .eval-tabpanel:nth-child(21) { display: block; }
+.evaluators:has(> .eval-row > .eval-disclosure:nth-child(22)[open]) > .eval-tabpanels > .eval-tabpanel:nth-child(22) { display: block; }
+.evaluators:has(> .eval-row > .eval-disclosure:nth-child(23)[open]) > .eval-tabpanels > .eval-tabpanel:nth-child(23) { display: block; }
+.evaluators:has(> .eval-row > .eval-disclosure:nth-child(24)[open]) > .eval-tabpanels > .eval-tabpanel:nth-child(24) { display: block; }
+</style><body><header class='masthead'><div class='masthead-inner'><div class='masthead-top'><p class='eyebrow'>Living Proof Labs</p><fieldset class='theme'><legend>Colour theme</legend><label><input type='radio' name='theme' id='theme-system' value='system' checked> System</label><label><input type='radio' name='theme' id='theme-light' value='light'> Light</label><label><input type='radio' name='theme' id='theme-dark' value='dark'> Dark</label></fieldset></div><div class='hero'><div><h1>Living Proof Labs capability report</h1><p class='lede'>Fixture evidence, not robot safety certification. Stored decisions; no regrading. Incompatible environments and revisions remain separate.</p></div><div class='grades'><div class='grade'>
 <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024' role='img' aria-label='12 successes, 60%; overall FAIL' width='104' height='104'>
 <title>12 successes, 60%; overall FAIL</title>
 <circle cx='510.5' cy='505.75' r='381.1' fill='none' stroke='#0B4F4D' stroke-width='42'/>
@@ -1155,7 +1256,7 @@ details[open] > .step-summary .disclose-open { display: inline; }
 <circle cx='591.8' cy='547.9' r='33.2'/>
 <rect x='448' y='620' width='114' height='22' rx='11'/>
 </g>
-</svg></div><div><h2 class='run-title'>Walk the hallway</h2><p class='pct'>60% success</p><p class='count'>12 successes, 60%</p><p class='stored-status'>Stored overall status: FAIL</p></div></div><p class='assessment-failure'>12 successes, 60%; overall FAIL.</p><div class='evaluators'><p class='evaluators-label'>Evaluators</p><div class='eval-row' style='--eval-count:1'><details class='eval-disclosure' name='run-evaluators' style='--col:1'><summary class='eval-mark is-speaking'><span class='eval-face' role='img' aria-label='Evaluator'><span class='eval-fallback' aria-hidden='true'>E</span></span><span class='eval-name eval-name-full'>Evaluator</span></summary><div class='eval-panel'><h4>Evaluator</h4><p class='descriptor-note'>No evaluator descriptor was stored.</p></div><div class='stored-run' style='--eval-count:1'><div class='card scenario-steps'><h2>This run</h2><div class='split'><div><div class='run-hero'><div class='badge'><svg class='success-ring' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024' role='img' aria-label='60% success' width='128' height='128'>
+</svg></div><div><h2 class='run-title'>Walk the hallway</h2><p class='pct'>60% success</p><p class='count'>12 successes, 60%</p><p class='stored-status'>Stored overall status: FAIL</p></div></div><p class='assessment-failure'>12 successes, 60%; overall FAIL.</p><div class='evaluators'><p class='evaluators-label'>Evaluators</p><div class='eval-row' role='tablist' aria-label='Evaluators' style='--eval-count:1'><details class='eval-disclosure' name='run-evaluators' role='none'><summary class='eval-mark is-speaking' role='tab' id='run-evaluators-tab-1' aria-controls='run-evaluators-panel-1' aria-selected='false'><span class='eval-face' role='img' aria-label='Evaluator'><span class='eval-fallback' aria-hidden='true'>E</span></span><span class='eval-name eval-name-full'>Evaluator</span></summary></details></div><div class='eval-tabpanels'><div class='eval-tabpanel' role='tabpanel' id='run-evaluators-panel-1' aria-labelledby='run-evaluators-tab-1'><div class='eval-panel'><h4>Evaluator</h4><p class='descriptor-note'>No evaluator descriptor was stored.</p></div><div class='stored-run'><div class='card scenario-steps'><h2>This run</h2><div class='split'><div><div class='run-hero'><div class='badge'><svg class='success-ring' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024' role='img' aria-label='60% success' width='128' height='128'>
 <title>60% success</title>
 <circle cx='512' cy='512' r='512' fill='#01152D'/>
 <circle cx='510.5' cy='505.75' r='381.1' fill='none' stroke='#0B4F4D' stroke-width='42'/>

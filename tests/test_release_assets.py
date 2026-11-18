@@ -123,7 +123,9 @@ def test_workflow_gates_public_assets_on_registry_verification():
 @pytest.mark.parametrize("version", ["v9.6.3", "v9.6.5", "v9.6.6"])
 def test_workflow_gate_accepts_guidelines_patch_updates(version):
     text = (ROOT / ".github/workflows/verify.yml").read_text()
-    text, count = re.subn(r"semantic-release\.yml@v[0-9.]+", f"semantic-release.yml@{version}", text)
+    text, count = re.subn(
+        r"semantic-release\.yml@v[0-9.]+", f"semantic-release.yml@{version}", text
+    )
     assert count == 1
     assert_workflow_gates_public_assets(text)
 
@@ -139,7 +141,7 @@ def test_workflow_gate_accepts_guidelines_patch_updates(version):
         ("needs: [release, verify-registry]", "needs: [release]"),
         ("draft-release: true", "draft-release: false"),
         ("tools/registry_release.py resolve", "echo resolve"),
-        ('docker pull --platform', 'echo --platform'),
+        ("docker pull --platform", "echo --platform"),
         ("semantic-release.yml@", "other-release.yml@"),
         ("Living-Proof-Labs/collaboration-guidelines/", "other-owner/collaboration-guidelines/"),
     ],

@@ -544,7 +544,13 @@ def _icon_html(view):
     return f"<span class='eval-fallback' aria-hidden='true'>{esc(view['letter'])}</span>"
 
 
-def _mark(view, group, column, count):
+def _mark(view, group, column):
+    """One tab (a details element holding only its summary) and its panel.
+
+    The tab is the summary. The panel carries the descriptor detail and, for the
+    mark that hosts it, the stored run. The mark label is ``view['title']`` as
+    stored (or the "Evaluator" fallback); nothing is appended to it.
+    """
     speaking = bool(view["findings"]) or view.get("force_speaking")
     state = "is-speaking" if speaking else "is-quiet"
     grade = view["grade"]
@@ -569,15 +575,26 @@ def _mark(view, group, column, count):
     names = f"<span class='eval-name eval-name-full'>{esc(view['title'])}</span>"
     if view["short_title"]:
         names += f"<span class='eval-name eval-name-short'>{esc(view['short_title'])}</span>"
-    panel = _panel(view)
-    body = view.get("body_html") or ""
-    return (
-        f"<details class='eval-disclosure' name='{esc(group)}' style='--col:{column}'>"
-        f"<summary class='{klass}'>"
-        f"<span class='eval-face' role='img' aria-label='{esc(accessible)}'>{face}</span>"
-        f"{names}</summary>{panel}"
-        f"<div class='stored-run' style='--eval-count:{count}'>{body}</div></details>"
+    tab_id = f"{group}-tab-{column}"
+    panel_id = f"{group}-panel-{column}"
+    panel = (
+        f"<div class='eval-tabpanel' role='tabpanel' id='{esc(panel_id)}' "
+        f"aria-labelledby='{esc(tab_id)}'>{_panel(view)}"
+        f"<div class='stored-run'>{view.get('body_html') or ''}</div></div>"
     )
+    inline = column > html_theme.MAX_PANEL_TABS
+    tab = (
+        f"<details class='eval-disclosure{' eval-inline' if inline else ''}' "
+        f"name='{esc(group)}' role='none'>"
+        f"<summary class='{klass}' role='tab' id='{esc(tab_id)}' "
+        f"aria-controls='{esc(panel_id)}' aria-selected='false'>"
+        f"<span class='eval-face' role='img' aria-label='{esc(accessible)}'>{face}</span>"
+        f"{names}</summary>"
+    )
+    if inline:
+        # No generated rule picks this panel; it opens inside its own details.
+        return f"{tab}{panel}</details>", ""
+    return f"{tab}</details>", panel
 
 
 def _panel(view):
@@ -658,15 +675,50 @@ def _callouts(views, *, quiet):
     return "".join(bits)
 
 
+# Progressive enhancement for the tabs, self-contained: it reads and writes
+# attributes of its own .evaluators container and listens to events inside it.
+# It makes no network request and loads nothing. The page works without it:
+# opening, closing, the one-open-at-a-time rule and the selected look come from
+# the details element and CSS. Without it only these stay as loaded:
+#   - aria-selected (always "false"), and
+#   - arrow/Home/End keys and the roving tabindex (every tab is a Tab stop).
+# With it:
+#   - aria-selected follows the open details element;
+#   - Left/Right move focus between tabs (wrapping), Home/End to the first/last;
+#   - tabindex roves: the focused tab, else the open one, else the first, is 0.
+# The keys only move focus (manual activation). Enter/Space open or close the
+# focused tab, as for a native summary, so panels never open as a side effect
+# of moving, and the selected one can still be closed.
+_TABS_SCRIPT = (
+    "<script data-eval-tabs>(function(s){"
+    "var w=s.parentNode.querySelector(':scope > .eval-row');"
+    "function t(){return Array.from(w.querySelectorAll(':scope > .eval-disclosure > summary'))}"
+    "function f(){var a=t(),o=a.find(function(x){return x===document.activeElement})"
+    "||a.find(function(x){return x.parentNode.open})||a[0];"
+    "a.forEach(function(x){x.setAttribute('aria-selected',x.parentNode.open?'true':'false');"
+    "x.tabIndex=x===o?0:-1})}"
+    "w.addEventListener('toggle',f,true);w.addEventListener('focusin',f);"
+    "w.addEventListener('keydown',function(e){var a=t(),i=a.indexOf(e.target),"
+    "n={ArrowRight:i+1,ArrowLeft:i-1,Home:0,End:a.length-1}[e.key];"
+    "if(i<0||n===undefined)return;e.preventDefault();a[(n+a.length)%a.length].focus()});"
+    "f()})(document.currentScript)</script>"
+)
+
+
 def render_marks(views, *, group="eval-marks", quiet=False):
     ordered = order_marks(views)
-    count = len(ordered) or 1
-    marks = "".join(_mark(view, group, index + 1, count) for index, view in enumerate(ordered))
+    tabs, panels = [], []
+    for index, view in enumerate(ordered):
+        tab, panel = _mark(view, group, index + 1)
+        tabs.append(tab)
+        panels.append(panel)
     return (
         "<div class='evaluators'>"
         "<p class='evaluators-label'>Evaluators</p>"
-        f"<div class='eval-row' style='--eval-count:{count}'>{marks}</div></div>"
-        + _callouts(ordered, quiet=quiet)
+        f"<div class='eval-row' role='tablist' aria-label='Evaluators' "
+        f"style='--eval-count:{len(tabs) or 1}'>{''.join(tabs)}</div>"
+        f"<div class='eval-tabpanels'>{''.join(panels)}</div>"
+        f"{_TABS_SCRIPT}</div>" + _callouts(ordered, quiet=quiet)
     )
 
 
