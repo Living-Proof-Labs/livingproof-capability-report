@@ -363,6 +363,31 @@ def test_a_mark_past_the_generated_panel_rules_keeps_its_panel_inside_its_own_de
     assert f".eval-disclosure:nth-child({limit + 1})[open]" not in css
 
 
+def test_removing_the_tabs_script_leaves_every_panel_body_in_the_markup():
+    """Without the script, panel copy is still in the HTML and is not hidden or inert."""
+    front = _front(_two_evaluators())
+    stripped = re.sub(r"<script data-eval-tabs>.*?</script>", "", front, count=1, flags=re.S)
+    assert "<script" not in stripped
+    nodes, _, panels = _tabs(stripped)
+    assert len(panels) == 2
+    assert all("hidden" not in node["attrs"] and "inert" not in node["attrs"] for node in panels)
+    assert [node["text"] for node in _find(nodes, "h4")] == ["Scenario", "Run Integrity"]
+    assert "Scenario" in panels[0]["text"] and "Run Integrity" in panels[1]["text"]
+
+
+def test_outside_panels_are_shown_only_by_has_rules_and_overflow_marks_use_open_details():
+    """First 24 panels rely on :has(); a mark past that is shown by open details."""
+    css = html_theme.stylesheet()
+    assert ".eval-disclosure[open] > .eval-tabpanel { display: block; }" in css
+    rules = [block.strip() for block in css.split("}") if "eval-tabpanel" in block]
+    shown = [rule for rule in rules if "display: block" in rule]
+    overflow = [rule for rule in shown if ".eval-disclosure[open] > .eval-tabpanel" in rule]
+    has_rules = [rule for rule in shown if ":has(" in rule]
+    assert len(overflow) == 1
+    assert len(has_rules) == html_theme.MAX_PANEL_TABS
+    assert len(shown) == 1 + html_theme.MAX_PANEL_TABS
+
+
 # --- CSS: width, hover, selected, focus, narrow ----------------------------------
 
 
