@@ -39,7 +39,11 @@ ICON_KEY = {
 
 def _stored_run_body():
     text = FIXTURES.read_text(encoding="utf-8")
-    match = re.search(r"(<!--lp-stored-run-->.*?)</div></details>", text, re.S)
+    match = re.search(
+        r"(<!--lp-stored-run-->.*?)</div></div>(?:<div class='eval-tabpanel'|</div><script)",
+        text,
+        re.S,
+    )
     assert match, "fixtures.html is missing the stored G1 stock run body"
     return match.group(1)
 

@@ -62,7 +62,8 @@ def test_html_embeds_dm_sans_and_keeps_body_text_above_the_contrast_floor():
     assert "data:font/woff2;base64," in page
     assert "SIL Open Font License, Version 1.1" in page
     assert "Copyright 2014 The DM Sans Project Authors" in page
-    assert "<script" not in page
+    # The only script is the small one that keeps the evaluator tabs' aria-selected current.
+    assert page.count("<script") == page.count("<script data-eval-tabs>")
     # Body-sized links and the Show control use these, not #0e8785 (4.35:1 / 3.79:1).
     assert "--link: #0b6e6c" in page and "--link: #64dfc7" in page
     assert "summary::after" in page and "color: var(--link)" in page
@@ -78,7 +79,8 @@ def test_test_context_scroll_region_is_keyboard_focusable():
         in page
     )
     assert page.count("tabindex='0'") == 1
-    assert "<script" not in page
+    # The only script is the small one that keeps the evaluator tabs' aria-selected current.
+    assert page.count("<script") == page.count("<script data-eval-tabs>")
     assert '.card[role="region"]:focus-visible' in page
     assert "outline: 3px solid var(--focus)" in page
     assert "outline-offset: 3px" in page

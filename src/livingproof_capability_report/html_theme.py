@@ -922,11 +922,12 @@ details[open] > .step-summary .disclose-open { display: inline; }
   color: var(--text-muted);
 }
 .eval-row {
-  --eval-gap: 0.3rem;
-  display: grid;
-  grid-template-columns: repeat(var(--eval-count, 1), minmax(0, 1fr));
-  justify-items: center;
-  align-items: start;
+  --eval-card-width: 11.25rem; /* 180px */
+  --eval-gap: 0.45rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: stretch;
   gap: var(--eval-gap);
   margin: 0;
   padding: 0;
@@ -935,17 +936,22 @@ details[open] > .step-summary .disclose-open { display: inline; }
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.28rem;
   text-align: center;
   min-width: 0;
+  box-sizing: border-box;
   width: 100%;
+  height: 100%;
   margin: 0;
-  padding: 0.3rem 0.25rem;
+  padding: 0.55rem 0.45rem 0.5rem;
   border-radius: 0.65rem;
   border: 1px solid transparent;
   background: transparent;
   color: inherit;
   font: inherit;
+  letter-spacing: normal;
+  text-transform: none;
 }
 .eval-mark .eval-face {
   position: relative;
@@ -977,7 +983,22 @@ details[open] > .step-summary .disclose-open { display: inline; }
   box-shadow: 0 0 0 2px var(--surface);
 }
 .eval-mark .pip svg { width: 0.62rem; height: 0.62rem; display: block; }
-.eval-mark.is-speaking {
+.eval-fallback { font-weight: 700; font-size: 0.95rem; line-height: 1; }
+/* A mark is a tab. Its details element holds only the summary; the panel is a
+   sibling of the row so it stays full width and outside the scrolling row. */
+.eval-disclosure {
+  flex: 0 0 var(--eval-card-width);
+  width: var(--eval-card-width);
+  min-width: 0;
+}
+.eval-disclosure > summary.eval-mark { list-style: none; cursor: pointer; }
+.eval-disclosure[open] > summary.eval-mark { margin-bottom: 0; }
+.eval-disclosure > summary.eval-mark::-webkit-details-marker,
+.eval-disclosure > summary.eval-mark::marker { content: ""; }
+.eval-disclosure > summary.eval-mark::after,
+.eval-disclosure[open] > summary.eval-mark::after { content: none; float: none; }
+/* Speaking: this evaluator has something to say. Not the selected state. */
+.eval-disclosure:not([open]) > summary.eval-mark.is-speaking {
   background: color-mix(in srgb, var(--speak) 10%, var(--surface));
   border-color: color-mix(in srgb, var(--speak) 45%, var(--border));
 }
@@ -986,29 +1007,72 @@ details[open] > .step-summary .disclose-open { display: inline; }
   background: color-mix(in srgb, var(--speak) 16%, var(--surface));
 }
 .eval-mark.is-speaking .eval-name { color: var(--text); font-weight: 650; }
-.eval-fallback { font-weight: 700; font-size: 0.95rem; line-height: 1; }
-.eval-disclosure { min-width: 0; width: 100%; }
-.eval-disclosure > summary.eval-mark { list-style: none; cursor: pointer; }
-.eval-disclosure > summary.eval-mark::-webkit-details-marker,
-.eval-disclosure > summary.eval-mark::marker { content: ""; }
-.eval-disclosure > summary.eval-mark::after,
-.eval-disclosure[open] > summary.eval-mark::after { content: none; float: none; }
-.eval-disclosure[open] > summary.eval-mark { margin-bottom: 0; }
-.eval-panel, .stored-run {
-  box-sizing: border-box;
-  width: 100cqw;
-  margin-top: 0.45rem;
-  margin-left: calc((1 - var(--col, 1)) * (100cqw + var(--eval-gap, 0.3rem)) / var(--eval-count, 1));
+/* Hover */
+.eval-disclosure > summary.eval-mark:hover {
+  background: color-mix(in srgb, var(--bg-muted) 85%, var(--surface));
+  border-color: var(--border-strong);
 }
+.eval-disclosure > summary.eval-mark:hover .eval-name { color: var(--text); }
+/* Selected: only the open mark, tied to the panel below by a connector. */
+.eval-disclosure[open] > summary.eval-mark {
+  background: color-mix(in srgb, var(--link) 9%, var(--surface));
+  border-color: color-mix(in srgb, var(--link) 70%, var(--border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--link) 35%, transparent);
+  position: relative;
+  z-index: 1;
+}
+.eval-disclosure[open] > summary.eval-mark .eval-face {
+  color: var(--link);
+  background: color-mix(in srgb, var(--link) 14%, var(--surface));
+}
+.eval-disclosure[open] > summary.eval-mark .eval-name { color: var(--text); font-weight: 650; }
+.eval-disclosure[open] > summary.eval-mark.is-speaking .eval-face { color: var(--speak-text); }
+.eval-disclosure[open] > summary.eval-mark::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -0.72rem;
+  width: 0.85rem;
+  height: 0.85rem;
+  background: color-mix(in srgb, var(--link) 9%, var(--surface));
+  border-right: 1.5px solid color-mix(in srgb, var(--link) 70%, var(--border));
+  border-bottom: 1.5px solid color-mix(in srgb, var(--link) 70%, var(--border));
+  transform: translateX(-50%) rotate(45deg);
+  z-index: 2;
+}
+.eval-disclosure > summary.eval-mark:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+/* Panels. Closed unless their tab is open. The open tab's position picks the
+   panel (rules generated below for the first MAX_PANEL_TABS marks); a mark past
+   that keeps its panel inside its own details element. */
+.eval-tabpanel { display: none; margin-top: 0.7rem; min-width: 0; }
+.eval-disclosure > .eval-tabpanel { margin-top: 0.7rem; }
+.eval-disclosure[open] > .eval-tabpanel { display: block; }
 .eval-panel {
-  padding: 0.75rem 0.85rem 0.8rem;
+  box-sizing: border-box;
+  padding: 0.75rem 0.85rem 0.85rem;
   border-radius: 0.65rem;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg-muted) 55%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--link) 55%, var(--border));
+  border-top: 3px solid var(--link);
+  background: color-mix(in srgb, var(--link) 5%, var(--surface));
 }
-.eval-panel h4 { margin: 0 0 0.2rem; font-size: 0.95rem; }
+.eval-panel h4 { margin: 0 0 0.2rem; font-size: 0.95rem; color: var(--link); }
 .eval-panel .purpose, .eval-panel .more { margin: 0.35rem 0 0; }
 .eval-panel .meta, .descriptor-note { margin: 0.2rem 0 0; color: var(--text-muted); font-size: 0.86rem; }
+.stored-run { box-sizing: border-box; margin-top: 0.45rem; }
+/* Narrow screens: marks keep their width and the row scrolls sideways. */
+@media (max-width: 640px) {
+  .eval-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.85rem;
+    scrollbar-width: thin;
+  }
+  .eval-row .eval-disclosure { flex-shrink: 0; }
+  .eval-tabpanel, .eval-disclosure > .eval-tabpanel { margin-top: 0; }
+}
 .callout-ok, .callout-headline, .assessment-failure { margin: 0.75rem 0 0; }
 .callout-headline, .assessment-failure { font-weight: 650; }
 .assessment-failure {
@@ -1170,6 +1234,18 @@ def _font_face(filename, unicode_range):
     )
 
 
+MAX_PANEL_TABS = 24
+
+
+def _tabpanel_rules():
+    """Show the panel whose tab (same position in its row) is open."""
+    return "\n".join(
+        f".evaluators:has(> .eval-row > .eval-disclosure:nth-child({i})[open]) "
+        f"> .eval-tabpanels > .eval-tabpanel:nth-child({i}) {{ display: block; }}"
+        for i in range(1, MAX_PANEL_TABS + 1)
+    )
+
+
 def _build_stylesheet():
     """Theme CSS with the embedded DM Sans files and their SIL license."""
     ofl = (
@@ -1187,6 +1263,9 @@ def _build_stylesheet():
         + _font_face("DMSans-latin-ext.woff2", _LATIN_EXT)
         + _font_face("DMSans-latin.woff2", _LATIN)
         + CSS
+        + "\n"
+        + _tabpanel_rules()
+        + "\n"
     )
 
 
