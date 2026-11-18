@@ -35,7 +35,18 @@ jobs:
         with:
           version: '3.54.0'
       - run: task setup
+      # Browser tests (tests/test_evaluator_cards.py) need Chromium. The browser build
+      # is the one the locked playwright version pins. LIVINGPROOF_REQUIRE_BROWSER makes
+      # them fail, not skip, if Playwright or Chromium is missing.
+      - name: Install Chromium for the evaluator card browser tests
+        run: uv run --locked --no-sync playwright install --with-deps chromium
       - run: task verify
+        env:
+          LIVINGPROOF_REQUIRE_BROWSER: '1'
+      - name: Evaluator card browser tests ran (listed by name, none skipped)
+        env:
+          LIVINGPROOF_REQUIRE_BROWSER: '1'
+        run: uv run --locked --no-sync pytest tests/test_evaluator_cards.py -v -rs
       - name: Root CLI and reporter shared-environment regression
         env:
           LIVINGPROOF_NETWORK: '1'

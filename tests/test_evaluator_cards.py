@@ -358,9 +358,8 @@ def test_a_mark_past_the_generated_panel_rules_keeps_its_panel_inside_its_own_de
     assert (len(outside), len(inside)) == (limit, 2)
     inline_classes = [_classes(d) for d in _find(nodes, "details") if "eval-inline" in _classes(d)]
     assert len(inline_classes) == 2
-    css = html_theme.stylesheet()
-    assert f".eval-disclosure:nth-child({limit})[open]" in css
-    assert f".eval-disclosure:nth-child({limit + 1})[open]" not in css
+    # That the :has() rules stop at MAX_PANEL_TABS is pinned in
+    # test_outside_panels_are_shown_only_by_has_rules_and_overflow_marks_use_open_details.
 
 
 def test_removing_the_tabs_script_leaves_every_panel_body_in_the_markup():
@@ -499,14 +498,14 @@ def test_the_panel_has_a_3px_link_top_edge_and_a_link_coloured_heading():
     assert _rule(".eval-panel h4")["color"] == "var(--link)"
 
 
-def test_closed_panels_are_hidden_and_the_open_tabs_panel_is_shown():
+def test_closed_panels_are_hidden_until_their_tab_is_open():
+    # The :has() reveal rules themselves are pinned in
+    # test_outside_panels_are_shown_only_by_has_rules_and_overflow_marks_use_open_details.
     assert _rule(".eval-tabpanel")["display"] == "none"
-    css = html_theme.stylesheet()
-    for position in (1, 2, html_theme.MAX_PANEL_TABS):
-        assert (
-            f".evaluators:has(> .eval-row > .eval-disclosure:nth-child({position})[open]) "
-            f"> .eval-tabpanels > .eval-tabpanel:nth-child({position}) {{ display: block; }}"
-        ) in css
+    assert (
+        ".evaluators:has(> .eval-row > .eval-disclosure:nth-child(1)[open]) "
+        "> .eval-tabpanels > .eval-tabpanel:nth-child(1) { display: block; }"
+    ) in html_theme.stylesheet()
 
 
 def test_the_mark_label_is_not_restyled_by_the_generic_summary_rule():
@@ -517,17 +516,29 @@ def test_the_mark_label_is_not_restyled_by_the_generic_summary_rule():
 # --- rendered in a browser -------------------------------------------------------
 
 
-def _chromium():
-    pytest.importorskip("playwright.sync_api")
-    from playwright.sync_api import sync_playwright
+# CI sets this so a missing Playwright or Chromium fails the browser tests
+# instead of skipping them; elsewhere they skip.
+REQUIRE_BROWSER = os.environ.get("LIVINGPROOF_REQUIRE_BROWSER") == "1"
 
+
+def _unavailable(reason):
+    if REQUIRE_BROWSER:
+        pytest.fail(f"LIVINGPROOF_REQUIRE_BROWSER is set but {reason}", pytrace=False)
+    pytest.skip(reason)
+
+
+def _chromium():
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError as error:
+        _unavailable(f"Playwright is not installed: {error}")
     manager = sync_playwright().start()
     path = os.environ.get("LIVINGPROOF_BROWSER") or None
     try:
         return manager, manager.chromium.launch(executable_path=path)
     except Exception as error:  # no browser binary on this machine
         manager.stop()
-        pytest.skip(f"no Chromium available: {error}")
+        _unavailable(f"no Chromium available: {error}")
 
 
 def _selected(page, expected):
@@ -646,6 +657,9 @@ def test_with_scripts_off_one_panel_opens_at_a_time_and_only_aria_selected_goes_
     assert _visible_panels(page) == []
     tabs.nth(0).click()
     assert _visible_panels(page) == [f"{GROUP}-panel-1"]
+    # The panel shows its own copy: the title heading and its descriptor text.
+    assert page.locator(f"#{GROUP}-panel-1 h4").inner_text() == "Check 1"
+    assert "Checks each step" in page.locator(f"#{GROUP}-panel-1").inner_text()
     tabs.nth(1).click()
     assert _visible_panels(page) == [f"{GROUP}-panel-2"]
     tabs.nth(1).click()
@@ -676,6 +690,13 @@ def test_the_25th_and_26th_marks_still_open_and_close_their_panels(chromium, tmp
     # The panel opens full width under the row, not squeezed into its 180px tab.
     box = page.locator(f"#{GROUP}-panel-{limit + 1}").bounding_box()
     assert box["width"] > 600
+    # The open tab keeps a normal tab height, not the height of the details with its panel.
+    height = "e => e.getBoundingClientRect().height"
+    open_height = tabs.nth(last).evaluate(height)
+    closed_height = tabs.nth(after).evaluate(height)
+    assert abs(open_height - closed_height) <= 2, (open_height, closed_height)
+    assert open_height < 120
+    assert tabs.nth(last).evaluate("e => e.getBoundingClientRect().width") == 180
     if scripts:
         page.wait_for_function(
             "() => document.querySelectorAll('summary[role=tab]')[24].getAttribute('aria-selected') === 'true'"
@@ -686,6 +707,7 @@ def test_the_25th_and_26th_marks_still_open_and_close_their_panels(chromium, tmp
 
     tabs.nth(after).click()  # exclusive: the 26th replaces the 25th
     assert _visible_panels(page) == [f"{GROUP}-panel-{limit + 2}"]
+    assert abs(tabs.nth(after).evaluate(height) - closed_height) <= 2
     tabs.nth(5).click()  # a panel under the row replaces an inline one
     assert _visible_panels(page) == [f"{GROUP}-panel-6"]
     tabs.nth(last).click()
@@ -704,10 +726,13 @@ def test_arrow_keys_move_focus_with_wrapping_home_and_end_and_never_open_a_panel
     tabs = page.locator("summary[role=tab]")
 
     def state():
-        return page.evaluate(
+        found = page.evaluate(
             "() => [...document.querySelectorAll('summary[role=tab]')]"
             ".map(e => [e.tabIndex, e === document.activeElement])"
         )
+        # Exactly one tab is in the Tab order at any moment (roving tabindex).
+        assert sum(1 for index, _ in found if index == 0) == 1, found
+        return found
 
     # Roving tabindex from load: the first tab is the one Tab stop.
     assert [t for t, _ in state()] == [0, -1, -1]

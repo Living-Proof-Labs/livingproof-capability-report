@@ -1044,7 +1044,12 @@ details[open] > .step-summary .disclose-open { display: inline; }
   outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
-/* Panels. Closed unless their tab is open. The open tab's position picks the
+/* Browser floor: the first MAX_PANEL_TABS panels are revealed only by :has()
+   (Chrome 105, Safari 15.4, Firefox 121). In an older browser an open panel for
+   mark 1 to 24 stays display:none; the tab still opens, closes and shows the
+   selected chrome, and marks past that open their panel through the details
+   element itself, which needs no :has().
+   Panels are closed unless their tab is open. The open tab's position picks the
    panel (rules generated below for the first MAX_PANEL_TABS marks); a mark past
    that keeps its panel inside its own details element. */
 .eval-tabpanel { display: none; margin-top: 0.7rem; min-width: 0; }
@@ -1053,7 +1058,10 @@ details[open] > .step-summary .disclose-open { display: inline; }
 /* A mark past the generated panel rules: when open, its details takes the whole
    row and the panel opens full width under its (still 180px) tab. */
 .eval-disclosure.eval-inline[open] { flex: 1 0 100%; width: 100%; }
-.eval-disclosure.eval-inline > summary.eval-mark { width: var(--eval-card-width); }
+.eval-disclosure.eval-inline > summary.eval-mark {
+  width: var(--eval-card-width);
+  height: auto; /* not the 100% of a tab in a row: the open details also holds the panel */
+}
 .eval-panel {
   box-sizing: border-box;
   padding: 0.75rem 0.85rem 0.85rem;
