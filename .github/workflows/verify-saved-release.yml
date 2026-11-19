@@ -10,7 +10,32 @@ permissions:
   contents: read
   actions: read
 jobs:
+  preflight:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    outputs:
+      is_draft: ${{ steps.draft.outputs.is_draft }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: v1.2.0
+    steps:
+      - name: Check draft status before any release mutation
+        id: draft
+        run: |
+          is_draft="$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)"
+          case "$is_draft" in
+            true|false) ;;
+            *) echo "Unexpected draft status: $is_draft" >&2; exit 1 ;;
+          esac
+          echo "is_draft=$is_draft" >> "$GITHUB_OUTPUT"
+          if [ "$is_draft" != "true" ]; then
+            echo "$RELEASE_TAG is already published, nothing to do."
+            echo "$RELEASE_TAG is already published (isDraft=$is_draft); skipped asset upload and release mutation." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
   verify-saved:
+    needs: preflight
+    if: needs.preflight.outputs.is_draft == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -64,8 +89,8 @@ jobs:
           done
           echo 'Saved native image, both startup modes, and same Debian asset passed. Registry publication remains blocked by write_package permission.' >> "$GITHUB_STEP_SUMMARY"
   publish-assets:
-    needs: verify-saved
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: [preflight, verify-saved]
+    if: needs.preflight.outputs.is_draft == 'true'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -73,26 +98,15 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       RELEASE_TAG: v1.2.0
     steps:
-      - name: Check draft status before any release mutation
-        id: draft
-        run: |
-          is_draft="$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)"
-          echo "is_draft=$is_draft" >> "$GITHUB_OUTPUT"
-          if [ "$is_draft" != "true" ]; then
-            echo "$RELEASE_TAG is already published, nothing to do."
-            echo "$RELEASE_TAG is already published (isDraft=$is_draft); skipped asset upload and release mutation." >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
       - name: Verify all existing assets and assemble checksums
-        if: steps.draft.outputs.is_draft == 'true'
         run: |
           gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft | grep -x true
           gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir assets
           (cd assets && sha256sum -c SHA256SUMS-amd64 && sha256sum -c SHA256SUMS-arm64)
           cat assets/SHA256SUMS-amd64 assets/SHA256SUMS-arm64 > SHA256SUMS
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft | grep -x true
           gh release upload "$RELEASE_TAG" SHA256SUMS --repo "$GITHUB_REPOSITORY" --clobber
       - name: Publish tested downloadable packages with explicit registry limitation
-        if: steps.draft.outputs.is_draft == 'true'
         run: |
           gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body > notes.md
           cat >> notes.md <<'EOF'
@@ -103,9 +117,9 @@ jobs:
 
           Registry publication of version 1.2.0 is blocked: GitHub accepted the repository workflow token login but denied both pushes with `permission_denied: write_package`. This release does not claim that version 1.2.0 is available from GHCR. No credentials, package grants, visibility settings or existing image tags were changed.
           EOF
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft | grep -x true
           gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --notes-file notes.md --draft=false
       - name: Verify public package checksums
-        if: steps.draft.outputs.is_draft == 'true'
         run: |
           base="https://github.com/$GITHUB_REPOSITORY/releases/download/$RELEASE_TAG"
           mkdir public
