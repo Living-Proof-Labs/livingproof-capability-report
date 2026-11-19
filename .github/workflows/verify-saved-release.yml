@@ -1,16 +1,16 @@
 name: Verify saved release without registry publication
+# One-off recovery workflow from #5 for the historical v1.2.0 release.
+# Kept only for explicit manual dispatch; pull requests and main pushes
+# (including dependency updates touching this file) must not run it.
+# The isDraft guard below stays in force so an already published v1.2.0
+# release exits cleanly without editing, uploading, or republishing.
 on:
-  pull_request:
-    paths: [.github/workflows/verify-saved-release.yml]
-  push:
-    branches: [main]
-    paths: [.github/workflows/verify-saved-release.yml]
+  workflow_dispatch:
 permissions:
   contents: read
   actions: read
 jobs:
   verify-saved:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     strategy:
       fail-fast: false
       matrix:
@@ -65,7 +65,7 @@ jobs:
           echo 'Saved native image, both startup modes, and same Debian asset passed. Registry publication remains blocked by write_package permission.' >> "$GITHUB_STEP_SUMMARY"
   publish-assets:
     needs: verify-saved
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -73,7 +73,18 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       RELEASE_TAG: v1.2.0
     steps:
+      - name: Check draft status before any release mutation
+        id: draft
+        run: |
+          is_draft="$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)"
+          echo "is_draft=$is_draft" >> "$GITHUB_OUTPUT"
+          if [ "$is_draft" != "true" ]; then
+            echo "$RELEASE_TAG is already published, nothing to do."
+            echo "$RELEASE_TAG is already published (isDraft=$is_draft); skipped asset upload and release mutation." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
       - name: Verify all existing assets and assemble checksums
+        if: steps.draft.outputs.is_draft == 'true'
         run: |
           gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft | grep -x true
           gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir assets
@@ -81,6 +92,7 @@ jobs:
           cat assets/SHA256SUMS-amd64 assets/SHA256SUMS-arm64 > SHA256SUMS
           gh release upload "$RELEASE_TAG" SHA256SUMS --repo "$GITHUB_REPOSITORY" --clobber
       - name: Publish tested downloadable packages with explicit registry limitation
+        if: steps.draft.outputs.is_draft == 'true'
         run: |
           gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body > notes.md
           cat >> notes.md <<'EOF'
@@ -93,6 +105,7 @@ jobs:
           EOF
           gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --notes-file notes.md --draft=false
       - name: Verify public package checksums
+        if: steps.draft.outputs.is_draft == 'true'
         run: |
           base="https://github.com/$GITHUB_REPOSITORY/releases/download/$RELEASE_TAG"
           mkdir public
