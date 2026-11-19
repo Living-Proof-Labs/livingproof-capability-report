@@ -40,6 +40,11 @@ TIER_LABEL = {
     "review": "Review",
     "observation": "Observation",
 }
+GRADED_STATUSES = frozenset({"COMPLETED", "ERROR"})
+NOT_GRADED = {
+    "INCONCLUSIVE": "Not graded: no integrity check applied to this run.",
+}
+NOT_GRADED_UNKNOWN = "Not graded: this report does not recognise the status."
 RESULT_FORMAT = re.compile(r"^livingproof-evaluator-result/1\.\d+\.\d+$")
 NO_DESCRIPTOR = "No evaluator descriptor was stored."
 _CHECK = (
@@ -187,6 +192,17 @@ def _percentage(value):
     return None
 
 
+def not_graded_note(status):
+    """Card copy for a run status that was not graded, else ''.
+
+    INCONCLUSIVE (result format 1.2.0) means no check applied. A 1.x minor may
+    add run statuses, and one this report does not know is not graded either.
+    """
+    if not status or status in GRADED_STATUSES:
+        return ""
+    return NOT_GRADED.get(status, NOT_GRADED_UNKNOWN)
+
+
 def _apply_integrity(view, document):
     """Surface stored run-level integrity status, percentage and scope when present."""
     integrity = document.get("integrity")
@@ -196,6 +212,7 @@ def _apply_integrity(view, document):
     status = _visible(run.get("test_system_status"))
     if status:
         view["status"] = status
+        view["not_graded"] = not_graded_note(status)
     percentage = _percentage(run.get("percentage"))
     if percentage is not None:
         view["percentage"] = percentage
@@ -611,6 +628,8 @@ def _panel(view):
             else str(percentage)
         )
         bits.append(f"<p class='meta'>{esc(shown)}%</p>")
+    if view.get("not_graded"):
+        bits.append(f"<p class='more'>{esc(view['not_graded'])}</p>")
     if view.get("scope"):
         bits.append(f"<p class='meta'>Scope: {esc(view['scope'])}</p>")
     if view["purpose"]:
@@ -654,7 +673,7 @@ def _finding_meta(finding):
 def _callouts(views, *, quiet):
     rows = order_findings(views)
     if not rows:
-        if quiet:
+        if quiet and not any(view.get("not_graded") for view in views):
             return f"<p class='callout-ok'>{esc(all_quiet_line(len(views)))}</p>"
         return ""
     speakers = [view for view in views if view["findings"]]

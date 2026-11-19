@@ -60,6 +60,7 @@ def test_an_inconclusive_run_shows_the_label_and_copy_and_no_percentage():
     # The stored capability grade is unchanged and is not shown as a failure.
     assert "Stored overall status: PASS" in front
     assert "Needs attention" not in front
+    assert "satisfied" not in front
 
 
 def test_an_unrecognised_status_is_shown_and_not_graded():
@@ -70,6 +71,7 @@ def test_an_unrecognised_status_is_shown_and_not_graded():
     assert "Status: PARTIAL" in front
     assert "Not graded: this report does not recognise the status." in front
     assert "Needs attention" not in front
+    assert "satisfied" not in front
 
 
 def test_recognised_statuses_get_no_not_graded_copy():
