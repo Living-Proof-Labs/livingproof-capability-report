@@ -6,6 +6,8 @@ evaluator entries renders exactly as before.
 """
 
 import copy
+
+from provenance_snapshot import legacy_provenance
 import json
 from pathlib import Path
 
@@ -81,5 +83,5 @@ def test_a_bundle_with_no_evaluator_entries_renders_exactly_as_before():
         data = bundle(name)
         assert not any(r.get("evaluator_results") for r in data["results"])
         text = _markdown(data)
-        assert text == (ROBOTS / f"{name}.md").read_text(encoding="utf-8")
+        assert legacy_provenance(text) == (ROBOTS / f"{name}.md").read_text(encoding="utf-8")
         assert not _evaluator_lines(text)

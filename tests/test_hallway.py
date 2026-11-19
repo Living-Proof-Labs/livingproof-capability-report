@@ -10,6 +10,8 @@ from pathlib import Path
 
 import pytest
 
+from provenance_snapshot import legacy_provenance
+
 from livingproof_capability_report import narrative
 from livingproof_capability_report.assessed import report_from_bundle
 from livingproof_capability_report.core import digest, load_bundle, render
@@ -38,7 +40,7 @@ def stored(manifest, links=None):
 
 def test_markdown_follows_arts_layout(tmp_path):
     md = render(stored(example(tmp_path)), "markdown")
-    assert md == (EXPECTED / "report.md").read_text()
+    assert legacy_provenance(md) == (EXPECTED / "report.md").read_text()
     lines = md.splitlines()
     assert lines[0] == "<!-- livingproof-verification -->"  # 1: stable marker
     assert "draft" not in md.lower()
@@ -64,7 +66,7 @@ def test_markdown_follows_arts_layout(tmp_path):
     assert "![" not in md  # 7: no stored assets, no thumbnails
     assert "Full report" not in md  # 8: no links given, no links row
     assert "<details><summary>Per-seed failures · unitree-g1 · stock</summary>" in md  # 9
-    assert lines[-1].startswith(
+    assert legacy_provenance(lines[-1]).startswith(
         "<sub>Policy all-required-v1@1.0.0 · catalog v1.6.0 @ b4ba31e · run run-1 · "
     )
     assert lines[-1].endswith(
@@ -127,7 +129,7 @@ def test_evidence_links_stored_in_report_and_rendered(tmp_path):
     assert len(links["links"]) == 5  # the empty URL (skipped upload) is dropped
     assert report["source_bundle_sha256"] == digest(report["source_bundle"])  # no digest change
     md = render(report, "markdown")
-    assert md == (EXPECTED / "report-with-links.md").read_text()
+    assert legacy_provenance(md) == (EXPECTED / "report-with-links.md").read_text()
     assert f"**Evidence:** [CI run]({RUN}) · [evidence]({ART}1) · [MCAP, all trials]({ART}2)" in md
     assert f"- ▶️ seed 4 (fail): [video]({ART}5)" in md
     assert f"- ▶️ seed 1 (pass): [video]({ART}3) · [MCAP]({ART}4)" in md

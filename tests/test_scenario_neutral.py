@@ -13,6 +13,8 @@ import re
 from pathlib import Path
 
 import pytest
+
+from provenance_snapshot import legacy_provenance
 from click.testing import CliRunner
 from jsonschema import Draft202012Validator, ValidationError
 
@@ -109,10 +111,10 @@ def test_hallway_reports_match_v3_7_0(name):
     stored = report(bundle(name))
     markdown = render(stored, "markdown")
     html = top(render(stored, "html")) + "\n"
-    assert markdown == (GOLDEN / f"{name}.md").read_text(encoding="utf-8")
+    assert legacy_provenance(markdown) == (GOLDEN / f"{name}.md").read_text(encoding="utf-8")
     golden_html = (GOLDEN / f"{name}.html").read_text(encoding="utf-8")
     assert REMOVED_LABEL in golden_html
-    assert html == golden_html.replace(REMOVED_LABEL, "")
+    assert legacy_provenance(html) == golden_html.replace(REMOVED_LABEL, "")
     assert REMOVED_LABEL not in html
 
 

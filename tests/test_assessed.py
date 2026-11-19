@@ -7,6 +7,8 @@ import os
 from pathlib import Path
 
 import pytest
+
+from provenance_snapshot import legacy_provenance
 from click.testing import CliRunner
 
 from livingproof_capability_report import assessed
@@ -39,8 +41,8 @@ def test_render_matches_the_frozen_report(pair):
     assert without_bundle(stored) == frozen
     assert stored["source_bundle_sha256"] == digest(stored["source_bundle"])
     md = (EXPECTED / "report.md").read_text()
-    assert render(stored, "markdown") == md
-    assert render(json.loads(render(stored, "json")), "markdown") == md
+    assert legacy_provenance(render(stored, "markdown")) == md
+    assert legacy_provenance(render(json.loads(render(stored, "json")), "markdown")) == md
 
 
 def test_render_does_not_regrade(pair):
@@ -158,13 +160,13 @@ def test_cli_renders_a_bundle_and_keeps_evidence_links(pair, tmp_path):
         cli, ["render", str(manifest), "--format", "markdown", "--evidence-links", str(links)]
     )
     assert out.exit_code == 0, out.output
-    assert out.output == (EXPECTED / "report-with-links.md").read_text()
+    assert legacy_provenance(out.output) == (EXPECTED / "report-with-links.md").read_text()
     report_file = tmp_path / "report.json"
     out = runner.invoke(cli, ["render", str(manifest), "--format", "json", "-o", str(report_file)])
     assert out.exit_code == 0, out.output
     assert without_bundle(json.loads(report_file.read_text())) == frozen
     rerender = runner.invoke(cli, ["render", str(report_file), "--format", "markdown"])
-    assert rerender.output == (EXPECTED / "report.md").read_text()
+    assert legacy_provenance(rerender.output) == (EXPECTED / "report.md").read_text()
     refused = runner.invoke(cli, ["render", str(report_file), "--evidence-links", str(links)])
     assert refused.exit_code != 0 and "bundle 1.1.0 manifest only" in refused.output
 
@@ -179,7 +181,7 @@ sha = lambda data: hashlib.sha256(data).hexdigest()  # noqa: E731
     reason="set LIVINGPROOF_GOLDEN (reports from 1.10.0) and LIVINGPROOF_GOLDEN_BUNDLES (1.1.0 bundles)",
 )
 def test_golden_reports_are_byte_identical(tmp_path):
-    """report.md and the PR comment are sha256-identical to the 1.10.0 golden files.
+    """Reports match 1.10.0 goldens except the intentional #98 provenance links.
 
     report.json embeds the bundle it came from, so it can only differ there: every other
     key is byte-identical, and the bundle is the 1.0.0 bundle plus the 1.1.0 fields.
@@ -195,7 +197,9 @@ def test_golden_reports_are_byte_identical(tmp_path):
             )
             assert out.exit_code == 0, out.output
         md = (tmp_path / config / "report.md").read_bytes()
-        assert sha(md) == sha((golden / config / "report.md").read_bytes()), config
+        assert sha(legacy_provenance(md.decode()).encode()) == sha(
+            (golden / config / "report.md").read_bytes()
+        ), config
         mine = json.loads((tmp_path / config / "report.json").read_text())
         theirs = json.loads((golden / config / "report.json").read_text())
         assert list(mine) == list(theirs)
@@ -229,7 +233,7 @@ def test_golden_reports_are_byte_identical(tmp_path):
         )
         assert out.exit_code == 0, out.output
         expected = (golden / f"comment-{robot}.md").read_bytes()
-        assert sha(out.output.encode()) == sha(expected), robot
+        assert sha(legacy_provenance(out.output).encode()) == sha(expected), robot
 
 
 @pytest.mark.parametrize("grade", [["PASS"], {"grade": "PASS"}, 1])

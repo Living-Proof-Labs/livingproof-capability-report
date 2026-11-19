@@ -7,6 +7,8 @@ and not a ring. Markdown keeps its interval column; those snapshots do not chang
 """
 
 import re
+
+from provenance_snapshot import legacy_provenance
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -255,7 +257,7 @@ def test_no_pass_bar_without_required_passes_and_markdown_snapshots_stay():
     assert "required_passes" in full
     for name in ("g1", "go1", "t1"):
         markdown = render(report(bundle(name)), "markdown")
-        assert markdown == (ROBOTS / f"{name}.md").read_text(encoding="utf-8")
+        assert legacy_provenance(markdown) == (ROBOTS / f"{name}.md").read_text(encoding="utf-8")
         assert "| 95% interval |" not in markdown
     # Evidence 2.0.0 still must not say "seed" in reader-visible HTML.
     assert "seed" not in visible_html(render(stored(), "html")).lower()
