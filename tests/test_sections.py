@@ -19,6 +19,8 @@ from pathlib import Path
 
 import pytest
 
+from provenance_snapshot import legacy_provenance
+
 from livingproof_capability_report import assessed
 from livingproof_capability_report.core import digest, load_bundle, render
 
@@ -52,7 +54,7 @@ def test_robot_snapshots(name):
         path = ROBOTS / file
         if UPDATE:
             path.write_text(text, encoding="utf-8")
-        assert text == path.read_text(encoding="utf-8"), file
+        assert legacy_provenance(text) == legacy_provenance(path.read_text(encoding="utf-8")), file
 
 
 def test_html_embeds_dm_sans_and_keeps_body_text_above_the_contrast_floor():

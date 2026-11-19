@@ -417,9 +417,13 @@ def html_summary(report, bundle, escape):
         version = value.get("version") or value.get("revision")
         return f"{name}@{version}" if name and version else name
 
-    def items(pairs):
+    from .provenance import commit_link
+
+    def items(pairs, references=None):
         return "".join(
-            f"<dt>{escape(k)}</dt><dd>{escape(v)}</dd>" for k, v in pairs if v not in (None, "")
+            f"<dt>{escape(k)}</dt><dd>{(references or {}).get(k, escape(v))}</dd>"
+            for k, v in pairs
+            if v not in (None, "")
         )
 
     from .steps import repeat_statement, required_percentage, success_count
@@ -446,20 +450,13 @@ def html_summary(report, bundle, escape):
                     ("Observed", observed),
                     ("Threshold", required),
                     ("Capability", s.get("capability")),
-                    (
-                        "Spec",
-                        " ".join(
-                            str(x)
-                            for x in (
-                                spec.get("tag"),
-                                spec.get("revision") and f"revision {spec['revision']}",
-                                spec.get("commit"),
-                            )
-                            if x
-                        ),
-                    ),
+                    ("Spec", spec or None),
                     ("Environment", ref(s.get("environment"))),
-                ]
+                ],
+                {
+                    "Spec": commit_link(spec)
+                    + (f" revision {escape(spec['revision'])}" if spec.get("revision") else "")
+                },
             )
             + "</dl></section>"
         )
@@ -471,12 +468,10 @@ def html_summary(report, bundle, escape):
             ("Grade revision", str(report.get("grade_revision", 1))),
             ("Aggregation", ref(assessment.get("aggregation"))),
             ("Assessment format", assessment.get("format")),
-            (
-                "Assessed by",
-                " ".join(str(x) for x in (ref(producer), producer.get("commit")) if x),
-            ),
+            ("Assessed by", producer or None),
             ("Bundle", bundle.get("schema_version") and f"schema {bundle['schema_version']}"),
-        ]
+        ],
+        {"Assessed by": commit_link(producer, assessor=True)},
     )
     if not parts and not provenance:
         return ""

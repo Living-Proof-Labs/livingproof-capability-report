@@ -284,8 +284,10 @@ def markdown(report, links=None, retention=None):
             f"| `{d['result_id']}` | **{GRADE[d['status']]}** | {d['reason'].replace('|', '/')} |"
             for d in others
         ]
-    catalogs = sorted({f"{s['spec']['tag']} @ {s['spec']['commit'][:7]}" for s in runs}) or sorted(
-        {f"{r['spec']['tag']} @ {r['spec']['commit'][:7]}" for r in results.values()}
+    from .provenance import commit_link
+
+    catalogs = sorted({commit_link(s["spec"]) for s in runs}) or sorted(
+        {commit_link(r["spec"]) for r in results.values()}
     )
     footer = [f"Policy {report['policy']}", "catalog " + ", ".join(catalogs)]
     footer += [f"run {s['run_id']}" for s in runs if s.get("run_id")]
