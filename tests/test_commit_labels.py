@@ -145,7 +145,9 @@ def test_rendered_provenance_at_phone_and_desktop_width(tmp_path, width, tagged)
     try:
         page = browser.new_page(viewport={"width": width, "height": 900})
         page.set_content(render(report, "html"))
+        page.locator("summary[role=tab]").first.click()
         summary = page.locator("#summary")
+        summary.wait_for(state="visible")
         assert not HEX.search(summary.inner_text())
         for value in page.locator("[aria-label], [alt]").evaluate_all(
             "nodes => nodes.flatMap(node => [node.getAttribute('aria-label'), node.getAttribute('alt')])"
