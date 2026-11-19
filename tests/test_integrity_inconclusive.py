@@ -7,6 +7,7 @@ statuses, and a consumer treats any status it does not recognise as not graded.
 """
 
 import copy
+import html
 import json
 from pathlib import Path
 
@@ -19,6 +20,9 @@ COMPLETED = json.loads((FIXTURES / "success.json").read_text(encoding="utf-8"))
 RUN_ID = INCONCLUSIVE["integrity"]["run"]["id"]
 RESULT_ID = "stock-seed-01"
 COPY = "Not graded"
+UNKNOWN_COPY = "Not graded: this report version doesn't recognise this status yet."
+INCONCLUSIVE_COPY = "Not graded: no integrity check applied to this run."
+NEUTRAL = "<p class='meta not-graded'>"
 
 
 def _front(document, grade="PASS"):
@@ -55,7 +59,11 @@ def test_the_fixture_is_the_pr51_shape():
 def test_an_inconclusive_run_shows_the_label_and_copy_and_no_percentage():
     front = _front(copy.deepcopy(INCONCLUSIVE))
     assert "Status: INCONCLUSIVE" in front
-    assert "Not graded: no integrity check applied to this run." in front
+    assert INCONCLUSIVE_COPY in front
+    # Neutral: the same muted .meta style as the status line, not a failing chip or speaking mark.
+    assert f"{NEUTRAL}{INCONCLUSIVE_COPY}</p>" in front
+    assert "is-speaking" not in front
+    assert "chip-fail" not in front
     assert "%</p>" not in _panel(front)
     # The stored capability grade is unchanged and is not shown as a failure.
     assert "Stored overall status: PASS" in front
@@ -69,7 +77,7 @@ def test_an_unrecognised_status_is_shown_and_not_graded():
     document["integrity"]["run"]["test_system_status"] = "PARTIAL"
     front = _front(document)
     assert "Status: PARTIAL" in front
-    assert "Not graded: this report does not recognise the status." in front
+    assert html.escape(UNKNOWN_COPY, quote=True) in front
     assert "Needs attention" not in front
     assert "satisfied" not in front
 
