@@ -44,7 +44,7 @@ GRADED_STATUSES = frozenset({"COMPLETED", "ERROR"})
 NOT_GRADED = {
     "INCONCLUSIVE": "Not graded: no integrity check applied to this run.",
 }
-NOT_GRADED_UNKNOWN = "Not graded: this report does not recognise the status."
+NOT_GRADED_UNKNOWN = "Not graded: this report version doesn't recognise this status yet."
 RESULT_FORMAT = re.compile(r"^livingproof-evaluator-result/1\.\d+\.\d+$")
 NO_DESCRIPTOR = "No evaluator descriptor was stored."
 _CHECK = (
@@ -629,7 +629,8 @@ def _panel(view):
         )
         bits.append(f"<p class='meta'>{esc(shown)}%</p>")
     if view.get("not_graded"):
-        bits.append(f"<p class='more'>{esc(view['not_graded'])}</p>")
+        # Neutral: the muted .meta style the status line uses, not a failing chip.
+        bits.append(f"<p class='meta not-graded'>{esc(view['not_graded'])}</p>")
     if view.get("scope"):
         bits.append(f"<p class='meta'>Scope: {esc(view['scope'])}</p>")
     if view["purpose"]:
