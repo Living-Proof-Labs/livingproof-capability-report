@@ -277,8 +277,10 @@ def test_the_script_is_self_contained_and_makes_no_network_calls_or_loads_anythi
     assert front.count("<script") == 1 == front.count("<script data-eval-tabs>")
     assert "<script src" not in front and "<script type" not in front
     script = _script(front)
+    # #109: reading the URL fragment (`location.hash`) is the one allowed use of `location`.
+    checked = script.replace("location.hash", "")
     for banned in _NETWORK_AND_LOADING:
-        assert banned not in script, banned
+        assert banned not in checked, banned
     assert not re.search(r"(?<![\w.-])eval\s*\(", script)
     # Allow-list: every global or member the script touches is one of these.
     allowed = {
@@ -289,11 +291,23 @@ def test_the_script_is_self_contained_and_makes_no_network_calls_or_loads_anythi
         "length", "aria", "selected", "true", "false", "scope", "eval", "row", "disclosure",
         "summary", "toggle", "focusin", "keydown", "data", "tabs", "s", "w", "t", "f", "a", "o",
         "x", "e", "i", "n", "c",
+        # #109: opening a tab from its #evaluator-<id> fragment.
+        "location", "hash", "id", "hashchange", "load", "d", "m", "h",
+        # Art's refinements on #109: scroll the landed tab and panel into view, mark the tab.
+        "getAttribute", "toggleAttribute", "scrollIntoView", "preventScroll", "block", "p",
     }  # fmt: skip
     literals = set(re.findall(r"'([^']*)'", script))
     assert literals == {
         ":scope > .eval-row",
         ":scope > .eval-disclosure > summary",
+        ":scope > .eval-disclosure",
+        "#",
+        "summary",
+        "hashchange",
+        "load",
+        "aria-controls",
+        "data-landed",
+        "nearest",
         "aria-selected",
         "true",
         "false",
@@ -305,7 +319,7 @@ def test_the_script_is_self_contained_and_makes_no_network_calls_or_loads_anythi
     quoted = re.sub(r"'[^']*'", "''", script)
     words = set(re.findall(r"[A-Za-z_$][\w$]*", quoted))
     assert words <= allowed, sorted(words - allowed)
-    assert len(script) < 1400
+    assert len(script) < 2200
 
 
 def test_the_script_only_reads_and_writes_inside_its_own_container():
@@ -319,7 +333,17 @@ def test_the_script_only_reads_and_writes_inside_its_own_container():
     assert re.findall(r"querySelector(?:All)?\('([^']*)'", script) == [
         ":scope > .eval-row",
         ":scope > .eval-disclosure > summary",
+        ":scope > .eval-disclosure",
+        "summary",
+        "#",
     ]
+    # The one new outside read is the URL fragment (#109), matched against this row's own tabs.
+    assert script.count("location.") == 1 and "location.hash" in script
+    assert "hashchange" in script
+    # Landing scrolls the panel then the tab into view, and marks the tab for the CSS highlight.
+    # No timers: the fade is a CSS animation, and the script only sets the attribute.
+    assert script.count("scrollIntoView({block:'nearest'})") == 2
+    assert "toggleAttribute('data-landed'" in script and "setTimeout" not in script
 
 
 def test_the_markup_carries_no_roving_tabindex_so_with_scripts_off_every_tab_is_a_tab_stop():
@@ -334,7 +358,10 @@ def test_the_script_handles_arrows_home_and_end_and_leaves_activation_to_the_nat
         assert key in script
     assert "preventDefault" in script and "focus()" in script
     # Moving focus never opens a panel: no code path writes the details' open state.
-    assert ".open=" not in script and ".open =" not in script and "click" not in script
+    # The one exception (#109) is the URL fragment naming that tab, handled by `h`.
+    assert script.count(".open=") == 1 and ".open =" not in script and "click" not in script
+    handler = script[script.index("function h()") : script.index("addEventListener('hashchange'")]
+    assert ".open=true" in handler and "location.hash" in handler
     assert "tabIndex" in script and "aria-selected" in script
     # Without it the details element still opens, closes and styles the open tab.
     assert "[open] > summary.eval-mark" in html_theme.stylesheet()

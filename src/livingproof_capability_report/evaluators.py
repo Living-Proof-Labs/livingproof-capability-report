@@ -569,7 +569,19 @@ def _icon_html(view):
     return f"<span class='eval-fallback' aria-hidden='true'>{esc(view['letter'])}</span>"
 
 
-def _mark(view, group, column):
+def _anchor_id(identity, seen):
+    """A stable, unique, URL-safe id for an evaluator's tab: ``evaluator-<evaluator id>``."""
+    slug = re.sub(r"[^A-Za-z0-9._-]", "-", str(identity)) or "evaluator"
+    base = candidate = f"evaluator-{slug}"
+    number = 1
+    while candidate in seen:
+        number += 1
+        candidate = f"{base}-{number}"
+    seen.add(candidate)
+    return candidate
+
+
+def _mark(view, group, column, anchor=None):
     """One tab (a details element holding only its summary) and its panel.
 
     The tab is the summary. The panel carries the descriptor detail and, for the
@@ -621,8 +633,9 @@ def _mark(view, group, column):
         f"<div class='stored-run'>{view.get('body_html') or ''}</div></div>"
     )
     inline = column > html_theme.MAX_PANEL_TABS
+    anchor_attr = f" id='{esc(anchor)}'" if anchor else ""
     tab = (
-        f"<details class='eval-disclosure{' eval-inline' if inline else ''}' "
+        f"<details class='eval-disclosure{' eval-inline' if inline else ''}'{anchor_attr} "
         f"name='{esc(group)}' role='none'>"
         f"<summary class='{klass}' role='tab' id='{esc(tab_id)}' "
         f"aria-controls='{esc(panel_id)}' aria-selected='false'>"
@@ -724,7 +737,9 @@ def _callouts(views, *, quiet):
 # opening, closing, the one-open-at-a-time rule and the selected look come from
 # the details element and CSS. Without it only these stay as loaded:
 #   - aria-selected (always "false"), and
-#   - arrow/Home/End keys and the roving tabindex (every tab is a Tab stop).
+#   - arrow/Home/End keys and the roving tabindex (every tab is a Tab stop), and
+#   - opening a tab from its #evaluator-<id> fragment (without it the fragment only
+#     scrolls to the tab). It listens to hashchange (and load) to do that.
 # With it:
 #   - aria-selected follows the open details element;
 #   - Left/Right move focus between tabs (wrapping), Home/End to the first/last;
@@ -749,15 +764,26 @@ _TABS_SCRIPT = (
     "w.addEventListener('keydown',function(e){var a=t(),i=a.indexOf(e.target),"
     "n={ArrowRight:i+1,ArrowLeft:i-1,Home:0,End:a.length-1}[e.key];"
     "if(i<0||n===undefined)return;e.preventDefault();a[(n+a.length)%a.length].focus()});"
-    "f()})(document.currentScript)</script>"
+    "function h(){var a=Array.from(w.querySelectorAll(':scope > .eval-disclosure')),"
+    "d=a.find(function(x){return '#'+x.id===location.hash});"
+    "a.forEach(function(x){x.toggleAttribute('data-landed',false)});if(!d)return;"
+    "d.open=true;var m=d.querySelector('summary'),"
+    "p=s.parentNode.querySelector('#'+m.getAttribute('aria-controls'));"
+    "m.focus({preventScroll:true});if(p)p.scrollIntoView({block:'nearest'});"
+    "m.scrollIntoView({block:'nearest'});d.toggleAttribute('data-landed',true)}"
+    "addEventListener('hashchange',h);addEventListener('load',h);"
+    "f();h()})(document.currentScript)</script>"
 )
 
 
-def render_marks(views, *, group="eval-marks", quiet=False):
+def render_marks(views, *, group="eval-marks", quiet=False, anchors=False):
+    """The tabs and panels. With ``anchors``, each tab also gets ``id="evaluator-<id>"``."""
     ordered = order_marks(views)
     tabs, panels = [], []
+    seen = set()
     for index, view in enumerate(ordered):
-        tab, panel = _mark(view, group, index + 1)
+        anchor = _anchor_id(view["identity"], seen) if anchors else None
+        tab, panel = _mark(view, group, index + 1, anchor)
         tabs.append(tab)
         panels.append(panel)
     return (
@@ -846,7 +872,7 @@ def summary_front(report, stored_body, evidence_results=None):
         )
     return (
         "<article class='summary-card'>"
-        f"{heroes}{failure}{render_marks(views, group='run-evaluators', quiet=quiet)}</article>"
+        f"{heroes}{failure}{render_marks(views, group='run-evaluators', quiet=quiet, anchors=True)}</article>"
     )
 
 

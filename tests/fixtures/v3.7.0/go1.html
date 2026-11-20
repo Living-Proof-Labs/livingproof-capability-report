@@ -1126,6 +1126,22 @@ details[open] > .step-summary .disclose-open { display: inline; }
   outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
+/* Landing on #evaluator-<id> (the tabs script sets data-landed): keep the tab clear of
+   the top edge, and mark it with a 2px accent outline that fades over 1.5s. The keyboard
+   focus ring above wins while the tab has it, so a focus indicator never fades away. */
+.eval-disclosure[id] { scroll-margin-top: 1rem; }
+@keyframes eval-landed {
+  from { outline-color: var(--focus); }
+  to { outline-color: transparent; }
+}
+.eval-disclosure[data-landed] > summary.eval-mark:not(:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  animation: eval-landed 1.5s ease-out forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .eval-disclosure[data-landed] > summary.eval-mark:not(:focus-visible) { animation: none; }
+}
 /* Browser floor: the first MAX_PANEL_TABS panels are revealed only by :has()
    (Chrome 105, Safari 15.4, Firefox 121). In an older browser an open panel for
    mark 1 to 24 stays display:none; the tab still opens, closes and shows the
@@ -1257,7 +1273,7 @@ details[open] > .step-summary .disclose-open { display: inline; }
 <circle cx='591.8' cy='547.9' r='33.2'/>
 <rect x='448' y='620' width='114' height='22' rx='11'/>
 </g>
-</svg></div><div><h2 class='run-title'>Walk the hallway</h2><p class='pct'>75% success</p><p class='count'>15 successes, 75%</p><p class='stored-status'>Stored overall status: FAIL</p></div></div><p class='assessment-failure'>15 successes, 75%; overall FAIL.</p><div class='evaluators'><p class='evaluators-label'>Evaluators</p><div class='eval-row' role='tablist' aria-label='Evaluators' style='--eval-count:1'><details class='eval-disclosure' name='run-evaluators' role='none'><summary class='eval-mark is-speaking' role='tab' id='run-evaluators-tab-1' aria-controls='run-evaluators-panel-1' aria-selected='false'><span class='eval-face' role='img' aria-label='Evaluator'><span class='eval-fallback' aria-hidden='true'>E</span></span><span class='eval-name eval-name-full'>Evaluator</span></summary></details></div><div class='eval-tabpanels'><div class='eval-tabpanel' role='tabpanel' id='run-evaluators-panel-1' aria-labelledby='run-evaluators-tab-1'><div class='eval-panel'><h4>Evaluator</h4><p class='descriptor-note'>No evaluator descriptor was stored.</p></div><div class='stored-run'><div class='card scenario-steps'><h2>This run</h2><div class='split'><div><div class='run-hero'><div class='badge'><svg class='success-ring' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024' role='img' aria-label='75% success' width='128' height='128'>
+</svg></div><div><h2 class='run-title'>Walk the hallway</h2><p class='pct'>75% success</p><p class='count'>15 successes, 75%</p><p class='stored-status'>Stored overall status: FAIL</p></div></div><p class='assessment-failure'>15 successes, 75%; overall FAIL.</p><div class='evaluators'><p class='evaluators-label'>Evaluators</p><div class='eval-row' role='tablist' aria-label='Evaluators' style='--eval-count:1'><details class='eval-disclosure' id='evaluator-Evaluator' name='run-evaluators' role='none'><summary class='eval-mark is-speaking' role='tab' id='run-evaluators-tab-1' aria-controls='run-evaluators-panel-1' aria-selected='false'><span class='eval-face' role='img' aria-label='Evaluator'><span class='eval-fallback' aria-hidden='true'>E</span></span><span class='eval-name eval-name-full'>Evaluator</span></summary></details></div><div class='eval-tabpanels'><div class='eval-tabpanel' role='tabpanel' id='run-evaluators-panel-1' aria-labelledby='run-evaluators-tab-1'><div class='eval-panel'><h4>Evaluator</h4><p class='descriptor-note'>No evaluator descriptor was stored.</p></div><div class='stored-run'><div class='card scenario-steps'><h2>This run</h2><div class='split'><div><div class='run-hero'><div class='badge'><svg class='success-ring' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024' role='img' aria-label='75% success' width='128' height='128'>
 <title>75% success</title>
 <circle cx='512' cy='512' r='512' fill='#01152D'/>
 <circle cx='510.5' cy='505.75' r='381.1' fill='none' stroke='#0B4F4D' stroke-width='42'/>
