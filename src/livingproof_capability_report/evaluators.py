@@ -585,10 +585,16 @@ def _mark(view, group, column):
         face = f"<span class='mini-ring'>{ring}</span>"
         klass = f"eval-mark {state} is-graded"
     else:
-        pip = "" if speaking else f"<span class='pip' aria-hidden='true'>{_CHECK}</span>"
+        # A not-graded run is neither a pass nor a failure: the neutral face has no check pip.
+        ungraded = bool(view.get("not_graded")) and not speaking
+        pip = (
+            "" if speaking or ungraded else f"<span class='pip' aria-hidden='true'>{_CHECK}</span>"
+        )
         face = f"{_icon_html(view)}{pip}"
         klass = f"eval-mark {state}"
     accessible = view["accessible_name"]
+    if view.get("not_graded") and not speaking:
+        accessible = f"{view['title']}, not graded"
     names = f"<span class='eval-name eval-name-full'>{esc(view['title'])}</span>"
     if view["short_title"]:
         names += f"<span class='eval-name eval-name-short'>{esc(view['short_title'])}</span>"
