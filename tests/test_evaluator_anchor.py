@@ -171,3 +171,93 @@ def test_the_readme_documents_the_anchor():
     readme = (Path(__file__).parents[1] / "README.md").read_text(encoding="utf-8")
     assert "### Deep-linking to an evaluator" in readme
     assert "evaluator-<evaluator id>" in readme and "#evaluator-livingproof-run-integrity" in readme
+
+
+# --- Art's refinements: scroll into view, and a CSS-only landed highlight ------------
+
+
+def _tall(path: Path) -> Path:
+    """The card below 2000px of filler, so landing on a tab has to scroll."""
+    text = path.read_text(encoding="utf-8")
+    path.write_text(
+        text.replace("<main class='wrap'>", "<main class='wrap'><div style='height:2000px'></div>")
+    )
+    return path
+
+
+def _in_view(page, selector: str) -> bool:
+    return page.evaluate(
+        "s => { const r = document.querySelector(s).getBoundingClientRect();"
+        " return r.top >= 0 && r.bottom <= innerHeight; }",
+        selector,
+    )
+
+
+def test_the_landed_tab_gets_a_scroll_margin_and_a_css_only_highlight():
+    from livingproof_capability_report import html_theme
+
+    css = html_theme.stylesheet()
+    assert re.search(r"\.eval-disclosure\[id\][^{]*\{[^}]*scroll-margin-top:", css)
+    assert "@keyframes eval-landed" in css
+    rule = re.search(r"\.eval-disclosure\[data-landed\][^{]*\{([^}]*)\}", css).group(1)
+    assert "outline: 2px solid var(--focus)" in rule and "animation: eval-landed 1.5s" in rule
+    reduced = re.search(r"@media \(prefers-reduced-motion: reduce\) \{(.*?)\n\}", css, re.S).group(
+        1
+    )
+    assert "data-landed" in reduced and "animation: none" in reduced
+
+
+@pytest.mark.parametrize("scenario", [False, True], ids=["no scenario", "with scenario"])
+def test_in_a_browser_landing_scrolls_into_view_and_marks_the_tab(scenario: bool, tmp_path):
+    path = _tall(_page(_front(scenario=scenario), tmp_path))
+    manager, browser = _chromium()
+    try:
+        page = browser.new_page(viewport={"width": 1280, "height": 700})
+        page.goto(f"{path.as_uri()}#evaluator-livingproof-run-integrity")
+        page.wait_for_function("() => document.querySelector('[data-landed]')", timeout=3000)
+        landed = page.locator("details[data-landed]")
+        assert landed.count() == 1
+        assert landed.get_attribute("id") == "evaluator-livingproof-run-integrity"
+        assert page.evaluate("scrollY") > 0
+        assert _in_view(page, "details[data-landed] > summary")
+        panel = page.evaluate(
+            "() => { const p = [...document.querySelectorAll('.eval-tabpanel')]"
+            ".find(e => e.offsetParent); const r = p.getBoundingClientRect();"
+            " return r.top >= 0 && r.bottom <= innerHeight; }"
+        )
+        assert panel, "the opened panel should be in view"
+        assert page.locator(".eval-tabpanel:visible h4").all_inner_texts() == ["Run Integrity"]
+        # Landing on another evaluator moves the mark: one at a time.
+        if scenario:
+            page.evaluate("location.hash = '#evaluator-livingproof-scenario'")
+            page.wait_for_function(
+                "() => document.querySelector('details[data-landed]')?.id"
+                " === 'evaluator-livingproof-scenario'",
+                timeout=3000,
+            )
+            assert page.locator("details[data-landed]").count() == 1
+        # The highlight is a 2px accent outline that fades by CSS animation, no timers.
+        style = page.evaluate(
+            "() => { const s = document.querySelector('details[data-landed] > summary');"
+            " const c = getComputedStyle(s);"
+            " return {w: c.outlineWidth, a: c.animationName, d: c.animationDuration,"
+            " fv: s.matches(':focus-visible')}; }"
+        )
+        if style["fv"]:
+            assert style["w"] == "3px"  # the keyboard focus ring wins, so it never fades away
+        else:
+            assert (style["w"], style["a"], style["d"]) == ("2px", "eval-landed", "1.5s")
+        # Reduced motion: the same outline, static.
+        calm = browser.new_page(viewport={"width": 1280, "height": 700}, reduced_motion="reduce")
+        calm.goto(f"{path.as_uri()}#evaluator-livingproof-run-integrity")
+        calm.wait_for_function("() => document.querySelector('[data-landed]')", timeout=3000)
+        rest = calm.evaluate(
+            "() => { const s = document.querySelector('details[data-landed] > summary');"
+            " const c = getComputedStyle(s);"
+            " return {w: c.outlineWidth, a: c.animationName, fv: s.matches(':focus-visible')}; }"
+        )
+        assert rest["a"] == "none"
+        assert rest["w"] == ("3px" if rest["fv"] else "2px")
+    finally:
+        browser.close()
+        manager.stop()
