@@ -609,7 +609,7 @@ def _mark(view, group, column):
     if view.get("not_graded") and not speaking:
         accessible = f"{view['title']}, not graded"
     elif view.get("integrity_error") and not speaking:
-        accessible = f"{view['title']}: ERROR"
+        accessible = f"{view['title']}: error"
     names = f"<span class='eval-name eval-name-full'>{esc(view['title'])}</span>"
     if view["short_title"]:
         names += f"<span class='eval-name eval-name-short'>{esc(view['short_title'])}</span>"
