@@ -982,6 +982,7 @@ details[open] > .step-summary .disclose-open { display: inline; }
   place-items: center;
   box-shadow: 0 0 0 2px var(--surface);
 }
+.eval-mark .pip.pip-fail { background: var(--chip-fail-fg); color: var(--surface); }
 .eval-mark .pip svg { width: 0.62rem; height: 0.62rem; display: block; }
 .eval-fallback { font-weight: 700; font-size: 0.95rem; line-height: 1; }
 /* A mark is a tab. Its details element holds only the summary; the panel is a

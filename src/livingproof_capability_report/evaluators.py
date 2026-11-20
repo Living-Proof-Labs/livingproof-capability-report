@@ -54,6 +54,13 @@ _CHECK = (
 )
 
 
+_CROSS = (
+    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' aria-hidden='true' "
+    "focusable='false'><path d='M4 4 12 12M12 4 4 12' fill='none' stroke='currentColor' "
+    "stroke-width='2.2' stroke-linecap='round'/></svg>"
+)
+
+
 def esc(value):
     return html.escape(str(value), quote=True)
 
@@ -213,6 +220,7 @@ def _apply_integrity(view, document):
     if status:
         view["status"] = status
         view["not_graded"] = not_graded_note(status)
+        view["integrity_error"] = status == "ERROR"
     percentage = _percentage(run.get("percentage"))
     if percentage is not None:
         view["percentage"] = percentage
@@ -587,14 +595,21 @@ def _mark(view, group, column):
     else:
         # A not-graded run is neither a pass nor a failure: the neutral face has no check pip.
         ungraded = bool(view.get("not_graded")) and not speaking
-        pip = (
-            "" if speaking or ungraded else f"<span class='pip' aria-hidden='true'>{_CHECK}</span>"
-        )
+        # An ERROR integrity status is a failing mark, never the passing tick (#106).
+        errored = bool(view.get("integrity_error")) and not speaking
+        if errored:
+            pip = f"<span class='pip pip-fail' aria-hidden='true'>{_CROSS}</span>"
+        elif speaking or ungraded:
+            pip = ""
+        else:
+            pip = f"<span class='pip' aria-hidden='true'>{_CHECK}</span>"
         face = f"{_icon_html(view)}{pip}"
-        klass = f"eval-mark {state}"
+        klass = f"eval-mark {state}{' is-error' if errored else ''}"
     accessible = view["accessible_name"]
     if view.get("not_graded") and not speaking:
         accessible = f"{view['title']}, not graded"
+    elif view.get("integrity_error") and not speaking:
+        accessible = f"{view['title']}: error"
     names = f"<span class='eval-name eval-name-full'>{esc(view['title'])}</span>"
     if view["short_title"]:
         names += f"<span class='eval-name eval-name-short'>{esc(view['short_title'])}</span>"
@@ -680,7 +695,9 @@ def _finding_meta(finding):
 def _callouts(views, *, quiet):
     rows = order_findings(views)
     if not rows:
-        if quiet and not any(view.get("not_graded") for view in views):
+        if quiet and not any(
+            view.get("not_graded") or view.get("integrity_error") for view in views
+        ):
             return f"<p class='callout-ok'>{esc(all_quiet_line(len(views)))}</p>"
         return ""
     speakers = [view for view in views if view["findings"]]
