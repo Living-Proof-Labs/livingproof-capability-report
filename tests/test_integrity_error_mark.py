@@ -50,7 +50,7 @@ def test_an_error_mark_has_no_pass_tick_and_a_matching_label():
     mark = _mark(front)
     assert "class='pip'" not in mark
     assert "pip-fail" in mark
-    assert "aria-label='Run Integrity: ERROR'" in mark
+    assert "aria-label='Run Integrity: error'" in mark
     assert "eval-mark is-quiet is-error" in mark
     assert "satisfied" not in front
 
