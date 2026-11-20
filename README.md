@@ -197,6 +197,18 @@ assessment has one, is muted text in the run detail, not on the ring. Today's
 bundles do not carry a descriptor yet, so the mark uses the fallback name and
 the letter disc and says so.
 
+### Deep-linking to an evaluator
+
+On a run page each evaluator tab carries a stable anchor, `evaluator-<evaluator id>`
+(for example `#evaluator-livingproof-run-integrity`), on the tab's `<details>` element.
+Characters outside `A-Z a-z 0-9 . _ -` become `-`, and a repeated id gets `-2`, `-3`.
+Opening the page with that fragment, or navigating to it, opens that evaluator's tab and
+moves focus to it. Link to this anchor from other pages. Do not link to
+`run-evaluators-tab-N`: the tab number follows the reporter's own order (tier, then
+title), so Run Integrity is tab 2 whenever a Scenario result is present. Without
+JavaScript the fragment only scrolls to the tab. The `run-evaluators-tab-N` and
+`run-evaluators-panel-N` ids are unchanged.
+
 Every value is read from the stored report and its source bundle and HTML-escaped;
 nothing is regraded or recomputed, and a field the report does not carry is left out.
 The trial table (Result, Catalog, Revision, Environment, Status, Reason) follows.

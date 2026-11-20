@@ -277,8 +277,10 @@ def test_the_script_is_self_contained_and_makes_no_network_calls_or_loads_anythi
     assert front.count("<script") == 1 == front.count("<script data-eval-tabs>")
     assert "<script src" not in front and "<script type" not in front
     script = _script(front)
+    # #109: reading the URL fragment (`location.hash`) is the one allowed use of `location`.
+    checked = script.replace("location.hash", "")
     for banned in _NETWORK_AND_LOADING:
-        assert banned not in script, banned
+        assert banned not in checked, banned
     assert not re.search(r"(?<![\w.-])eval\s*\(", script)
     # Allow-list: every global or member the script touches is one of these.
     allowed = {
@@ -290,7 +292,7 @@ def test_the_script_is_self_contained_and_makes_no_network_calls_or_loads_anythi
         "summary", "toggle", "focusin", "keydown", "data", "tabs", "s", "w", "t", "f", "a", "o",
         "x", "e", "i", "n", "c",
         # #109: opening a tab from its #evaluator-<id> fragment.
-        "window", "location", "hash", "id", "hashchange", "load", "setTimeout", "d", "m", "h",
+        "location", "hash", "id", "hashchange", "load", "d", "m", "h",
     }  # fmt: skip
     literals = set(re.findall(r"'([^']*)'", script))
     assert literals == {
@@ -348,7 +350,7 @@ def test_the_script_handles_arrows_home_and_end_and_leaves_activation_to_the_nat
     # Moving focus never opens a panel: no code path writes the details' open state.
     # The one exception (#109) is the URL fragment naming that tab, handled by `h`.
     assert script.count(".open=") == 1 and ".open =" not in script and "click" not in script
-    handler = script[script.index("function h()") : script.index("window.addEventListener")]
+    handler = script[script.index("function h()") : script.index("addEventListener('hashchange'")]
     assert ".open=true" in handler and "location.hash" in handler
     assert "tabIndex" in script and "aria-selected" in script
     # Without it the details element still opens, closes and styles the open tab.
