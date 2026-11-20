@@ -293,6 +293,8 @@ def test_the_script_is_self_contained_and_makes_no_network_calls_or_loads_anythi
         "x", "e", "i", "n", "c",
         # #109: opening a tab from its #evaluator-<id> fragment.
         "location", "hash", "id", "hashchange", "load", "d", "m", "h",
+        # Art's refinements on #109: scroll the landed tab and panel into view, mark the tab.
+        "getAttribute", "toggleAttribute", "scrollIntoView", "preventScroll", "block", "p",
     }  # fmt: skip
     literals = set(re.findall(r"'([^']*)'", script))
     assert literals == {
@@ -303,6 +305,9 @@ def test_the_script_is_self_contained_and_makes_no_network_calls_or_loads_anythi
         "summary",
         "hashchange",
         "load",
+        "aria-controls",
+        "data-landed",
+        "nearest",
         "aria-selected",
         "true",
         "false",
@@ -314,7 +319,7 @@ def test_the_script_is_self_contained_and_makes_no_network_calls_or_loads_anythi
     quoted = re.sub(r"'[^']*'", "''", script)
     words = set(re.findall(r"[A-Za-z_$][\w$]*", quoted))
     assert words <= allowed, sorted(words - allowed)
-    assert len(script) < 1800
+    assert len(script) < 2200
 
 
 def test_the_script_only_reads_and_writes_inside_its_own_container():
@@ -330,10 +335,15 @@ def test_the_script_only_reads_and_writes_inside_its_own_container():
         ":scope > .eval-disclosure > summary",
         ":scope > .eval-disclosure",
         "summary",
+        "#",
     ]
     # The one new outside read is the URL fragment (#109), matched against this row's own tabs.
     assert script.count("location.") == 1 and "location.hash" in script
     assert "hashchange" in script
+    # Landing scrolls the panel then the tab into view, and marks the tab for the CSS highlight.
+    # No timers: the fade is a CSS animation, and the script only sets the attribute.
+    assert script.count("scrollIntoView({block:'nearest'})") == 2
+    assert "toggleAttribute('data-landed'" in script and "setTimeout" not in script
 
 
 def test_the_markup_carries_no_roving_tabindex_so_with_scripts_off_every_tab_is_a_tab_stop():
