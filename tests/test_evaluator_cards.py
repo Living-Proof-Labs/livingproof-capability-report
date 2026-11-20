@@ -289,11 +289,18 @@ def test_the_script_is_self_contained_and_makes_no_network_calls_or_loads_anythi
         "length", "aria", "selected", "true", "false", "scope", "eval", "row", "disclosure",
         "summary", "toggle", "focusin", "keydown", "data", "tabs", "s", "w", "t", "f", "a", "o",
         "x", "e", "i", "n", "c",
+        # #109: opening a tab from its #evaluator-<id> fragment.
+        "window", "location", "hash", "id", "hashchange", "load", "setTimeout", "d", "m", "h",
     }  # fmt: skip
     literals = set(re.findall(r"'([^']*)'", script))
     assert literals == {
         ":scope > .eval-row",
         ":scope > .eval-disclosure > summary",
+        ":scope > .eval-disclosure",
+        "#",
+        "summary",
+        "hashchange",
+        "load",
         "aria-selected",
         "true",
         "false",
@@ -305,7 +312,7 @@ def test_the_script_is_self_contained_and_makes_no_network_calls_or_loads_anythi
     quoted = re.sub(r"'[^']*'", "''", script)
     words = set(re.findall(r"[A-Za-z_$][\w$]*", quoted))
     assert words <= allowed, sorted(words - allowed)
-    assert len(script) < 1400
+    assert len(script) < 1800
 
 
 def test_the_script_only_reads_and_writes_inside_its_own_container():
@@ -319,7 +326,12 @@ def test_the_script_only_reads_and_writes_inside_its_own_container():
     assert re.findall(r"querySelector(?:All)?\('([^']*)'", script) == [
         ":scope > .eval-row",
         ":scope > .eval-disclosure > summary",
+        ":scope > .eval-disclosure",
+        "summary",
     ]
+    # The one new outside read is the URL fragment (#109), matched against this row's own tabs.
+    assert script.count("location.") == 1 and "location.hash" in script
+    assert "hashchange" in script
 
 
 def test_the_markup_carries_no_roving_tabindex_so_with_scripts_off_every_tab_is_a_tab_stop():
@@ -334,7 +346,10 @@ def test_the_script_handles_arrows_home_and_end_and_leaves_activation_to_the_nat
         assert key in script
     assert "preventDefault" in script and "focus()" in script
     # Moving focus never opens a panel: no code path writes the details' open state.
-    assert ".open=" not in script and ".open =" not in script and "click" not in script
+    # The one exception (#109) is the URL fragment naming that tab, handled by `h`.
+    assert script.count(".open=") == 1 and ".open =" not in script and "click" not in script
+    handler = script[script.index("function h()") : script.index("window.addEventListener")]
+    assert ".open=true" in handler and "location.hash" in handler
     assert "tabIndex" in script and "aria-selected" in script
     # Without it the details element still opens, closes and styles the open tab.
     assert "[open] > summary.eval-mark" in html_theme.stylesheet()

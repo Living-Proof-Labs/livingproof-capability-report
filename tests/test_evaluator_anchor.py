@@ -165,3 +165,9 @@ def test_in_a_browser_the_fragment_opens_its_own_tab(scenario: bool, tmp_path):
     finally:
         browser.close()
         manager.stop()
+
+
+def test_the_readme_documents_the_anchor():
+    readme = (Path(__file__).parents[1] / "README.md").read_text(encoding="utf-8")
+    assert "### Deep-linking to an evaluator" in readme
+    assert "evaluator-<evaluator id>" in readme and "#evaluator-livingproof-run-integrity" in readme
