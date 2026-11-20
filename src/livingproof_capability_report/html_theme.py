@@ -1045,6 +1045,22 @@ details[open] > .step-summary .disclose-open { display: inline; }
   outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
+/* Landing on #evaluator-<id> (the tabs script sets data-landed): keep the tab clear of
+   the top edge, and mark it with a 2px accent outline that fades over 1.5s. The keyboard
+   focus ring above wins while the tab has it, so a focus indicator never fades away. */
+.eval-disclosure[id] { scroll-margin-top: 1rem; }
+@keyframes eval-landed {
+  from { outline-color: var(--focus); }
+  to { outline-color: transparent; }
+}
+.eval-disclosure[data-landed] > summary.eval-mark:not(:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  animation: eval-landed 1.5s ease-out forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .eval-disclosure[data-landed] > summary.eval-mark:not(:focus-visible) { animation: none; }
+}
 /* Browser floor: the first MAX_PANEL_TABS panels are revealed only by :has()
    (Chrome 105, Safari 15.4, Firefox 121). In an older browser an open panel for
    mark 1 to 24 stays display:none; the tab still opens, closes and shows the
