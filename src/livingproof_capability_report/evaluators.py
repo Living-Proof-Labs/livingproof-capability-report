@@ -10,6 +10,7 @@ run assessment, and the descriptor. The card itself shows the stored success
 ring and only the finding rows an evaluator supplied.
 """
 
+from datetime import datetime, timezone
 import html
 import json
 import re
@@ -84,6 +85,99 @@ def _trial(value):
         return value
     text = _visible(value) if isinstance(value, str) else ""
     return text or None
+
+
+_LATE_THRESHOLD_SECONDS = 600
+
+
+def _parse_iso_utc(value):
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        dt = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        return None
+    return dt.astimezone(timezone.utc)
+
+
+def _utc_time_text(dt):
+    return f"{dt.day} {dt.strftime('%b %Y, %H:%M')} UTC"
+
+
+def _time_html(value):
+    dt = _parse_iso_utc(value)
+    if dt is None:
+        return ""
+    canonical = dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    utc_text = _utc_time_text(dt)
+    return f"<time datetime='{esc(canonical)}' title='{esc(utc_text)}'>{esc(utc_text)}</time>"
+
+
+def _late_note(graded_dt, run_dt):
+    if graded_dt is None or run_dt is None:
+        return ""
+    delta = int((graded_dt - run_dt).total_seconds())
+    if delta <= _LATE_THRESHOLD_SECONDS:
+        return ""
+    if delta < 3600:
+        return f"Graded {delta // 60} min after the run"
+    if delta < 86400:
+        return f"Graded {max(1, round(delta / 3600))} h after the run"
+    return f"Graded {max(1, round(delta / 86400))} d after the run"
+
+
+def _run_completed_at(report, summary):
+    bundle = report.get("source_bundle")
+    results = bundle.get("results") if isinstance(bundle, dict) else None
+    by_id = {
+        r["id"]: r for r in (results or []) if isinstance(r, dict) and isinstance(r.get("id"), str)
+    }
+    result_ids = summary.get("result_ids") or list(by_id.keys())
+    trial_times = []
+    for rid in result_ids:
+        res = by_id.get(rid)
+        if not isinstance(res, dict):
+            continue
+        ts = res.get("timestamps")
+        if isinstance(ts, dict):
+            dt = _parse_iso_utc(ts.get("completed_at"))
+            if dt is not None:
+                trial_times.append(dt)
+    if trial_times:
+        return max(trial_times)
+    summary_ts = summary.get("timestamps")
+    if isinstance(summary_ts, dict):
+        dt = _parse_iso_utc(summary_ts.get("completed_at"))
+        if dt is not None:
+            return dt
+    scenario_times = []
+    embedded_times = []
+    for rid in result_ids:
+        res = by_id.get(rid)
+        if not isinstance(res, dict):
+            continue
+        for doc in _embedded(res):
+            ts = doc.get("timestamps")
+            dt = _parse_iso_utc(ts.get("completed_at")) if isinstance(ts, dict) else None
+            if dt is None:
+                continue
+            ev = doc.get("evaluator")
+            if isinstance(ev, dict) and ev.get("kind") == "scenario":
+                scenario_times.append(dt)
+            else:
+                embedded_times.append(dt)
+    if scenario_times:
+        return max(scenario_times)
+    if embedded_times:
+        return max(embedded_times)
+    return None
 
 
 def is_result(document):
@@ -167,6 +261,7 @@ def _view(
     findings,
     missing_descriptor,
     identity,
+    completed_at="",
 ):
     title = title or FALLBACK_TITLE
     short = short_title if short_title and short_title != title else ""
@@ -185,6 +280,8 @@ def _view(
         "findings": findings,
         "missing_descriptor": missing_descriptor,
         "identity": identity or title,
+        "completed_at": completed_at,
+        "late_note": "",
         "body_html": "",
         "force_speaking": False,
         "letter": fallback_letter(short, title),
@@ -229,6 +326,14 @@ def _apply_integrity(view, document):
         view["scope"] = scope
 
 
+def _document_completed_at(document):
+    ts = document.get("timestamps")
+    if not isinstance(ts, dict):
+        return ""
+    dt = _parse_iso_utc(ts.get("completed_at"))
+    return dt.strftime("%Y-%m-%dT%H:%M:%SZ") if dt is not None else ""
+
+
 def resolve_one(document):
     """One mark from a result envelope or a bare descriptor (example data)."""
     if is_result(document):
@@ -264,6 +369,7 @@ def resolve_one(document):
             findings=findings,
             missing_descriptor=descriptor is None,
             identity=identity,
+            completed_at=_document_completed_at(document),
         )
         _apply_integrity(view, document)
         return view
@@ -286,6 +392,7 @@ def resolve_one(document):
         findings=findings,
         missing_descriptor=False,
         identity=title,
+        completed_at=_document_completed_at(document),
     )
 
 
@@ -301,11 +408,16 @@ def _merge_group(documents):
         finding["index"] = index
     grades = [view["grade"] for view in views if view["grade"] is not None]
     grade = grades[0] if grades and all(item == grades[0] for item in grades) else None
+    completed_dts = [
+        dt for dt in (_parse_iso_utc(view["completed_at"]) for view in views) if dt is not None
+    ]
+    completed_at = max(completed_dts).strftime("%Y-%m-%dT%H:%M:%SZ") if completed_dts else ""
     chosen = dict(chosen)
     chosen["findings"] = findings
     chosen["grade"] = grade
     chosen["missing_descriptor"] = all(view["missing_descriptor"] for view in views)
     chosen["identity"] = first["identity"]
+    chosen["completed_at"] = completed_at
     if not chosen["details"]:
         chosen["details"] = next((view["details"] for view in views if view["details"]), "")
     return chosen
@@ -520,7 +632,18 @@ def assessment_failure_line(summary):
     return ""
 
 
-def _compared_hero(report, summary):
+def _run_time_html(run_dt):
+    if run_dt is None:
+        return "<p class='run-time is-missing'>Time not recorded</p>"
+    canonical = run_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    utc_text = _utc_time_text(run_dt)
+    return (
+        "<p class='run-time'>Ran "
+        f"<time datetime='{esc(canonical)}' title='{esc(utc_text)}'>{esc(utc_text)}</time></p>"
+    )
+
+
+def _compared_hero(report, summary, run_dt=None):
     """The one outcome and the stored statement. No success ring and no rate."""
     description = report["source_bundle"].get("description")
     mission = description.get("mission") if isinstance(description, dict) else None
@@ -531,13 +654,14 @@ def _compared_hero(report, summary):
     grade = summary.get("grade") if isinstance(summary.get("grade"), str) else ""
     title = f"<h2 class='run-title'>{esc(headline)}</h2>" if headline else ""
     statement_html = f"<p class='pct'>{esc(statement)}</p>" if statement else ""
+    time_html = _run_time_html(run_dt)
     status = f"<p class='stored-status'>Stored overall status: {esc(grade)}</p>" if grade else ""
-    return f"<div class='summary-hero'><div>{title}{statement_html}{status}</div></div>"
+    return f"<div class='summary-hero'><div>{title}{statement_html}{time_html}{status}</div></div>"
 
 
-def _hero(report, summary):
+def _hero(report, summary, run_dt=None):
     if compared_block(summary) is not None:
-        return _compared_hero(report, summary)
+        return _compared_hero(report, summary, run_dt)
     description = report["source_bundle"].get("description")
     mission = description.get("mission") if isinstance(description, dict) else None
     headline = _visible(mission.get("title")) if isinstance(mission, dict) else ""
@@ -552,6 +676,7 @@ def _hero(report, summary):
         face, complete, fill = shown["face"], shown["complete"], shown["fill"]
         counted = success_count(summary.get("k"), summary.get("n"))
         count = f"<p class='count'>{esc(counted)}</p>" if counted else ""
+    time_html = _run_time_html(run_dt)
     grade = summary.get("grade") if isinstance(summary.get("grade"), str) else ""
     status = f"<p class='stored-status'>Stored overall status: {esc(grade)}</p>" if grade else ""
     badge = html_theme.success_badge(face, phrase, esc, complete=complete, fill=fill, size=128)
@@ -559,7 +684,7 @@ def _hero(report, summary):
     return (
         "<div class='summary-hero'>"
         f"<div class='badge'>{badge}</div><div>"
-        f"{title}<p class='pct'>{esc(phrase)}</p>{count}{status}</div></div>"
+        f"{title}<p class='pct'>{esc(phrase)}</p>{count}{time_html}{status}</div></div>"
     )
 
 
@@ -581,7 +706,7 @@ def _anchor_id(identity, seen):
     return candidate
 
 
-def _mark(view, group, column, anchor=None):
+def _mark(view, group, column, anchor=None, *, show_time=True):
     """One tab (a details element holding only its summary) and its panel.
 
     The tab is the summary. The panel carries the descriptor detail and, for the
@@ -629,7 +754,7 @@ def _mark(view, group, column, anchor=None):
     panel_id = f"{group}-panel-{column}"
     panel = (
         f"<div class='eval-tabpanel' role='tabpanel' id='{esc(panel_id)}' "
-        f"aria-labelledby='{esc(tab_id)}'>{_panel(view)}"
+        f"aria-labelledby='{esc(tab_id)}'>{_panel(view, show_time=show_time)}"
         f"<div class='stored-run'>{view.get('body_html') or ''}</div></div>"
     )
     inline = column > html_theme.MAX_PANEL_TABS
@@ -648,7 +773,7 @@ def _mark(view, group, column, anchor=None):
     return f"{tab}</details>", panel
 
 
-def _panel(view):
+def _panel(view, *, show_time=True):
     bits = [f"<h4>{esc(view['title'])}</h4>"]
     if view["version"]:
         bits.append(f"<p class='meta'>{esc(view['version'])}</p>")
@@ -674,6 +799,14 @@ def _panel(view):
     label = tier_label(view["tier"])
     if label:
         bits.append(f"<p class='meta'>Tier: {esc(label)}</p>")
+    if show_time:
+        time_html = _time_html(view.get("completed_at"))
+        if time_html:
+            bits.append(f"<p class='meta'>Graded {time_html}</p>")
+            if view.get("late_note"):
+                bits.append(f"<p class='meta late-note'>{esc(view['late_note'])}</p>")
+        else:
+            bits.append("<p class='meta is-missing'>Time not recorded</p>")
     if view["details"]:
         bits.append(f"<p class='more'>{esc(view['details'])}</p>")
     if view["missing_descriptor"]:
@@ -776,14 +909,14 @@ _TABS_SCRIPT = (
 )
 
 
-def render_marks(views, *, group="eval-marks", quiet=False, anchors=False):
+def render_marks(views, *, group="eval-marks", quiet=False, anchors=False, show_time=True):
     """The tabs and panels. With ``anchors``, each tab also gets ``id="evaluator-<id>"``."""
     ordered = order_marks(views)
     tabs, panels = [], []
     seen = set()
     for index, view in enumerate(ordered):
         anchor = _anchor_id(view["identity"], seen) if anchors else None
-        tab, panel = _mark(view, group, index + 1, anchor)
+        tab, panel = _mark(view, group, index + 1, anchor, show_time=show_time)
         tabs.append(tab)
         panels.append(panel)
     return (
@@ -838,7 +971,7 @@ def render_example_card(
         f"<div class='badge'>{badge}</div><div>"
         f"<h3 class='run-title'>{esc(run_title)}</h3>"
         f"<p class='pct'>{esc(phrase)}</p>{count_html}</div></div>"
-        f"{render_marks(views, group=group, quiet=quiet)}</article>"
+        f"{render_marks(views, group=group, quiet=quiet, show_time=False)}</article>"
     )
 
 
@@ -863,7 +996,14 @@ def summary_front(report, stored_body, evidence_results=None):
         if failed and not host["findings"]:
             host["force_speaking"] = True
     quiet = not failed and not any(view["findings"] or view.get("force_speaking") for view in views)
-    heroes = "".join(_hero(report, summary) for summary in runs)
+    run_times = [_run_completed_at(report, summary) for summary in runs]
+    valid_run_times = [dt for dt in run_times if dt is not None]
+    latest_run_dt = max(valid_run_times) if valid_run_times else None
+    for view in views:
+        view["late_note"] = _late_note(_parse_iso_utc(view.get("completed_at")), latest_run_dt)
+    heroes = "".join(
+        _hero(report, summary, run_dt) for summary, run_dt in zip(runs, run_times, strict=True)
+    )
     failure = ""
     if not any(view["findings"] for view in views):
         lines = [assessment_failure_line(summary) for summary in runs]

@@ -895,6 +895,10 @@ details[open] > .step-summary .disclose-open { display: inline; }
   gap: 0.85rem 1rem;
   min-width: 0;
 }
+.summary-hero > div { min-width: 0; }
+@media (max-width: 480px) {
+  .summary-hero { flex-direction: column; align-items: flex-start; }
+}
 .summary-hero .badge svg { width: 6.5rem; height: 6.5rem; display: block; }
 .summary-card.is-compact .summary-hero .badge svg { width: 4.5rem; height: 4.5rem; }
 .summary-hero .run-title {
@@ -905,7 +909,13 @@ details[open] > .step-summary .disclose-open { display: inline; }
   line-height: 1.25;
 }
 .summary-hero .pct { margin: 0.1rem 0 0; font-size: 1.35rem; font-weight: 650; }
-.summary-hero .count, .summary-hero .stored-status { margin: 0.1rem 0 0; color: var(--text-muted); }
+.summary-hero .count, .summary-hero .stored-status, .summary-hero .run-time {
+  margin: 0.1rem 0 0;
+  color: var(--text-muted);
+}
+.summary-hero .run-time { font-size: 0.92rem; }
+.summary-hero .run-time.is-missing, .eval-panel .meta.is-missing { font-style: italic; }
+time { white-space: nowrap; }
 .evaluators {
   margin-top: 0.85rem;
   padding-top: 0.75rem;
@@ -1340,6 +1350,36 @@ def history_markup(history):
     return f"<nav class='run-history' aria-label='{label}'><a href='{href}'>{label}</a></nav>"
 
 
+_TIME_SCRIPT = (
+    "<script data-report-times>(function(){"
+    "function fmt(iso){"
+    "var ms=Date.parse(iso);"
+    "if(!Number.isFinite(ms)||typeof Intl==='undefined'||!Intl.DateTimeFormat)return '';"
+    "try{"
+    "var d=new Date(ms);"
+    "var df=new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',"
+    "hour:'2-digit',minute:'2-digit',hourCycle:'h23'});"
+    "var p={};df.formatToParts(d).forEach(function(x){p[x.type]=x.value;});"
+    "if(!p.day||!p.month||!p.year||!p.hour||!p.minute)return '';"
+    "var z='';"
+    "try{var tf=new Intl.DateTimeFormat(undefined,{timeZoneName:'short'});"
+    "var tp=tf.formatToParts(d).find(function(x){return x.type==='timeZoneName';});"
+    "if(tp&&tp.value)z=tp.value;}catch(_e){z='';}"
+    "if(!z){var om=-d.getTimezoneOffset();"
+    "if(om===0){z='UTC';}else{var s=om>=0?'+':'-',a=Math.abs(om),"
+    "hh=String(Math.floor(a/60)).padStart(2,'0'),mm=String(a%60).padStart(2,'0');"
+    "z=mm==='00'?'UTC'+s+hh:'UTC'+s+hh+':'+mm;}}"
+    "return p.day+' '+p.month+' '+p.year+', '+p.hour+':'+p.minute+' '+z;"
+    "}catch(_e){return '';}}"
+    "function run(){document.querySelectorAll('time[datetime]').forEach(function(el){"
+    "var text=fmt(el.getAttribute('datetime')||'');if(!text)return;"
+    "el.textContent=text;el.setAttribute('title',text);});}"
+    "if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',run);}"
+    "else{run();}"
+    "})();</script>"
+)
+
+
 def page(
     *,
     title,
@@ -1388,5 +1428,5 @@ def page(
         + "</main>"
         "<footer class='wrap'><p class='foot'>"
         "<a href='https://docs.livingprooflabs.com/reading-reports.html'>"
-        "How to read this report</a></p></footer></body></html>\n"
+        f"How to read this report</a></p></footer>{_TIME_SCRIPT}</body></html>\n"
     )
