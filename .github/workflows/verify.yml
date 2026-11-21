@@ -301,3 +301,14 @@ jobs:
           curl -fsSL "$base/compatibility-arm64.json" -o compatibility-arm64.json
           curl -fsSL "$base/compatibility-amd64.json" -o compatibility-amd64.json
           sha256sum --ignore-missing -c SHA256SUMS
+  deploy-manual:
+    needs: [release, publish-release]
+    if: needs.release.outputs.draft-created == 'true' && needs.publish-release.result == 'success'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/documentation.yml
+    with:
+      release_tag: ${{ needs.release.outputs.git-tag }}
+      release_version: ${{ needs.release.outputs.version }}
