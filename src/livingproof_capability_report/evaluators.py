@@ -107,6 +107,10 @@ def _parse_iso_utc(value):
     return dt.astimezone(timezone.utc)
 
 
+def _utc_iso(dt):
+    return dt.isoformat().replace("+00:00", "Z")
+
+
 def _utc_time_text(dt):
     return f"{dt.day} {dt.strftime('%b %Y, %H:%M')} UTC"
 
@@ -115,7 +119,7 @@ def _time_html(value):
     dt = _parse_iso_utc(value)
     if dt is None:
         return ""
-    canonical = dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    canonical = _utc_iso(dt)
     utc_text = _utc_time_text(dt)
     return f"<time datetime='{esc(canonical)}' title='{esc(utc_text)}'>{esc(utc_text)}</time>"
 
@@ -123,11 +127,11 @@ def _time_html(value):
 def _late_note(graded_dt, run_dt):
     if graded_dt is None or run_dt is None:
         return ""
-    delta = int((graded_dt - run_dt).total_seconds())
+    delta = (graded_dt - run_dt).total_seconds()
     if delta <= _LATE_THRESHOLD_SECONDS:
         return ""
     if delta < 3600:
-        return f"Graded {delta // 60} min after the run"
+        return f"Graded {int(delta // 60)} min after the run"
     if delta < 86400:
         return f"Graded {max(1, round(delta / 3600))} h after the run"
     return f"Graded {max(1, round(delta / 86400))} d after the run"
@@ -157,26 +161,6 @@ def _run_completed_at(report, summary):
         dt = _parse_iso_utc(summary_ts.get("completed_at"))
         if dt is not None:
             return dt
-    scenario_times = []
-    embedded_times = []
-    for rid in result_ids:
-        res = by_id.get(rid)
-        if not isinstance(res, dict):
-            continue
-        for doc in _embedded(res):
-            ts = doc.get("timestamps")
-            dt = _parse_iso_utc(ts.get("completed_at")) if isinstance(ts, dict) else None
-            if dt is None:
-                continue
-            ev = doc.get("evaluator")
-            if isinstance(ev, dict) and ev.get("kind") == "scenario":
-                scenario_times.append(dt)
-            else:
-                embedded_times.append(dt)
-    if scenario_times:
-        return max(scenario_times)
-    if embedded_times:
-        return max(embedded_times)
     return None
 
 
@@ -331,7 +315,7 @@ def _document_completed_at(document):
     if not isinstance(ts, dict):
         return ""
     dt = _parse_iso_utc(ts.get("completed_at"))
-    return dt.strftime("%Y-%m-%dT%H:%M:%SZ") if dt is not None else ""
+    return _utc_iso(dt) if dt is not None else ""
 
 
 def resolve_one(document):
@@ -411,7 +395,7 @@ def _merge_group(documents):
     completed_dts = [
         dt for dt in (_parse_iso_utc(view["completed_at"]) for view in views) if dt is not None
     ]
-    completed_at = max(completed_dts).strftime("%Y-%m-%dT%H:%M:%SZ") if completed_dts else ""
+    completed_at = _utc_iso(max(completed_dts)) if completed_dts else ""
     chosen = dict(chosen)
     chosen["findings"] = findings
     chosen["grade"] = grade
@@ -635,7 +619,7 @@ def assessment_failure_line(summary):
 def _run_time_html(run_dt):
     if run_dt is None:
         return "<p class='run-time is-missing'>Time not recorded</p>"
-    canonical = run_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    canonical = _utc_iso(run_dt)
     utc_text = _utc_time_text(run_dt)
     return (
         "<p class='run-time'>Ran "

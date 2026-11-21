@@ -120,6 +120,48 @@ def test_run_header_and_evaluator_panels_show_utc_fallback_and_late_note():
     assert core.render(report, "html") == html
 
 
+def test_checked_in_g1_recording_does_not_borrow_its_scenario_grading_time():
+    report = _corner_report()
+    assert report["source_bundle"]["results"][0].get("timestamps") is None
+
+    html = core.render(report, "html")
+
+    assert "<p class='run-time is-missing'>Time not recorded</p>" in html
+    assert "Graded <time datetime='2026-11-16T17:27:29Z'" in html
+    assert "class='meta late-note'" not in html
+
+
+def test_recorded_run_summary_is_used_only_when_trial_time_is_missing():
+    summary_time = "2026-11-20T06:41:00Z"
+    report = _with_timestamps(trial_times=(None,))
+    report["summaries"][0]["timestamps"] = {"completed_at": summary_time}
+    assert f"Ran <time datetime='{summary_time}'" in core.render(report, "html")
+
+    report = _with_timestamps()
+    report["summaries"][0]["timestamps"] = {"completed_at": summary_time}
+    assert "Ran <time datetime='2026-11-20T06:42:00Z'" in core.render(report, "html")
+
+
+@pytest.mark.parametrize(
+    ("graded_time", "expected_late"),
+    [
+        ("2026-11-20T06:52:00.100000Z", False),
+        ("2026-11-20T06:52:00.900000Z", True),
+    ],
+)
+def test_late_grading_preserves_fractional_seconds(graded_time, expected_late):
+    run_time = "2026-11-20T06:42:00.100000Z"
+    report = _with_timestamps(
+        trial_times=(run_time,),
+        scenario_time=graded_time,
+        integrity_time=None,
+    )
+    html = core.render(report, "html")
+    assert f"Ran <time datetime='{run_time}'" in html
+    assert f"Graded <time datetime='{graded_time}'" in html
+    assert ("<p class='meta late-note'>Graded 10 min after the run</p>" in html) is expected_late
+
+
 def test_winter_timestamp_aest_and_missing_timestamps():
     # Missing timestamps on both run and evaluator -> Time not recorded.
     missing = _with_timestamps(
