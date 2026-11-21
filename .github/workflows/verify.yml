@@ -47,6 +47,24 @@ jobs:
         env:
           LIVINGPROOF_REQUIRE_BROWSER: '1'
         run: uv run --locked --no-sync pytest tests/test_evaluator_cards.py -v -rs
+      - name: Capture report timestamp browser evidence
+        if: github.event_name == 'pull_request' && matrix.architecture == 'amd64'
+        shell: bash
+        run: |
+          browser_tmp="$(mktemp -d "${RUNNER_TEMP}/report-timestamp-browser.XXXXXX")"
+          uv run --locked --no-sync pytest \
+            tests/test_run_timestamps.py::test_browser_viewer_timezones_no_js_mobile_and_print \
+            --basetemp "$browser_tmp"
+          evidence_dir="artifacts/report-timestamp-browser"
+          mkdir -p "$evidence_dir"
+          for file in desktop-sydney.png mobile-320.png print-sydney.png report-print.pdf; do
+            source="$(find "$browser_tmp" -mindepth 2 -maxdepth 2 -type f -name "$file" -print -quit)"
+            test -n "$source" && test -s "$source" || {
+              echo "Expected browser evidence is missing: $file" >&2
+              exit 1
+            }
+            cp -- "$source" "$evidence_dir/$file"
+          done
       - name: Root CLI and reporter shared-environment regression
         env:
           LIVINGPROOF_NETWORK: '1'

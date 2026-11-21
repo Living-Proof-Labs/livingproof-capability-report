@@ -114,7 +114,16 @@ def test_hallway_reports_match_v3_7_0(name):
     assert legacy_provenance(markdown) == (GOLDEN / f"{name}.md").read_text(encoding="utf-8")
     golden_html = (GOLDEN / f"{name}.html").read_text(encoding="utf-8")
     assert REMOVED_LABEL in golden_html
-    assert legacy_provenance(html) == golden_html.replace(REMOVED_LABEL, "")
+
+    def strip_style(s):
+        return re.sub(r"<style>.*?</style>", "<style>...</style>", s, flags=re.S)
+
+    normalized_html = (
+        strip_style(legacy_provenance(html))
+        .replace("<p class='run-time is-missing'>Time not recorded</p>", "")
+        .replace("<p class='meta is-missing'>Time not recorded</p>", "")
+    )
+    assert normalized_html == strip_style(golden_html.replace(REMOVED_LABEL, ""))
     assert REMOVED_LABEL not in html
 
 

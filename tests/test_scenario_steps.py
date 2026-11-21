@@ -225,7 +225,9 @@ def test_trial_number_is_the_stored_seed_and_duration_comes_from_the_observation
         == 4
     )
     # The only script is the small one that keeps the evaluator tabs' aria-selected current.
-    assert rendered.output.count("<script") == rendered.output.count("<script data-eval-tabs>")
+    assert rendered.output.count("<script") == rendered.output.count(
+        "<script data-eval-tabs>"
+    ) + rendered.output.count("<script data-report-times>")
 
 
 def test_insufficient_evidence_is_named_and_values_are_escaped():
