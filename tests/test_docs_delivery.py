@@ -37,9 +37,10 @@ def test_only_published_wheel_delivery_depends_on_the_package_finalizer():
     assert build["with"]["package_version"] == "${{ needs.release.outputs.version }}"
     assert build["permissions"] == {"contents": "read"}
     replay = workflow("documentation")["jobs"]
+    release_pin = jobs["release"]["uses"].rsplit("@", 1)[1]
     assert {job["uses"] for job in replay.values()} == {
         "Living-Proof-Labs/collaboration-guidelines/.github/workflows/"
-        "semantic-release-candidate.yml@v9.9.2",
+        f"semantic-release-candidate.yml@{release_pin}",
         "./.github/workflows/documentation-build.yml",
         "./.github/workflows/documentation-deploy.yml",
     }
