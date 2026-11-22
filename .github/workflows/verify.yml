@@ -47,6 +47,24 @@ jobs:
         env:
           LIVINGPROOF_REQUIRE_BROWSER: '1'
         run: uv run --locked --no-sync pytest tests/test_evaluator_cards.py -v -rs
+      - name: Capture report timestamp browser evidence
+        if: github.event_name == 'pull_request' && matrix.architecture == 'amd64'
+        shell: bash
+        run: |
+          browser_tmp="$(mktemp -d "${RUNNER_TEMP}/report-timestamp-browser.XXXXXX")"
+          uv run --locked --no-sync pytest \
+            tests/test_run_timestamps.py::test_browser_viewer_timezones_no_js_mobile_and_print \
+            --basetemp "$browser_tmp"
+          evidence_dir="artifacts/report-timestamp-browser"
+          mkdir -p "$evidence_dir"
+          for file in desktop-sydney.png mobile-320.png print-sydney.png report-print.pdf; do
+            source="$(find "$browser_tmp" -mindepth 2 -maxdepth 2 -type f -name "$file" -print -quit)"
+            test -n "$source" && test -s "$source" || {
+              echo "Expected browser evidence is missing: $file" >&2
+              exit 1
+            }
+            cp -- "$source" "$evidence_dir/$file"
+          done
       - name: Root CLI and reporter shared-environment regression
         env:
           LIVINGPROOF_NETWORK: '1'
@@ -108,7 +126,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: write
-    uses: Living-Proof-Labs/collaboration-guidelines/.github/workflows/semantic-release.yml@v9.7.9
+    uses: Living-Proof-Labs/collaboration-guidelines/.github/workflows/semantic-release.yml@v9.9.2
     with:
       draft-release: true
   publish:
@@ -301,14 +319,41 @@ jobs:
           curl -fsSL "$base/compatibility-arm64.json" -o compatibility-arm64.json
           curl -fsSL "$base/compatibility-amd64.json" -o compatibility-amd64.json
           sha256sum --ignore-missing -c SHA256SUMS
-  deploy-manual:
+  build-released-manual:
     needs: [release, publish-release]
-    if: needs.release.outputs.draft-created == 'true' && needs.publish-release.result == 'success'
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      needs.release.outputs.draft-created == 'true' &&
+      needs.publish-release.result == 'success' &&
+      needs.release.outputs.version != '' &&
+      needs.release.outputs.git-tag == format('v{0}', needs.release.outputs.version) &&
+      needs.release.outputs.commit == github.sha
+    permissions:
+      contents: read
+    uses: ./.github/workflows/documentation-build.yml
+    with:
+      version: ${{ needs.release.outputs.version }}
+      package_version: ${{ needs.release.outputs.version }}
+      release_tag: ${{ needs.release.outputs.git-tag }}
+      commit: ${{ needs.release.outputs.commit }}
+      run: ${{ format('{0}', github.run_id) }}
+      attempt: ${{ format('{0}', github.run_attempt) }}
+  deploy-manual:
+    needs: [release, build-released-manual]
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      needs.build-released-manual.outputs.artifact-id != '' &&
+      needs.build-released-manual.outputs.digest != ''
     permissions:
       contents: read
       pages: write
       id-token: write
-    uses: ./.github/workflows/documentation.yml
+    uses: ./.github/workflows/documentation-deploy.yml
     with:
       release_tag: ${{ needs.release.outputs.git-tag }}
-      release_version: ${{ needs.release.outputs.version }}
+      version: ${{ needs.release.outputs.version }}
+      commit: ${{ needs.release.outputs.commit }}
+      run: ${{ format('{0}', github.run_id) }}
+      attempt: ${{ needs.build-released-manual.outputs.attempt }}
+      artifact_id: ${{ needs.build-released-manual.outputs.artifact-id }}
+      digest: ${{ needs.build-released-manual.outputs.digest }}

@@ -95,11 +95,12 @@ def test_documented_command_serves_extracted_artifact(tmp_path):
     """
     archive_path = os.environ.get("REPORTER_DOCS_PREVIEW_ZIP")
     if not archive_path:
-        workflow = yaml.safe_load((ROOT / ".github/workflows/documentation.yml").read_text())
+        workflow = yaml.safe_load((ROOT / ".github/workflows/documentation-build.yml").read_text())
         (upload,) = [
             s["with"]
             for s in workflow["jobs"]["build"]["steps"]
-            if s.get("uses", "").startswith("actions/upload-artifact@")
+            if s.get("id") == "evidence"
+            and s.get("uses", "").startswith("actions/upload-artifact@")
         ]
         files = set()
         for pattern in upload["path"].splitlines():
@@ -155,12 +156,18 @@ def test_common_navigation_and_exact_docs_identity_on_every_page():
         local_links = {link.removeprefix("./") for link in page.links}
         assert "license.html" in local_links and "contributing.html" in local_links, path.name
         assert repo + "/tree/" + record["source_commit"] in page.links, path.name
-        assert "Docs: development" in path.read_text(), path.name
+        assert record["docs_label"] in path.read_text(), path.name
     assert record["guidelines"] == "v6.0.0"
     assert record["guidelines_commit"] == "52a2f274576dab20e96ee1152b6c8d187cfbf377"
     provenance = (SITE / "provenance.html").read_text()
     assert record["package_version"] in provenance
-    assert "Candidate metadata is not a claim of a published package release." in provenance
+    if record["edition"] == "release":
+        assert record["release_tag"] == "v" + record["version"]
+        assert record["package_version"] == record["version"]
+        assert repo + "/releases/tag/" + record["release_tag"] in provenance
+        assert f"Released wheel SHA-256: <code>{record['wheel_sha256']}</code>" in provenance
+    else:
+        assert "Candidate metadata is not a claim of a published package release." in provenance
 
 
 def test_api_reference_matches_installed_wheel_and_consumer_example(tmp_path):

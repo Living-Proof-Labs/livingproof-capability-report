@@ -263,8 +263,8 @@ def test_repository_workflows_authenticate_every_main_freshness_read():
             calls.append(name)
         problems.extend(freshness_problems(name, text))
     assert problems == [], "\n".join(problems)
-    assert calls == ["documentation.yml"]
-    document = yaml.safe_load((WORKFLOWS / "documentation.yml").read_text())
+    assert calls == ["documentation-deploy.yml"]
+    document = yaml.safe_load((WORKFLOWS / "documentation-deploy.yml").read_text())
     job = document["jobs"]["deploy"]
     assert job["permissions"] == {
         "contents": "read",
@@ -313,15 +313,15 @@ def test_contents_write_fails_even_when_the_read_sends_a_token():
 
 
 def test_dropping_the_documented_token_fails():
-    text = (WORKFLOWS / "documentation.yml").read_text()
+    text = (WORKFLOWS / "documentation-deploy.yml").read_text()
     stripped = text.replace("          GH_TOKEN: ${{ github.token }}\n", "")
     assert stripped != text
-    problems = freshness_problems("documentation.yml", stripped)
+    problems = freshness_problems("documentation-deploy.yml", stripped)
     assert any("without authentication" in problem for problem in problems), problems
 
 
 def _run_guard(tmp_path, *, remote_sha, http_status):
-    document = yaml.safe_load((WORKFLOWS / "documentation.yml").read_text())
+    document = yaml.safe_load((WORKFLOWS / "documentation-deploy.yml").read_text())
     guard = _guard_step(document)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()

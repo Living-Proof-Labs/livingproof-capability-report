@@ -26,8 +26,32 @@ USES = re.compile(
     re.MULTILINE,
 )
 PRESET = re.compile(rf"^github>{REPO}:renovate-preset#(?P<ref>.+)$")
-SHARED_RELEASE_INPUTS = {"dry-run", "draft-release"}
-SHARED_RELEASE_OUTPUTS = {"draft-created", "published", "version", "git-tag", "release-url"}
+SHARED_RELEASE_INPUTS = {"dry-run", "draft-release", "expected-version", "expected-commit"}
+SHARED_RELEASE_OUTPUTS = {
+    "draft-created",
+    "published",
+    "version",
+    "git-tag",
+    "commit",
+    "release-url",
+}
+INTERFACES = {
+    "semantic-release.yml": (SHARED_RELEASE_INPUTS, SHARED_RELEASE_OUTPUTS, "write"),
+    "semantic-release-candidate.yml": (
+        {"replay-tag"},
+        {
+            "version",
+            "git-tag",
+            "commit",
+            "run-id",
+            "run-attempt",
+            "semver-version",
+            "pep440-version",
+            "debian-version",
+        },
+        "read",
+    ),
+}
 
 
 def _root() -> Path:
@@ -70,8 +94,10 @@ def preset_refs(config: dict | None = None) -> list[str]:
 
 def pinned_versions(text: str | None = None, config: dict | None = None) -> set[str]:
     refs = set(preset_refs(config))
-    if text is not None or workflow_path() is not None:
-        refs |= {match.group("ref") for match in guideline_calls(text).values()}
+    paths = [workflow_path(), ROOT / ".github/workflows/documentation.yml"]
+    texts = [text] if text is not None else [path.read_text() for path in paths if path]
+    for source in texts:
+        refs |= {match.group("ref") for match in guideline_calls(source).values()}
     return refs
 
 
@@ -132,17 +158,18 @@ def test_mismatched_pins_are_reported():
     workflow_path() is None, reason="this repository has no guidelines workflow call"
 )
 def test_release_call_uses_only_the_shared_interface():
-    path = workflow_path()
-    text = path.read_text()
-    calls = guideline_calls(text)
-    assert calls, "expected a job that uses the shared semantic-release workflow"
-    for name, match in calls.items():
-        assert match.group("file") == "semantic-release.yml"
-        block = _job_block(text, name)
-        assert set(_mapping(block, "with")) <= SHARED_RELEASE_INPUTS
-        assert _mapping(block, "permissions").get("contents") == "write"
-        used = set(re.findall(rf"needs\.{re.escape(name)}\.outputs\.([\w-]+)", text))
-        assert used <= SHARED_RELEASE_OUTPUTS, sorted(used - SHARED_RELEASE_OUTPUTS)
+    paths = [workflow_path(), ROOT / ".github/workflows/documentation.yml"]
+    for path in paths:
+        text = path.read_text()
+        calls = guideline_calls(text)
+        assert calls, f"expected a pinned shared release workflow in {path.name}"
+        for name, match in calls.items():
+            inputs, outputs, scope = INTERFACES[match.group("file")]
+            block = _job_block(text, name)
+            assert set(_mapping(block, "with")) <= inputs
+            assert _mapping(block, "permissions") == {"contents": scope}
+            used = set(re.findall(rf"needs\.{re.escape(name)}\.outputs\.([\w-]+)", text))
+            assert used <= outputs, sorted(used - outputs)
 
 
 @pytest.mark.skipif(
@@ -167,10 +194,10 @@ def test_an_unknown_release_output_is_reported():
     workflow_path() is None, reason="this repository has no guidelines workflow call"
 )
 def test_recorded_interface_matches_the_pinned_shared_workflow():
-    refs = {match.group("ref") for match in guideline_calls().values()}
-    (ref,) = refs
-    url = f"https://raw.githubusercontent.com/{REPO}/{ref}/.github/workflows/semantic-release.yml"
-    with urllib.request.urlopen(url, timeout=30) as response:
-        shared = response.read().decode()
-    assert _workflow_call_keys(shared, "inputs") == SHARED_RELEASE_INPUTS
-    assert _workflow_call_keys(shared, "outputs") == SHARED_RELEASE_OUTPUTS
+    (ref,) = pinned_versions()
+    for name, (inputs, outputs, _scope) in INTERFACES.items():
+        url = f"https://raw.githubusercontent.com/{REPO}/{ref}/.github/workflows/{name}"
+        with urllib.request.urlopen(url, timeout=30) as response:
+            shared = response.read().decode()
+        assert _workflow_call_keys(shared, "inputs") == inputs
+        assert _workflow_call_keys(shared, "outputs") == outputs
