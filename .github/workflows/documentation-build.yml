@@ -1,0 +1,147 @@
+name: Build verified reporter documentation
+on:
+  workflow_call:
+    inputs:
+      version: {type: string, required: true}
+      package_version: {type: string, required: true}
+      release_tag: {type: string, required: false, default: ''}
+      commit: {type: string, required: true}
+      run: {type: string, required: true}
+      attempt: {type: string, required: true}
+    outputs:
+      artifact-id:
+        value: ${{ jobs.build.outputs.artifact-id }}
+      digest:
+        value: ${{ jobs.build.outputs.digest }}
+      attempt:
+        value: ${{ jobs.build.outputs.attempt }}
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      artifact-id: ${{ steps.manual-artifact.outputs.artifact-id }}
+      digest: ${{ steps.seal.outputs.digest }}
+      attempt: ${{ steps.seal.outputs.attempt }}
+    env:
+      MANUAL_VERSION: ${{ inputs.version }}
+      MANUAL_PACKAGE_VERSION: ${{ inputs.package_version }}
+      MANUAL_RELEASE_TAG: ${{ inputs.release_tag }}
+      PLAN_COMMIT: ${{ inputs.commit }}
+      PLAN_RUN: ${{ inputs.run }}
+      PLAN_ATTEMPT: ${{ inputs.attempt }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.commit }}
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+      - name: Require the exact source, run and version selection
+        env:
+          EXPECTED_SOURCE: ${{ github.event.pull_request.head.sha || github.sha }}
+          PR_BASE: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$PLAN_COMMIT"
+          test "$PLAN_COMMIT" = "$EXPECTED_SOURCE"
+          test "$PLAN_RUN" = "$GITHUB_RUN_ID"
+          test "$PLAN_ATTEMPT" = "$GITHUB_RUN_ATTEMPT"
+          if [[ "$GITHUB_EVENT_NAME" == 'pull_request' ]]; then
+            test -z "$MANUAL_RELEASE_TAG"
+            if [[ "$PR_BASE" == 'main' ]]; then
+              test -n "$MANUAL_VERSION"
+              test -n "$MANUAL_PACKAGE_VERSION"
+            fi
+          else
+            test -n "$MANUAL_RELEASE_TAG"
+          fi
+      - name: Download exact published wheel with release checksums
+        if: inputs.release_tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$MANUAL_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          test "$MANUAL_RELEASE_TAG" = "v$MANUAL_VERSION"
+          test "$MANUAL_PACKAGE_VERSION" = "$MANUAL_VERSION"
+          test "$(git rev-parse --verify "refs/tags/${MANUAL_RELEASE_TAG}^{commit}")" = "$PLAN_COMMIT"
+          mkdir -p artifacts/docs-released-wheel
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$MANUAL_RELEASE_TAG" \
+            > artifacts/docs-released-wheel/release.json
+          python3 tools/docs_delivery.py released "$MANUAL_RELEASE_TAG" "$MANUAL_VERSION"
+          gh release download "$MANUAL_RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --dir artifacts/docs-released-wheel --pattern SHA256SUMS \
+            --pattern "livingproof_capability_report-${MANUAL_VERSION}-py3-none-any.whl"
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.16'
+      - uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff
+        with:
+          version: '0.12.23'
+      - uses: go-task/setup-task@a00fbb05ce67b35648be3c78cbc9fd85354c757e
+        with:
+          version: '3.54.0'
+      - run: task setup
+      - run: task verify
+      - run: task docs:prepare
+      - run: task test:features
+      - run: task docs
+        if: ${{ !cancelled() }}
+      - run: task test:docs
+        if: ${{ !cancelled() }}
+      - name: Individual installed scenarios and manual checks
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        uses: dorny/test-reporter@d1b5dff021aa968b288b02285a8bf47471c5928a
+        with:
+          name: Reporter documentation scenarios and checks
+          path: artifacts/feature-tests.xml,artifacts/docs-tests.xml
+          reporter: python-xunit
+          use-actions-summary: 'true'
+          collapsed: never
+          fail-on-error: 'true'
+          fail-on-empty: 'true'
+      - name: Evidence context
+        if: ${{ !cancelled() }}
+        run: |
+          echo 'Four named installed reporter scenarios; not exhaustive feature coverage. No line coverage measured.' >> "$GITHUB_STEP_SUMMARY"
+          echo "Revision: ${{ github.event.pull_request.head.sha || github.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo 'Documentation preview and raw JUnit are retained for 14 days below. Browser and independent review remain separate.' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        id: evidence
+        if: always()
+        with:
+          name: reporter-documentation-${{ github.run_attempt }}-${{ inputs.version || 'development' }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            artifacts/docs/html/
+            artifacts/docs/source/
+            artifacts/docs/wheels/
+            artifacts/*tests.xml
+      - name: Seal the tested released manual for exact same-run delivery
+        id: seal
+        if: inputs.release_tag != ''
+        run: |
+          set -euo pipefail
+          python3 tools/docs_delivery.py seal artifacts/docs/html/build.json
+          cd artifacts/docs/html
+          test -f index.html
+          test -z "$(find . ! -type f ! -type d -print -quit)"
+          tar --dereference --hard-dereference -cf "$RUNNER_TEMP/artifact.tar" .
+          checksum=$(sha256sum "$RUNNER_TEMP/artifact.tar")
+          echo "digest=${checksum%% *}" >> "$GITHUB_OUTPUT"
+          echo "attempt=$PLAN_ATTEMPT" >> "$GITHUB_OUTPUT"
+      - name: Retain the immutable source artifact
+        id: manual-artifact
+        if: inputs.release_tag != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: reporter-sealed-${{ inputs.attempt }}-${{ inputs.version }}
+          path: ${{ runner.temp }}/artifact.tar
+          retention-days: 14
+          if-no-files-found: error

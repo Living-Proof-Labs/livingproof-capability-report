@@ -182,10 +182,13 @@ fi
 
 
 def test_regular_ci_and_release_keep_pull_request_and_main_push():
-    for name in ("verify.yml", "development.yml", "documentation.yml"):
+    for name in ("verify.yml", "development.yml"):
         triggers = _triggers(_load(name))
         assert "pull_request" in triggers, name
         assert triggers.get("push", {}).get("branches") == ["main"], name
+    docs = _triggers(_load("documentation.yml"))
+    assert set(docs) == {"pull_request", "workflow_dispatch"}
+    assert docs["workflow_dispatch"]["inputs"]["replay_tag"]["required"] is True
     jobs = _load("verify.yml")["jobs"]
     assert (
         "collaboration-guidelines/.github/workflows/semantic-release.yml@"

@@ -7,11 +7,14 @@ import os
 from pathlib import Path
 import posixpath
 import re
+import shutil
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
 
 import yaml
+
+from docs_delivery import RELEASED, edition, released_wheel
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "artifacts/docs"
@@ -35,25 +38,82 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def planned():
+    version, package_version, tag = (
+        os.environ.get(name, "")
+        for name in ("MANUAL_VERSION", "MANUAL_PACKAGE_VERSION", "MANUAL_RELEASE_TAG")
+    )
+    kind = edition(version, package_version, tag)
+    return version, package_version, tag, kind
+
+
 def prepare():
+    version, package_version, tag, kind = planned()
     wheels = OUT / "wheels"
     wheels.mkdir(parents=True, exist_ok=True)
-    run(["uv", "build", "--wheel", "--out-dir", str(wheels)], cwd=ROOT)
+    if any(wheels.iterdir()):
+        raise RuntimeError("Use a fresh checkout: expected an empty wheel staging directory")
+    if kind == "release":
+        commit = run(["git", "rev-parse", "HEAD"], cwd=ROOT).strip()
+        tagged = run(["git", "rev-parse", "--verify", f"refs/tags/{tag}^{{commit}}"], cwd=ROOT)
+        if tagged.strip() != commit:
+            raise ValueError("Released documentation tag must identify the exact source checkout")
+        wheel = released_wheel(RELEASED, tag, version, commit)
+        shutil.copyfile(wheel, wheels / wheel.name)
+    elif kind == "preview":
+        # uv's PEP 440 parser cannot read the shared attempt number (beyond uint64).
+        # The locked PyPA frontend still uses the same isolated Hatch backend and uv solver.
+        run(
+            [
+                sys.executable,
+                "-m",
+                "build",
+                "--installer",
+                "uv",
+                "--wheel",
+                "--outdir",
+                str(wheels),
+            ],
+            cwd=ROOT,
+            env={**os.environ, "SETUPTOOLS_SCM_PRETEND_VERSION": package_version},
+        )
+    else:
+        run(["uv", "build", "--wheel", "--out-dir", str(wheels)], cwd=ROOT)
     candidates = list(wheels.glob("*.whl"))
     if len(candidates) != 1:
-        raise RuntimeError("Use a fresh checkout: expected exactly one candidate wheel")
-    run(
-        [
-            "uv",
-            "pip",
-            "install",
-            "--no-deps",
-            "--target",
-            str(OUT / "packages"),
-            "--reinstall",
-            str(candidates[0]),
-        ]
-    )
+        raise RuntimeError("Use a fresh checkout: expected exactly one documentation wheel")
+    if kind == "preview":
+        installer = OUT / "installer"
+        run([sys.executable, "-m", "venv", str(installer)])
+        run(
+            [
+                str(installer / "bin/python"),
+                "-m",
+                "pip",
+                "install",
+                "--disable-pip-version-check",
+                "--no-cache-dir",
+                "--no-index",
+                "--no-deps",
+                "--target",
+                str(OUT / "packages"),
+                str(candidates[0]),
+            ]
+        )
+    else:
+        run(
+            [
+                "uv",
+                "pip",
+                "install",
+                "--no-index",
+                "--no-deps",
+                "--target",
+                str(OUT / "packages"),
+                "--reinstall",
+                str(candidates[0]),
+            ]
+        )
 
 
 def scenarios():
@@ -107,11 +167,28 @@ def build():
     source.mkdir(parents=True, exist_ok=True)
     (source / "LICENSE").write_bytes((ROOT / "LICENSE").read_bytes())
     commit = run(["git", "rev-parse", "HEAD"], cwd=ROOT).strip()
+    version, package_version, tag, kind = planned()
+    dirty = bool(run(["git", "status", "--porcelain"], cwd=ROOT).strip())
+    if version and dirty:
+        raise ValueError("Versioned documentation requires the exact clean source checkout")
+    label = (
+        f"Docs: {tag}"
+        if kind == "release"
+        else f"Docs: preview {version}"
+        if kind == "preview"
+        else f"Docs: development · {commit[:12]}"
+    )
     (wheel,) = (OUT / "wheels").glob("*.whl")
     outcomes = results()
     provenance = {
         "source_commit": commit,
-        "source_dirty": bool(run(["git", "status", "--porcelain"], cwd=ROOT).strip()),
+        "source_dirty": dirty,
+        "edition": kind,
+        "version": version or None,
+        "release_tag": tag or None,
+        "docs_label": label,
+        "run_id": os.environ.get("GITHUB_RUN_ID"),
+        "run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
         "wheel": wheel.name,
         "wheel_sha256": digest(wheel),
         "guidelines": "v6.0.0",
@@ -178,6 +255,10 @@ print(json.dumps({'commands': walk(report, 'livingproof-capability-report'),
     installed = json.loads(run([sys.executable, "-c", probe], cwd=OUT, env=env))
     commands = installed["commands"]
     provenance["package_version"] = installed["package_version"]
+    if package_version and provenance["package_version"] != package_version:
+        raise ValueError(
+            "The installed reporter wheel version does not match the documentation plan"
+        )
     (source / "api.json").write_text(json.dumps(installed["api"], indent=2) + "\n")
     with (source / "api.md").open("a") as stream:
         stream.write("\n## Installed signatures and docstrings\n\n")
@@ -199,12 +280,21 @@ print(json.dumps({'commands': walk(report, 'livingproof-capability-report'),
         + "\n".join(f"## {c['name']}\n\n```text\n{c['help']}\n```\n" for c in commands)
     )
     (source / "build.json").write_text(json.dumps(provenance, indent=2) + "\n")
-    (source / "provenance.md").write_text(
-        "# Development documentation\n\n"
-        f"[Exact documentation source]({REPO}/tree/{commit})\n\n"
-        f"Installed candidate package metadata: `{installed['package_version']}`.\n"
+    identity_text = (
+        f"Documentation version **{version}**. This manual was tested against the exact "
+        f"wheel from the [immutable published release]({REPO}/releases/tag/{tag}).\n"
+        f"Released package metadata: `{installed['package_version']}`.\n"
+        f"Released wheel SHA-256: `{provenance['wheel_sha256']}`.\n"
+        if kind == "release"
+        else f"Installed candidate package metadata: `{installed['package_version']}`.\n"
         "Candidate metadata is not a claim of a published package release.\n"
-        f"[Published package releases]({REPO}/releases) are separate from this manual.\n\n"
+        f"[Published package releases]({REPO}/releases) are separate from this manual.\n"
+    )
+    (source / "provenance.md").write_text(
+        '<a id="development-documentation"></a>\n\n'
+        "# Version and source\n\n"
+        f"[Exact documentation source]({REPO}/tree/{commit})\n\n"
+        f"{identity_text}\n"
         "Historical manuals are not maintained. Consult the corresponding "
         f"[source release tag]({REPO}/tags) for earlier behavior.\n\n"
         "[Machine-readable build record](build.json)\n\n```json\n"
@@ -224,7 +314,7 @@ print(json.dumps({'commands': walk(report, 'livingproof-capability-report'),
         )
     )
     identity = (
-        f"> [Docs: development · {commit[:12]}]({REPO}/tree/{commit})"
+        f"> [{label}]({REPO}/tree/{commit})"
         + (" (uncommitted changes)" if provenance["source_dirty"] else "")
         + ". [Version and source](provenance.md).\n\n"
     )

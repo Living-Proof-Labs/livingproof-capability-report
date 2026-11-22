@@ -30,6 +30,13 @@ Build provenance records source revision/dirty state, wheel digest, canonical
 source digests and the CI run. Historical version manuals are not maintained;
 consult the corresponding source tag for released behavior.
 
+Pull request previews keep their own planned version. A stable manual is
+built only after the existing package release passes final verification, from
+that exact immutable release's wheel and checksum manifest. The installed
+metadata and wheel SHA-256 appear in Version and source. If delivery needs to
+be retried after the artifact expires, use **Reporter documentation** on main
+with the existing stable tag; this does not change package or registry state.
+
 ## Initial feature inventory and gaps
 
 The initial scenarios are ordinary pytest cases with Given/When/Then docstrings.

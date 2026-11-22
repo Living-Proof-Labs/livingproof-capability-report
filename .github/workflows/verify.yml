@@ -319,3 +319,41 @@ jobs:
           curl -fsSL "$base/compatibility-arm64.json" -o compatibility-arm64.json
           curl -fsSL "$base/compatibility-amd64.json" -o compatibility-amd64.json
           sha256sum --ignore-missing -c SHA256SUMS
+  build-released-manual:
+    needs: [release, publish-release]
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      needs.release.outputs.draft-created == 'true' &&
+      needs.publish-release.result == 'success' &&
+      needs.release.outputs.version != '' &&
+      needs.release.outputs.git-tag == format('v{0}', needs.release.outputs.version) &&
+      needs.release.outputs.commit == github.sha
+    permissions:
+      contents: read
+    uses: ./.github/workflows/documentation-build.yml
+    with:
+      version: ${{ needs.release.outputs.version }}
+      package_version: ${{ needs.release.outputs.version }}
+      release_tag: ${{ needs.release.outputs.git-tag }}
+      commit: ${{ needs.release.outputs.commit }}
+      run: ${{ format('{0}', github.run_id) }}
+      attempt: ${{ format('{0}', github.run_attempt) }}
+  deploy-manual:
+    needs: [release, build-released-manual]
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      needs.build-released-manual.outputs.artifact-id != '' &&
+      needs.build-released-manual.outputs.digest != ''
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/documentation-deploy.yml
+    with:
+      release_tag: ${{ needs.release.outputs.git-tag }}
+      version: ${{ needs.release.outputs.version }}
+      commit: ${{ needs.release.outputs.commit }}
+      run: ${{ format('{0}', github.run_id) }}
+      attempt: ${{ needs.build-released-manual.outputs.attempt }}
+      artifact_id: ${{ needs.build-released-manual.outputs.artifact-id }}
+      digest: ${{ needs.build-released-manual.outputs.digest }}
