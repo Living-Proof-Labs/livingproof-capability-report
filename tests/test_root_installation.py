@@ -17,11 +17,11 @@ from urllib.request import urlopen
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-ROOT_WHEEL = "livingproof-1.4.18-py3-none-any.whl"
+ROOT_WHEEL = "livingproof-1.5.17-py3-none-any.whl"
 ROOT_URL = (
-    "https://github.com/Living-Proof-Labs/livingproof/releases/download/v1.4.18/" + ROOT_WHEEL
+    "https://github.com/Living-Proof-Labs/livingproof/releases/download/v1.5.17/" + ROOT_WHEEL
 )
-ROOT_SHA256 = "68901c1f9e2778a8070e17e1cd31f2455428c394ade0c393019ef5483e4c351f"
+ROOT_SHA256 = "d35abb457504caaab2c28e79e643c866afa8c78d83864bff54bcc846aeb1960e"
 
 
 @pytest.mark.skipif(os.environ.get("LIVINGPROOF_NETWORK") != "1", reason="network opt-in")
