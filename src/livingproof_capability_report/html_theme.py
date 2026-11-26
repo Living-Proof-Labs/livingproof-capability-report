@@ -1430,3 +1430,20 @@ def page(
         "<a href='https://docs.livingprooflabs.com/reading-reports.html'>"
         f"How to read this report</a></p></footer>{_TIME_SCRIPT}</body></html>\n"
     )
+
+
+PRESENTATION_STYLES = """
+/* Optional presentation peers remain discoverable, including on narrow screens.
+   Existing reports without contributions retain their original layout. */
+.has-presentations > .eval-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(5rem, 1fr));
+  max-width: 36rem;
+  overflow: visible;
+  padding-bottom: 0;
+}
+.has-presentations > .eval-row > .eval-disclosure { width: auto; min-width: 0; }
+.has-presentations .eval-name { overflow-wrap: anywhere; }
+.has-presentations .eval-cue { color: var(--text-muted); font-size: 0.75rem; }
+.has-presentations .eval-panel { overflow-wrap: anywhere; }
+"""

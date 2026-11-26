@@ -193,6 +193,7 @@ def render(
     *,
     observations=None,
     evaluator_results=None,
+    evaluator_presentations=None,
     history=None,
     retention=None,
 ):
@@ -204,6 +205,13 @@ def render(
     default. Every format refuses the same stored reports: an unknown, null or
     non-string summary grade stops JSON, Markdown, HTML, CSV and table output alike.
     """
+    from .presentation import validate_presentations
+
+    presentations = validate_presentations(evaluator_presentations, report)
+    if presentations and not report.get("summaries"):
+        raise ValueError("Optional evaluator presentations require a run summary")
+    if presentations and format != "html":
+        raise ValueError("Optional evaluator presentations are supported only for HTML")
     if report.get("report_version") != "1.0.0":
         raise ValueError("Unsupported report version")
     for s in report.get("summaries") or []:
@@ -363,7 +371,7 @@ def render(
     if runs:
         from .evaluators import summary_front
 
-        front = summary_front(report, sections_body, evaluator_results)
+        front = summary_front(report, sections_body, evaluator_results, presentations=presentations)
         return html_theme.page(
             title="Living Proof Labs capability report",
             lede=(

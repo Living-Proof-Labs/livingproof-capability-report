@@ -732,6 +732,8 @@ def _mark(view, group, column, anchor=None, *, show_time=True):
     elif view.get("integrity_error") and not speaking:
         accessible = f"{view['title']}: error"
     names = f"<span class='eval-name eval-name-full'>{esc(view['title'])}</span>"
+    if view.get("advisory"):
+        names += "<span class='eval-cue'>Advisory</span>"
     if view["short_title"]:
         names += f"<span class='eval-name eval-name-short'>{esc(view['short_title'])}</span>"
     tab_id = f"{group}-tab-{column}"
@@ -783,7 +785,7 @@ def _panel(view, *, show_time=True):
     label = tier_label(view["tier"])
     if label:
         bits.append(f"<p class='meta'>Tier: {esc(label)}</p>")
-    if show_time:
+    if show_time and not view.get("advisory"):
         time_html = _time_html(view.get("completed_at"))
         if time_html:
             bits.append(f"<p class='meta'>Graded {time_html}</p>")
@@ -793,6 +795,8 @@ def _panel(view, *, show_time=True):
             bits.append("<p class='meta is-missing'>Time not recorded</p>")
     if view["details"]:
         bits.append(f"<p class='more'>{esc(view['details'])}</p>")
+    if view.get("details_href"):
+        bits.append(f"<p class='more'><a href='{esc(view['details_href'])}'>Recorded data</a></p>")
     if view["missing_descriptor"]:
         bits.append(f"<p class='descriptor-note'>{esc(NO_DESCRIPTOR)}</p>")
     return f"<div class='eval-panel'>{''.join(bits)}</div>"
@@ -904,12 +908,19 @@ def render_marks(views, *, group="eval-marks", quiet=False, anchors=False, show_
         tabs.append(tab)
         panels.append(panel)
     return (
-        "<div class='evaluators'>"
-        "<p class='evaluators-label'>Evaluators</p>"
+        (
+            "<style>"
+            + html_theme.PRESENTATION_STYLES
+            + "</style><div class='evaluators has-presentations'>"
+            if any(v.get("advisory") for v in ordered)
+            else "<div class='evaluators'>"
+        )
+        + "<p class='evaluators-label'>Evaluators</p>"
         f"<div class='eval-row' role='tablist' aria-label='Evaluators' "
         f"style='--eval-count:{len(tabs) or 1}'>{''.join(tabs)}</div>"
         f"<div class='eval-tabpanels'>{''.join(panels)}</div>"
-        f"{_TABS_SCRIPT}</div>" + _callouts(ordered, quiet=quiet)
+        f"{_TABS_SCRIPT}</div>"
+        + _callouts([view for view in ordered if not view.get("advisory")], quiet=quiet)
     )
 
 
@@ -959,13 +970,34 @@ def render_example_card(
     )
 
 
-def summary_front(report, stored_body, evidence_results=None):
+def summary_front(report, stored_body, evidence_results=None, *, presentations=()):
     """Visible ring and marks. ``stored_body`` sits inside one mark's details."""
     runs = [summary for summary in report.get("summaries") or [] if isinstance(summary, dict)]
     docs = []
     for summary in runs:
         docs.extend(documents_for_summary(report, summary, evidence_results))
     views = views_from(docs)
+    identities = {view["identity"] for view in views}
+    for contribution in presentations:
+        if contribution.id in identities:
+            raise ValueError("Optional presentation cannot replace an existing evaluator")
+        identities.add(contribution.id)
+        view = resolve_one(
+            {
+                "title": contribution.title,
+                "version": contribution.version,
+                "purpose": contribution.purpose,
+                "details_copy": contribution.details,
+                "tier": "observation",
+            }
+        )
+        view.update(
+            identity=contribution.id,
+            advisory=True,
+            not_graded="Advisory observations only; does not change the grade.",
+            details_href=contribution.details_href,
+        )
+        views.append(view)
     failed = any(_run_failed(summary) for summary in runs)
     if not views:
         if not runs and not stored_body:
@@ -975,7 +1007,10 @@ def summary_front(report, stored_body, evidence_results=None):
         # The run record stays one expansion away. With one mark, that mark
         # holds it. With several, the first mark after tier-then-title order
         # holds it. descriptor.kind is not consulted.
-        host = order_marks(views)[0]
+        host = next((v for v in order_marks(views) if not v.get("advisory")), None)
+        if host is None:
+            host = _fallback_view()
+            views.insert(0, host)
         host["body_html"] = stored_body
         if failed and not host["findings"]:
             host["force_speaking"] = True
