@@ -1,8 +1,8 @@
 # Python API
 
-The supported import surface is the five operations exported through
+The supported import surface includes the operations exported through
 `livingproof_capability_report.__all__`: `load_bundle`, `validate_bundle`,
-`aggregate`, `report_from_bundle` and `render`. Their installed signatures and
+`aggregate`, `report_from_bundle` and `render`, plus the `EvaluatorPresentation` type. Their installed signatures and
 docstrings are generated below. Internal helpers and the internal Click
 implementation are not additional supported library interfaces. Install the
 reporter package using the [release instructions](../README.md#install-a-release).
@@ -31,3 +31,51 @@ the report from a bundle 1.1.0's stored decisions and run assessment; it compute
 grade and refuses a bundle without decisions. Invalid input can raise `ValueError`;
 filesystem errors remain ordinary Python exceptions. These descriptions do not
 relax the underlying validation or add automatic fetching or archive extraction.
+
+## Optional advisory contributions
+
+`render(report, "html", evaluator_presentations=[...])` accepts up to 16
+`EvaluatorPresentation` instances. This is a presentation API, not an evaluator
+result schema or a grading input. The caller first validates the source payload,
+its provenance and its trial bindings. The renderer checks that each contribution
+names the report's `source_bundle_sha256`; that equality is not an attestation.
+It never reads files or fetches URLs on behalf of a contribution.
+
+```python
+from livingproof_capability_report import EvaluatorPresentation, render
+
+advisory = EvaluatorPresentation(
+    id="recording-notes",
+    title="Recording notes",
+    version="1.0.0",
+    purpose="Describe the recorded samples; no verdict is assigned.",
+    details="The observation source contains no robot health telemetry.",
+    source_bundle_sha256=saved["source_bundle_sha256"],
+    details_href="observations.json",
+)
+html = render(saved, "html", evaluator_presentations=[advisory])
+```
+
+The versioned wire object has exactly these constructor fields plus explicit
+`format: "livingproof-evaluator-presentation/1"` and `state: "advisory"`.
+Use `EvaluatorPresentation.from_dict(document)` to decode it. Unknown fields,
+formats and states are refused. The id is a lowercase slug of at most 64
+characters; title, version, purpose and details are nonempty plain text, bounded
+at 80, 64, 400 and 2000 characters respectively. Text is escaped, never executed.
+`details_href` is optional and permits only a relative JSON or text file path
+with plain alphanumeric, underscore and hyphen segments; no traversal, schemes,
+queries or fragments. The publisher remains responsible for validating and safely
+retaining that referenced file. No arbitrary HTML, JavaScript, icons, grades or
+findings are accepted by this API.
+
+Each contribution appears as an independent peer with a neutral **Advisory** cue,
+no pass/fail pip, no grade, and no invented evaluation timestamp. Its details use
+the same disclosure and keyboard controls as other peers. The common strip wraps
+on narrow screens when contributions are present. Duplicate ids or collisions
+with existing evaluator identities fail rather than replace a sibling.
+
+Omit the argument (or supply an empty list) for the existing rendering path, with
+no placeholder. Contributions do not mutate the report, its source bundle or the
+stored Scenario and Run Integrity results. They are HTML-only; supplying a
+nonempty list for another format raises `ValueError`. Preserve the original
+portable report and evidence when generating a site page with contributions.

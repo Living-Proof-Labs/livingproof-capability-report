@@ -203,7 +203,14 @@ print(json.dumps([{'name': n, 'signature': str(inspect.signature(getattr(api, n)
         )
     )
     assert actual == json.loads((SITE / "api.json").read_text())
-    assert len(actual) == 5
+    assert {item["name"] for item in actual} == {
+        "aggregate",
+        "load_bundle",
+        "render",
+        "report_from_bundle",
+        "validate_bundle",
+        "EvaluatorPresentation",
+    }
     text = (ROOT / "artifacts/docs/source/api.md").read_text()
     for function in actual:
         assert function["name"] + function["signature"] in text
