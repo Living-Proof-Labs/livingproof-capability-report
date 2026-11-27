@@ -234,8 +234,14 @@ def render(
         retention = elinks.ensure_retention(report, retention)
     if format == "json":
         return json.dumps(report, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+    if format in {"html", "markdown", "table"}:
+        # Refuse a bad advisory result before any format writes it. No advisory
+        # results leaves this empty, so existing bundles render as before.
+        from .evaluators import advisory_views
+
+        advisory_views(report, evaluator_results)
     if format == "markdown":
-        return narrative.markdown(report, links, retention)
+        return narrative.markdown(report, links, retention, evidence_results=evaluator_results)
     results = {r["id"]: r for r in bundle["results"]}
     rows = [
         {
@@ -279,6 +285,9 @@ def render(
         ]
         for decision in decisions:
             details.append(json.dumps(decision, ensure_ascii=True, sort_keys=True))
+        from .evaluators import advisory_text_lines
+
+        details.extend(advisory_text_lines(report, evaluator_results))
         return text + "\n".join(details) + "\n"
     if format == "csv":
         if any("assessment_details" in d for d in decisions):

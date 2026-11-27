@@ -46,6 +46,7 @@ NOT_GRADED = {
     "INCONCLUSIVE": "Not graded: no integrity check applied to this run.",
 }
 NOT_GRADED_UNKNOWN = "Not graded: this report version doesn't recognise this status yet."
+ADVISORY_NOT_GRADED = "Advisory observations only; does not change the grade."
 RESULT_FORMAT = re.compile(r"^livingproof-evaluator-result/1\.\d+\.\d+$")
 NO_DESCRIPTOR = "No evaluator descriptor was stored."
 _CHECK = (
@@ -718,7 +719,10 @@ def _mark(view, group, column, anchor=None, *, show_time=True):
         ungraded = bool(view.get("not_graded")) and not speaking
         # An ERROR integrity status is a failing mark, never the passing tick (#106).
         errored = bool(view.get("integrity_error")) and not speaking
-        if errored:
+        # An advisory card is never a pass: quiet views otherwise receive _CHECK.
+        if view.get("advisory"):
+            pip = ""
+        elif errored:
             pip = f"<span class='pip pip-fail' aria-hidden='true'>{_CROSS}</span>"
         elif speaking or ungraded:
             pip = ""
@@ -780,6 +784,8 @@ def _panel(view, *, show_time=True):
         bits.append(f"<p class='meta'>Scope: {esc(view['scope'])}</p>")
     if view["purpose"]:
         bits.append(f"<p class='purpose'>{esc(view['purpose'])}</p>")
+    if view.get("summary"):
+        bits.append(f"<p class='more'>{esc(view['summary'])}</p>")
     if view["source"]:
         bits.append(f"<p class='meta'>{esc(view['source'])}</p>")
     label = tier_label(view["tier"])
@@ -982,21 +988,11 @@ def summary_front(report, stored_body, evidence_results=None, *, presentations=(
         if contribution.id in identities:
             raise ValueError("Optional presentation cannot replace an existing evaluator")
         identities.add(contribution.id)
-        view = resolve_one(
-            {
-                "title": contribution.title,
-                "version": contribution.version,
-                "purpose": contribution.purpose,
-                "details_copy": contribution.details,
-                "tier": "observation",
-            }
-        )
-        view.update(
-            identity=contribution.id,
-            advisory=True,
-            not_graded="Advisory observations only; does not change the grade.",
-            details_href=contribution.details_href,
-        )
+        views.append(_presentation_view(contribution))
+    for view in advisory_views(report, evidence_results):
+        if view["identity"] in identities:
+            raise ValueError("Optional presentation cannot replace an existing evaluator")
+        identities.add(view["identity"])
         views.append(view)
     failed = any(_run_failed(summary) for summary in runs)
     if not views:
@@ -1035,9 +1031,14 @@ def summary_front(report, stored_body, evidence_results=None, *, presentations=(
     )
 
 
+def _collapsed(value):
+    """One line of plain text. The field is already plain, so nothing is escaped."""
+    return " ".join(str(value).split())
+
+
 def _plain(value):
     """One line of Markdown-safe text: no line breaks, no table or emphasis markup."""
-    text = " ".join(str(value).split())
+    text = _collapsed(value)
     for char in ("\\", "|", "*", "_", "`", "[", "]", "<", ">"):
         text = text.replace(char, "\\" + char)
     return text
@@ -1068,3 +1069,275 @@ def markdown_line(report, evidence_results=None):
             name += f" ({count} {'problem' if count == 1 else 'problems'})"
         names.append(name)
     return "**Evaluators:** " + " · ".join(names)
+
+
+_REPO = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*$")
+_TAG = re.compile(r"^v(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$")
+_HEX40 = re.compile(r"^[0-9a-f]{40}$")
+
+
+def _assessment_value(report, key):
+    bundle = report.get("source_bundle") if isinstance(report, dict) else None
+    assessment = bundle.get("assessment") if isinstance(bundle, dict) else None
+    if not isinstance(assessment, dict) or key not in assessment:
+        return None
+    return assessment.get(key)
+
+
+def _bounded_plain(name, text, limit):
+    """The presentation plain-text check, applied to a field of the same limit."""
+    from .presentation import EvaluatorPresentation
+
+    slot = {80: "title", 64: "version", 400: "purpose", 2000: "details"}[limit]
+    fields = {
+        "id": "a",
+        "title": "T",
+        "version": "1",
+        "purpose": "p",
+        "details": "d",
+        "source_bundle_sha256": "0" * 64,
+    }
+    fields[slot] = text
+    try:
+        EvaluatorPresentation(**fields)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"Evaluator presentation {name} must be bounded plain text") from exc
+
+
+def _provenance_line(record):
+    """``Source <repo>@<ref> (<commit[:12]>)`` from the loader record, or a refusal."""
+    if not isinstance(record, dict):
+        raise ValueError("Advisory provenance must be a record with repo, ref and commit")
+    repo, ref, commit = record.get("repo"), record.get("ref"), record.get("commit")
+    if not isinstance(repo, str) or _REPO.fullmatch(repo) is None:
+        raise ValueError("Advisory provenance repo must be owner/name")
+    if not isinstance(ref, str) or (_TAG.fullmatch(ref) is None and _HEX40.fullmatch(ref) is None):
+        raise ValueError("Advisory provenance ref must be a vX.Y.Z tag or a commit")
+    if not isinstance(commit, str) or _HEX40.fullmatch(commit) is None:
+        raise ValueError("Advisory provenance commit must be 40 lowercase hex")
+    return f"Source {repo}@{ref} ({commit[:12]})"
+
+
+def _provenance_by_id(report):
+    """``source_bundle.assessment.advisory_provenance``, keyed by ``evaluator.id``."""
+    stored = _assessment_value(report, "advisory_provenance")
+    if stored is None:
+        return {}
+    if not isinstance(stored, dict):
+        raise ValueError("advisory_provenance must be an object keyed by evaluator id")
+    return {key: _provenance_line(record) for key, record in stored.items()}
+
+
+def _not_run_title(ident, record):
+    descriptor = record.get("descriptor") if isinstance(record.get("descriptor"), dict) else None
+    title = descriptor.get("title") if isinstance(descriptor, dict) else None
+    if isinstance(title, str) and title.strip():
+        _bounded_plain("title", title, 80)
+        return title
+    return ident
+
+
+def _not_run_view(ident, record):
+    if not isinstance(record, dict):
+        raise ValueError("advisory_not_run entry must be a record with outcome and reason")
+    outcome = record.get("outcome")
+    if outcome not in {"failure", "refused"}:
+        raise ValueError("Advisory not-run outcome must be failure or refused")
+    _bounded_plain("reason", record.get("reason"), 2000)
+    _bounded_plain("id", ident, 80)
+    from .presentation import EvaluatorPresentation
+
+    try:
+        EvaluatorPresentation(
+            id=ident,
+            title="T",
+            version="1",
+            purpose="p",
+            details="d",
+            source_bundle_sha256="0" * 64,
+        )
+    except ValueError as exc:
+        raise ValueError("Advisory not-run id must be a stable lowercase slug") from exc
+    title = _not_run_title(ident, record)
+    line = f"{title}: NOT RUN ({outcome}): {record['reason']}"
+    view = resolve_one({"title": title, "tier": "observation"})
+    view.update(
+        identity=ident,
+        advisory=True,
+        not_graded=ADVISORY_NOT_GRADED,
+        summary=line,
+        not_run_line=line,
+    )
+    return view
+
+
+def _not_run_views(report, taken):
+    """``source_bundle.assessment.advisory_not_run``, keyed by ``evaluator.id``."""
+    stored = _assessment_value(report, "advisory_not_run")
+    if stored is None:
+        return []
+    if not isinstance(stored, dict):
+        raise ValueError("advisory_not_run must be an object keyed by evaluator id")
+    views = []
+    for ident, record in stored.items():
+        view = _not_run_view(ident, record)
+        if view["identity"] in taken:
+            raise ValueError("Optional presentation cannot replace an existing evaluator")
+        taken.add(view["identity"])
+        views.append(view)
+    return views
+
+
+def advisory_documents(report):
+    """Read ``source_bundle.assessment.advisory_results``.
+
+    The object is keyed by ``evaluator.id``. Each value is one result or a list
+    of results, the same shape ``_integrity_documents`` reads from
+    ``integrity_results``. Absent means this bundle stored no advisory result.
+    """
+    bundle = report.get("source_bundle") if isinstance(report, dict) else None
+    assessment = bundle.get("assessment") if isinstance(bundle, dict) else None
+    stored = assessment.get("advisory_results") if isinstance(assessment, dict) else None
+    if stored is None:
+        return []
+    if not isinstance(stored, dict):
+        raise ValueError("advisory_results must be an object keyed by evaluator id")
+    documents = []
+    for key, item in stored.items():
+        candidates = item if isinstance(item, list) else [item]
+        for document in candidates:
+            if not is_result(document):
+                raise ValueError(f"advisory_results entry {key!r} must be an evaluator result")
+            documents.append(document)
+    return documents
+
+
+def _advisory_contribution(document, source_bundle_sha256):
+    """One presentation from a descriptor plus the advisory payload.
+
+    Title, purpose and version come from the descriptor. Summary and details
+    come from the payload. ``details_file.uri`` is the local details link.
+    The same limits and plain-text check as ``EvaluatorPresentation`` apply.
+    """
+    evaluator = document.get("evaluator") if isinstance(document.get("evaluator"), dict) else {}
+    descriptor = document.get("descriptor")
+    descriptor = descriptor if isinstance(descriptor, dict) else None
+    payload = document.get("advisory") if isinstance(document.get("advisory"), dict) else None
+    if descriptor is None or payload is None:
+        raise ValueError("Advisory result requires a descriptor and an advisory payload")
+    from .presentation import EvaluatorPresentation
+
+    href = None
+    details_file = payload.get("details_file")
+    if details_file is not None:
+        if not isinstance(details_file, dict) or not isinstance(details_file.get("uri"), str):
+            raise ValueError(
+                "Evaluator presentation details_href must be a local JSON or text path"
+            )
+        href = details_file["uri"]
+    fields = {
+        "id": evaluator.get("id"),
+        "title": descriptor.get("title"),
+        "version": descriptor.get("version"),
+        "purpose": descriptor.get("purpose"),
+        "details": payload.get("details"),
+        "source_bundle_sha256": source_bundle_sha256,
+        "details_href": href,
+    }
+    contribution = EvaluatorPresentation(**fields)
+    # Summary uses the purpose bound (400) and the same plain-text check.
+    try:
+        EvaluatorPresentation(**{**fields, "purpose": payload.get("summary")})
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Evaluator presentation summary must be bounded plain text") from exc
+    return contribution, payload.get("summary")
+
+
+def _presentation_view(contribution, summary=""):
+    """The existing advisory card. ``summary`` is the payload line, when present."""
+    view = resolve_one(
+        {
+            "title": contribution.title,
+            "version": contribution.version,
+            "purpose": contribution.purpose,
+            "details_copy": contribution.details,
+            "tier": "observation",
+        }
+    )
+    view.update(
+        identity=contribution.id,
+        advisory=True,
+        not_graded=ADVISORY_NOT_GRADED,
+        details_href=contribution.details_href,
+    )
+    if summary:
+        view["summary"] = summary
+    return view
+
+
+def _apply_provenance(view, provenance):
+    line = provenance.get(view["identity"])
+    if line:
+        view["source"] = line
+    return view
+
+
+def advisory_views(report, evidence_results=None):
+    """One peer view per advisory result or not-run record. The caller builds no presentation."""
+    documents = advisory_documents(report)
+    provenance = _provenance_by_id(report)
+    if not documents and not _assessment_value(report, "advisory_not_run"):
+        return []
+    if not any(isinstance(summary, dict) for summary in report.get("summaries") or []):
+        raise ValueError("Advisory results require a run summary")
+    embedded = []
+    for summary in report.get("summaries") or []:
+        if isinstance(summary, dict):
+            embedded.extend(documents_for_summary(report, summary, evidence_results))
+    taken = {view["identity"] for view in views_from(embedded)}
+    digest = report.get("source_bundle_sha256")
+    views = []
+    for document in documents:
+        contribution, summary = _advisory_contribution(document, digest)
+        if contribution.id in taken:
+            raise ValueError("Optional presentation cannot replace an existing evaluator")
+        taken.add(contribution.id)
+        views.append(_apply_provenance(_presentation_view(contribution, summary), provenance))
+    for view in _not_run_views(report, taken):
+        views.append(_apply_provenance(view, provenance))
+    return views
+
+
+def _advisory_line(view, *, plain):
+    name = plain(view["title"])
+    if view["version"]:
+        name += f" {plain(view['version'])}"
+    return f"{name} · {plain(view['summary'])}"
+
+
+def _format_advisory_lines(views, *, plain, prefix):
+    lines = []
+    for view in views:
+        if view.get("not_run_line"):
+            lines.append(plain(view["not_run_line"]))
+        else:
+            lines.append(f"{prefix}{_advisory_line(view, plain=plain)}")
+        if view.get("source"):
+            lines.append(plain(view["source"]))
+    return lines
+
+
+def advisory_markdown_lines(report, evidence_results=None):
+    """One Markdown line per advisory result, in mark order. Empty when none are stored."""
+    views = order_marks(advisory_views(report, evidence_results))
+    if not views:
+        return []
+    return _format_advisory_lines(views, plain=_plain, prefix="**Advisory:** ")
+
+
+def advisory_text_lines(report, evidence_results=None):
+    """One plain line per advisory result, in mark order. Empty when none are stored."""
+    views = order_marks(advisory_views(report, evidence_results))
+    if not views:
+        return []
+    return _format_advisory_lines(views, plain=_collapsed, prefix="Advisory: ")

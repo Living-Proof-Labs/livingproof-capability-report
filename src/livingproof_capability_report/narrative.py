@@ -156,7 +156,7 @@ def _verdict(run):
     return f"{_robot(run['system'])} cannot be graded on {run['spec']['capability']}: {_label(run['grade'], 'summary grade')}."
 
 
-def markdown(report, links=None, retention=None):
+def markdown(report, links=None, retention=None, evidence_results=None):
     """PR-comment summary in Art's layout (review of 2026-11-01); update one comment in place."""
     runs = report.get("summaries", [])
     results = {r["id"]: r for r in report["source_bundle"]["results"]}
@@ -190,11 +190,13 @@ def markdown(report, links=None, retention=None):
                 f"| {_robot(s['system'])} {s['system']['version']} | "
                 f"**{_label(s['grade'], 'summary grade')}** | {passed} | {needs} |"
             )
-        from .evaluators import markdown_line
+        from .evaluators import advisory_markdown_lines, markdown_line
 
         contributing = markdown_line(report)
-        if contributing:
-            lines += ["", contributing]
+        block = [contributing] if contributing else []
+        block.extend(advisory_markdown_lines(report, evidence_results))
+        if block:
+            lines += ["", *block]
         for s in runs:
             sample = results[s["result_ids"][0]]
             why = sections.why_lines(report, s)
