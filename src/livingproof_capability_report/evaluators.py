@@ -46,6 +46,7 @@ NOT_GRADED = {
     "INCONCLUSIVE": "Not graded: no integrity check applied to this run.",
 }
 NOT_GRADED_UNKNOWN = "Not graded: this report version doesn't recognise this status yet."
+ADVISORY_NOT_GRADED = "Advisory observations only; does not change the grade."
 RESULT_FORMAT = re.compile(r"^livingproof-evaluator-result/1\.\d+\.\d+$")
 NO_DESCRIPTOR = "No evaluator descriptor was stored."
 _CHECK = (
@@ -780,6 +781,8 @@ def _panel(view, *, show_time=True):
         bits.append(f"<p class='meta'>Scope: {esc(view['scope'])}</p>")
     if view["purpose"]:
         bits.append(f"<p class='purpose'>{esc(view['purpose'])}</p>")
+    if view.get("summary"):
+        bits.append(f"<p class='more'>{esc(view['summary'])}</p>")
     if view["source"]:
         bits.append(f"<p class='meta'>{esc(view['source'])}</p>")
     label = tier_label(view["tier"])
@@ -982,21 +985,11 @@ def summary_front(report, stored_body, evidence_results=None, *, presentations=(
         if contribution.id in identities:
             raise ValueError("Optional presentation cannot replace an existing evaluator")
         identities.add(contribution.id)
-        view = resolve_one(
-            {
-                "title": contribution.title,
-                "version": contribution.version,
-                "purpose": contribution.purpose,
-                "details_copy": contribution.details,
-                "tier": "observation",
-            }
-        )
-        view.update(
-            identity=contribution.id,
-            advisory=True,
-            not_graded="Advisory observations only; does not change the grade.",
-            details_href=contribution.details_href,
-        )
+        views.append(_presentation_view(contribution))
+    for view in advisory_views(report, evidence_results):
+        if view["identity"] in identities:
+            raise ValueError("Optional presentation cannot replace an existing evaluator")
+        identities.add(view["identity"])
         views.append(view)
     failed = any(_run_failed(summary) for summary in runs)
     if not views:
@@ -1068,3 +1061,135 @@ def markdown_line(report, evidence_results=None):
             name += f" ({count} {'problem' if count == 1 else 'problems'})"
         names.append(name)
     return "**Evaluators:** " + " · ".join(names)
+
+
+def advisory_documents(report):
+    """Read ``source_bundle.assessment.advisory_results``.
+
+    The object is keyed by ``evaluator.id``. Each value is one result or a list
+    of results, the same shape ``_integrity_documents`` reads from
+    ``integrity_results``. Absent means this bundle stored no advisory result.
+    """
+    bundle = report.get("source_bundle") if isinstance(report, dict) else None
+    assessment = bundle.get("assessment") if isinstance(bundle, dict) else None
+    stored = assessment.get("advisory_results") if isinstance(assessment, dict) else None
+    if stored is None:
+        return []
+    if not isinstance(stored, dict):
+        raise ValueError("advisory_results must be an object keyed by evaluator id")
+    documents = []
+    for key, item in stored.items():
+        candidates = item if isinstance(item, list) else [item]
+        for document in candidates:
+            if not is_result(document):
+                raise ValueError(f"advisory_results entry {key!r} must be an evaluator result")
+            documents.append(document)
+    return documents
+
+
+def _advisory_contribution(document, source_bundle_sha256):
+    """One presentation from a descriptor plus the advisory payload.
+
+    Title, purpose and version come from the descriptor. Summary and details
+    come from the payload. ``details_file.uri`` is the local details link.
+    The same limits and plain-text check as ``EvaluatorPresentation`` apply.
+    """
+    evaluator = document.get("evaluator") if isinstance(document.get("evaluator"), dict) else {}
+    descriptor = document.get("descriptor")
+    descriptor = descriptor if isinstance(descriptor, dict) else None
+    payload = document.get("advisory") if isinstance(document.get("advisory"), dict) else None
+    if descriptor is None or payload is None:
+        raise ValueError("Advisory result requires a descriptor and an advisory payload")
+    from .presentation import EvaluatorPresentation
+    href = None
+    details_file = payload.get("details_file")
+    if details_file is not None:
+        if not isinstance(details_file, dict) or not isinstance(details_file.get("uri"), str):
+            raise ValueError(
+                "Evaluator presentation details_href must be a local JSON or text path"
+            )
+        href = details_file["uri"]
+    fields = {
+        "id": evaluator.get("id"),
+        "title": descriptor.get("title"),
+        "version": descriptor.get("version"),
+        "purpose": descriptor.get("purpose"),
+        "details": payload.get("details"),
+        "source_bundle_sha256": source_bundle_sha256,
+        "details_href": href,
+    }
+    contribution = EvaluatorPresentation(**fields)
+    # Summary uses the purpose bound (400) and the same plain-text check.
+    try:
+        EvaluatorPresentation(**{**fields, "purpose": payload.get("summary")})
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Evaluator presentation summary must be bounded plain text") from exc
+    return contribution, payload.get("summary")
+
+
+def _presentation_view(contribution, summary=""):
+    """The existing advisory card. ``summary`` is the payload line, when present."""
+    view = resolve_one(
+        {
+            "title": contribution.title,
+            "version": contribution.version,
+            "purpose": contribution.purpose,
+            "details_copy": contribution.details,
+            "tier": "observation",
+        }
+    )
+    view.update(
+        identity=contribution.id,
+        advisory=True,
+        not_graded=ADVISORY_NOT_GRADED,
+        details_href=contribution.details_href,
+    )
+    if summary:
+        view["summary"] = summary
+    return view
+
+
+def advisory_views(report, evidence_results=None):
+    """One peer view per advisory result. The caller builds no presentation."""
+    documents = advisory_documents(report)
+    if not documents:
+        return []
+    if not any(isinstance(summary, dict) for summary in report.get("summaries") or []):
+        raise ValueError("Advisory results require a run summary")
+    embedded = []
+    for summary in report.get("summaries") or []:
+        if isinstance(summary, dict):
+            embedded.extend(documents_for_summary(report, summary, evidence_results))
+    taken = {view["identity"] for view in views_from(embedded)}
+    digest = report.get("source_bundle_sha256")
+    views = []
+    for document in documents:
+        contribution, summary = _advisory_contribution(document, digest)
+        if contribution.id in taken:
+            raise ValueError("Optional presentation cannot replace an existing evaluator")
+        taken.add(contribution.id)
+        views.append(_presentation_view(contribution, summary))
+    return views
+
+
+def _advisory_line(view, *, plain):
+    name = plain(view["title"])
+    if view["version"]:
+        name += f" {plain(view['version'])}"
+    return f"{name} · {plain(view['summary'])}"
+
+
+def advisory_markdown_lines(report, evidence_results=None):
+    """One Markdown line per advisory result, in mark order. Empty when none are stored."""
+    views = order_marks(advisory_views(report, evidence_results))
+    if not views:
+        return []
+    return [f"**Advisory:** {_advisory_line(view, plain=_plain)}" for view in views]
+
+
+def advisory_text_lines(report, evidence_results=None):
+    """One plain line per advisory result, in mark order. Empty when none are stored."""
+    views = order_marks(advisory_views(report, evidence_results))
+    if not views:
+        return []
+    return [f"Advisory: {_advisory_line(view, plain=lambda value: str(value))}" for view in views]
