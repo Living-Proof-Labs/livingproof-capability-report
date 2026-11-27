@@ -719,7 +719,10 @@ def _mark(view, group, column, anchor=None, *, show_time=True):
         ungraded = bool(view.get("not_graded")) and not speaking
         # An ERROR integrity status is a failing mark, never the passing tick (#106).
         errored = bool(view.get("integrity_error")) and not speaking
-        if errored:
+        # An advisory card is never a pass: quiet views otherwise receive _CHECK.
+        if view.get("advisory"):
+            pip = ""
+        elif errored:
             pip = f"<span class='pip pip-fail' aria-hidden='true'>{_CROSS}</span>"
         elif speaking or ungraded:
             pip = ""
@@ -1063,6 +1066,123 @@ def markdown_line(report, evidence_results=None):
     return "**Evaluators:** " + " · ".join(names)
 
 
+_REPO = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*$")
+_TAG = re.compile(r"^v(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$")
+_HEX40 = re.compile(r"^[0-9a-f]{40}$")
+
+
+def _assessment_value(report, key):
+    bundle = report.get("source_bundle") if isinstance(report, dict) else None
+    assessment = bundle.get("assessment") if isinstance(bundle, dict) else None
+    if not isinstance(assessment, dict) or key not in assessment:
+        return None
+    return assessment.get(key)
+
+
+def _bounded_plain(name, text, limit):
+    """The presentation plain-text check, applied to a field of the same limit."""
+    from .presentation import EvaluatorPresentation
+
+    slot = {80: "title", 64: "version", 400: "purpose", 2000: "details"}[limit]
+    fields = {
+        "id": "a",
+        "title": "T",
+        "version": "1",
+        "purpose": "p",
+        "details": "d",
+        "source_bundle_sha256": "0" * 64,
+    }
+    fields[slot] = text
+    try:
+        EvaluatorPresentation(**fields)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"Evaluator presentation {name} must be bounded plain text") from exc
+
+
+def _provenance_line(record):
+    """``Source <repo>@<ref> (<commit[:12]>)`` from the loader record, or a refusal."""
+    if not isinstance(record, dict):
+        raise ValueError("Advisory provenance must be a record with repo, ref and commit")
+    repo, ref, commit = record.get("repo"), record.get("ref"), record.get("commit")
+    if not isinstance(repo, str) or _REPO.fullmatch(repo) is None:
+        raise ValueError("Advisory provenance repo must be owner/name")
+    if not isinstance(ref, str) or (_TAG.fullmatch(ref) is None and _HEX40.fullmatch(ref) is None):
+        raise ValueError("Advisory provenance ref must be a vX.Y.Z tag or a commit")
+    if not isinstance(commit, str) or _HEX40.fullmatch(commit) is None:
+        raise ValueError("Advisory provenance commit must be 40 lowercase hex")
+    return f"Source {repo}@{ref} ({commit[:12]})"
+
+
+def _provenance_by_id(report):
+    """``source_bundle.assessment.advisory_provenance``, keyed by ``evaluator.id``."""
+    stored = _assessment_value(report, "advisory_provenance")
+    if stored is None:
+        return {}
+    if not isinstance(stored, dict):
+        raise ValueError("advisory_provenance must be an object keyed by evaluator id")
+    return {key: _provenance_line(record) for key, record in stored.items()}
+
+
+def _not_run_title(ident, record):
+    descriptor = record.get("descriptor") if isinstance(record.get("descriptor"), dict) else None
+    title = descriptor.get("title") if isinstance(descriptor, dict) else None
+    if isinstance(title, str) and title.strip():
+        _bounded_plain("title", title, 80)
+        return title
+    return ident
+
+
+def _not_run_view(ident, record):
+    if not isinstance(record, dict):
+        raise ValueError("advisory_not_run entry must be a record with outcome and reason")
+    outcome = record.get("outcome")
+    if outcome not in {"failure", "refused"}:
+        raise ValueError("Advisory not-run outcome must be failure or refused")
+    _bounded_plain("reason", record.get("reason"), 2000)
+    _bounded_plain("id", ident, 80)
+    from .presentation import EvaluatorPresentation
+
+    try:
+        EvaluatorPresentation(
+            id=ident,
+            title="T",
+            version="1",
+            purpose="p",
+            details="d",
+            source_bundle_sha256="0" * 64,
+        )
+    except ValueError as exc:
+        raise ValueError("Advisory not-run id must be a stable lowercase slug") from exc
+    title = _not_run_title(ident, record)
+    line = f"{title}: NOT RUN ({outcome}): {record['reason']}"
+    view = resolve_one({"title": title, "tier": "observation"})
+    view.update(
+        identity=ident,
+        advisory=True,
+        not_graded=ADVISORY_NOT_GRADED,
+        summary=line,
+        not_run_line=line,
+    )
+    return view
+
+
+def _not_run_views(report, taken):
+    """``source_bundle.assessment.advisory_not_run``, keyed by ``evaluator.id``."""
+    stored = _assessment_value(report, "advisory_not_run")
+    if stored is None:
+        return []
+    if not isinstance(stored, dict):
+        raise ValueError("advisory_not_run must be an object keyed by evaluator id")
+    views = []
+    for ident, record in stored.items():
+        view = _not_run_view(ident, record)
+        if view["identity"] in taken:
+            raise ValueError("Optional presentation cannot replace an existing evaluator")
+        taken.add(view["identity"])
+        views.append(view)
+    return views
+
+
 def advisory_documents(report):
     """Read ``source_bundle.assessment.advisory_results``.
 
@@ -1149,10 +1269,18 @@ def _presentation_view(contribution, summary=""):
     return view
 
 
+def _apply_provenance(view, provenance):
+    line = provenance.get(view["identity"])
+    if line:
+        view["source"] = line
+    return view
+
+
 def advisory_views(report, evidence_results=None):
-    """One peer view per advisory result. The caller builds no presentation."""
+    """One peer view per advisory result or not-run record. The caller builds no presentation."""
     documents = advisory_documents(report)
-    if not documents:
+    provenance = _provenance_by_id(report)
+    if not documents and not _assessment_value(report, "advisory_not_run"):
         return []
     if not any(isinstance(summary, dict) for summary in report.get("summaries") or []):
         raise ValueError("Advisory results require a run summary")
@@ -1168,7 +1296,9 @@ def advisory_views(report, evidence_results=None):
         if contribution.id in taken:
             raise ValueError("Optional presentation cannot replace an existing evaluator")
         taken.add(contribution.id)
-        views.append(_presentation_view(contribution, summary))
+        views.append(_apply_provenance(_presentation_view(contribution, summary), provenance))
+    for view in _not_run_views(report, taken):
+        views.append(_apply_provenance(view, provenance))
     return views
 
 
@@ -1179,12 +1309,24 @@ def _advisory_line(view, *, plain):
     return f"{name} · {plain(view['summary'])}"
 
 
+def _format_advisory_lines(views, *, plain, prefix):
+    lines = []
+    for view in views:
+        if view.get("not_run_line"):
+            lines.append(plain(view["not_run_line"]))
+        else:
+            lines.append(f"{prefix}{_advisory_line(view, plain=plain)}")
+        if view.get("source"):
+            lines.append(plain(view["source"]))
+    return lines
+
+
 def advisory_markdown_lines(report, evidence_results=None):
     """One Markdown line per advisory result, in mark order. Empty when none are stored."""
     views = order_marks(advisory_views(report, evidence_results))
     if not views:
         return []
-    return [f"**Advisory:** {_advisory_line(view, plain=_plain)}" for view in views]
+    return _format_advisory_lines(views, plain=_plain, prefix="**Advisory:** ")
 
 
 def advisory_text_lines(report, evidence_results=None):
@@ -1192,4 +1334,4 @@ def advisory_text_lines(report, evidence_results=None):
     views = order_marks(advisory_views(report, evidence_results))
     if not views:
         return []
-    return [f"Advisory: {_advisory_line(view, plain=lambda value: str(value))}" for view in views]
+    return _format_advisory_lines(views, plain=lambda value: str(value), prefix="Advisory: ")

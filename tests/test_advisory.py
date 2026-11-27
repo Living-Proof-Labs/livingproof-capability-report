@@ -1,8 +1,9 @@
 """Advisory results stored on the bundle render as peer cards (#136).
 
-Read from ``source_bundle.assessment.advisory_results``, the object keyed by
-``evaluator.id`` that capability-verifier#265 is adding. A value is one result
-or a list. The caller builds no presentation.
+Read from ``source_bundle.assessment.advisory_results``, plus
+``advisory_provenance`` and ``advisory_not_run`` beside it. Each object is
+keyed by ``evaluator.id``. capability-verifier#265 is adding these names.
+A result value is one result or a list. The caller builds no presentation.
 """
 
 import copy
@@ -34,6 +35,15 @@ VENDORED = {
     "result.json": "b1d66c7c005d471972857c9716377d9303245b1a7ff3394ba2758d509898c3e5",
     "notes.txt": "672452afe3c3af41a8580455addb04c6e6696ce19e3117e4446a962fb448d7bc",
 }
+# both() with advisory results and no provenance or not-run record, at dc674fb.
+TODAY = {
+    "html": "b54f24817b641ed9ad5e2d4dcf96d3960d3e13cf175225e1098c14dd08875604",
+    "markdown": "9c8d47bdead72047049cf0f056fb9be97aeeac08c439c741d5e670d8d9286b3a",
+    "table": "307d99d68c2f5bb703fd06b36a5482365cde2849cc03ff7b3da594b8084b8d46",
+}
+CHECK_PATH = "M3.2 8.2 6.1 11.1 12.8 4.4"
+BATTERY_COMMIT = "a" * 40
+GAIT_COMMIT = "c" * 40
 
 
 def load_advisory(name):
@@ -44,6 +54,34 @@ def with_advisory(data, mapping):
     data = copy.deepcopy(data)
     data["assessment"]["advisory_results"] = mapping
     return report(data)
+
+
+def with_maps(data, *, results=None, provenance=None, not_run=None):
+    data = copy.deepcopy(data)
+    assessment = data["assessment"]
+    if results is not None:
+        assessment["advisory_results"] = results
+    if provenance is not None:
+        assessment["advisory_provenance"] = provenance
+    if not_run is not None:
+        assessment["advisory_not_run"] = not_run
+    return report(data)
+
+
+def provenance_record(repo, ref, commit, **extra):
+    record = {
+        "line": "DO NOT RENDER THIS",
+        "repo": repo,
+        "ref": ref,
+        "commit": commit,
+        "descriptor_sha256": "ab" * 32,
+        "package_name": "example-advisory",
+        "installed_version": "0.1.0",
+        "exit_code": 0,
+        "outcome": "success",
+    }
+    record.update(extra)
+    return record
 
 
 def with_peers(data):
@@ -308,3 +346,183 @@ def test_cli_render_shows_each_advisory_result(tmp_path):
     assert "bounded plain text" in refused.output
     assert "<script" not in refused.output
     assert "x<y" not in refused.stdout
+
+
+def _owned_provenance():
+    return {
+        "battery-thermal": provenance_record(
+            "living-proof/battery-thermal", "v0.1.0", BATTERY_COMMIT
+        ),
+        "gait-noise": provenance_record("living-proof/gait-noise", GAIT_COMMIT, GAIT_COMMIT),
+    }
+
+
+def test_each_advisory_shows_its_own_provenance_line():
+    stored = with_maps(
+        bundle("g1"),
+        results={
+            "battery-thermal": load_advisory("battery-thermal"),
+            "gait-noise": load_advisory("gait-noise"),
+        },
+        provenance=_owned_provenance(),
+    )
+    page = render(stored, "html")
+    markdown = render(stored, "markdown")
+    text = render(stored, "table")
+    expected = {
+        "battery-thermal": f"Source living-proof/battery-thermal@v0.1.0 ({BATTERY_COMMIT[:12]})",
+        "gait-noise": f"Source living-proof/gait-noise@{GAIT_COMMIT} ({GAIT_COMMIT[:12]})",
+    }
+    for ident, line in expected.items():
+        card = _card(page, ident)
+        assert line in card
+        assert "DO NOT RENDER THIS" not in card
+        assert line in markdown and line in text
+    assert "living-proof/battery-thermal" not in _card(page, "gait-noise")
+    assert "living-proof/gait-noise" not in _card(page, "battery-thermal")
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
+        ("commit", "A" * 40, "commit"),
+        ("repo", "not a repo", "repo"),
+    ],
+)
+def test_malformed_provenance_is_refused(field, value, match):
+    record = provenance_record("living-proof/battery-thermal", "v0.1.0", BATTERY_COMMIT)
+    record[field] = value
+    stored = with_maps(
+        bundle("g1"),
+        results={"battery-thermal": load_advisory("battery-thermal")},
+        provenance={"battery-thermal": record},
+    )
+    for fmt in ("html", "markdown", "table"):
+        with pytest.raises(ValueError, match=match):
+            rendered = render(stored, fmt)
+            assert value not in rendered
+
+
+def test_absent_provenance_matches_output_without_the_record():
+    stored = both()
+    assert "advisory_provenance" not in stored["source_bundle"]["assessment"]
+    for fmt, digest in TODAY.items():
+        assert hashlib.sha256(render(stored, fmt).encode()).hexdigest() == digest
+
+
+def test_not_run_renders_a_peer_card_and_lines():
+    stored = with_maps(
+        bundle("g1"),
+        not_run={
+            "camera-glare": {"outcome": "failure", "reason": "No frames were stored."},
+            "wheel-slip": {
+                "outcome": "refused",
+                "reason": "The recording was outside the contract.",
+                "descriptor": {"title": "Wheel slip"},
+            },
+        },
+    )
+    page = render(stored, "html")
+    markdown = render(stored, "markdown").splitlines()
+    text = render(stored, "table").splitlines()
+    expected = {
+        "camera-glare": "camera-glare: NOT RUN (failure): No frames were stored.",
+        "wheel-slip": "Wheel slip: NOT RUN (refused): The recording was outside the contract.",
+    }
+    for ident, line in expected.items():
+        assert line in _card(page, ident)
+        assert line in markdown
+        assert line in text
+    marked = with_maps(
+        bundle("g1"),
+        not_run={"camera-glare": {"outcome": "failure", "reason": "bad <reason>"}},
+    )
+    for fmt in ("html", "markdown", "table"):
+        with pytest.raises(ValueError, match="reason"):
+            render(marked, fmt)
+
+
+def test_not_run_card_has_no_check_pip_or_pass_styling():
+    stored = with_maps(
+        bundle("g1"),
+        not_run={"camera-glare": {"outcome": "failure", "reason": "No frames were stored."}},
+    )
+    card = _card(render(stored, "html"), "camera-glare")
+    assert CHECK_PATH not in card
+    assert "class='pip'" not in card
+    assert "is-graded" not in card
+    assert "PASS" not in card
+
+
+def test_advisory_mark_never_uses_the_check_or_says_pass():
+    from livingproof_capability_report.evaluators import _mark, resolve_one
+
+    view = resolve_one({"title": "Quiet advisory", "tier": "observation"})
+    view.update(advisory=True, identity="quiet-advisory")
+    tab, panel = _mark(view, "group", 1)
+    assert CHECK_PATH not in tab + panel
+    assert "PASS" not in tab + panel
+    card = _card(render(both(), "html"), "battery-thermal")
+    assert CHECK_PATH not in card
+    assert "PASS" not in card
+
+
+def test_no_media_result_renders_its_summary_without_a_pass():
+    document = load_advisory("no-media")
+    summary = document["advisory"]["summary"]
+    assert summary.endswith("was not run for lack of media. This is not a healthy verdict.")
+    stored = with_advisory(bundle("g1"), {"no-media": document})
+    card = _card(render(stored, "html"), "no-media")
+    assert summary in card
+    assert CHECK_PATH not in card
+    assert "PASS" not in card
+
+
+def test_not_run_keeps_grade_and_sibling_cards_byte_identical():
+    base_data = with_peers(bundle("g1"))
+    base = report(base_data)
+    advised = with_maps(
+        base_data,
+        not_run={"camera-glare": {"outcome": "refused", "reason": "No frames were stored."}},
+    )
+    assert base["summaries"] == advised["summaries"]
+    before = render(base, "html")
+    after = render(advised, "html")
+    assert _grades(before) == _grades(after)
+    for identity in ("livingproof-scenario", "livingproof-run-integrity"):
+        assert _card(before, identity) == _card(after, identity)
+
+    def without_added_lines(text):
+        kept = [
+            line
+            for line in text.splitlines()
+            if "NOT RUN" not in line
+            and not line.startswith("**Advisory:**")
+            and not line.startswith("Advisory: ")
+        ]
+        return "\n".join(kept) + "\n"
+
+    assert without_added_lines(render(advised, "markdown")) == render(base, "markdown")
+    assert without_added_lines(render(advised, "table")) == render(base, "table")
+
+
+def test_not_run_does_not_add_an_integrity_not_run_line():
+    base_data = with_peers(bundle("g1"))
+    base = report(base_data)
+    advised = with_maps(
+        base_data,
+        not_run={"camera-glare": {"outcome": "failure", "reason": "No frames were stored."}},
+    )
+    before_html = render(base, "html")
+    after_html = render(advised, "html")
+    assert _card(before_html, "livingproof-run-integrity") == _card(
+        after_html, "livingproof-run-integrity"
+    )
+    for fmt in ("markdown", "table"):
+        after = render(advised, fmt)
+        assert "camera-glare: NOT RUN (failure): No frames were stored." in after
+        integrity_lines = [
+            line for line in after.splitlines() if "Run Integrity" in line and "NOT RUN" in line
+        ]
+        assert integrity_lines == []
+    assert "NOT RUN" not in _card(after_html, "livingproof-run-integrity")
