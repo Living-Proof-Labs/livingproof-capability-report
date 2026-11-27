@@ -5,7 +5,20 @@
     "version": "9.9.9",
     "kind": "advisory",
     "execution": "deterministic",
-    "display_name": "Noise meter"
+    "display_name": "Noise meter",
+    "publisher": "Example Publisher",
+    "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 16 16\"><rect width=\"16\" height=\"16\" fill=\"none\"/></svg>"
+  },
+  "inputs": [
+    {
+      "role": "evidence-manifest",
+      "uri": "evidence/manifest.json",
+      "sha256": "b324aa783208399983b969f28924729519e55fc929525a06619cc015a3753261"
+    }
+  ],
+  "timestamps": {
+    "started_at": "2026-11-20T15:00:00Z",
+    "completed_at": "2026-11-20T15:00:01Z"
   },
   "descriptor": {
     "title": "Gait noise",

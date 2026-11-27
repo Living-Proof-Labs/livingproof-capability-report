@@ -1221,6 +1221,7 @@ def _advisory_contribution(document, source_bundle_sha256):
     if descriptor is None or payload is None:
         raise ValueError("Advisory result requires a descriptor and an advisory payload")
     from .presentation import EvaluatorPresentation
+
     href = None
     details_file = payload.get("details_file")
     if details_file is not None:
@@ -1334,4 +1335,4 @@ def advisory_text_lines(report, evidence_results=None):
     views = order_marks(advisory_views(report, evidence_results))
     if not views:
         return []
-    return _format_advisory_lines(views, plain=lambda value: str(value), prefix="Advisory: ")
+    return _format_advisory_lines(views, plain=_plain, prefix="Advisory: ")

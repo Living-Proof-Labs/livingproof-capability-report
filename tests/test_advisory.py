@@ -35,9 +35,9 @@ VENDORED = {
     "result.json": "b1d66c7c005d471972857c9716377d9303245b1a7ff3394ba2758d509898c3e5",
     "notes.txt": "672452afe3c3af41a8580455addb04c6e6696ce19e3117e4446a962fb448d7bc",
 }
-# both() with advisory results and no provenance or not-run record, at dc674fb.
+# both() with advisory results and no provenance or not-run record.
 TODAY = {
-    "html": "b54f24817b641ed9ad5e2d4dcf96d3960d3e13cf175225e1098c14dd08875604",
+    "html": "b221e55faa00f87fcf41c477ff532865ddf449df77792d264332e08eb3582c48",
     "markdown": "9c8d47bdead72047049cf0f056fb9be97aeeac08c439c741d5e670d8d9286b3a",
     "table": "307d99d68c2f5bb703fd06b36a5482365cde2849cc03ff7b3da594b8084b8d46",
 }
@@ -186,9 +186,10 @@ def test_each_advisory_card_shows_its_own_descriptor_title_purpose_and_summary(n
     card = _card(page, document["evaluator"]["id"])
     assert descriptor["title"] in card
     assert descriptor["purpose"] in card
-    assert document["advisory"]["summary"] in card or document["advisory"]["summary"].replace(
-        "&", "&amp;"
-    ) in card
+    assert (
+        document["advisory"]["summary"] in card
+        or document["advisory"]["summary"].replace("&", "&amp;") in card
+    )
     other = "Gait noise" if name == "battery-thermal" else "Battery thermal"
     assert other not in card
 
@@ -216,18 +217,30 @@ def test_two_advisory_evaluators_render_as_separate_cards_and_lines():
     assert page.index("id='evaluator-battery-thermal'") < page.index("id='evaluator-gait-noise'")
     markdown = render(stored, "markdown")
     text = render(stored, "table")
-    assert markdown.splitlines().count(
-        "**Advisory:** Battery thermal 0.1.0 · Pack & cell temperatures stayed within the recorded range."
-    ) == 1
-    assert markdown.splitlines().count(
-        "**Advisory:** Gait noise 0.2.0 · Footfall noise stayed within the recorded band."
-    ) == 1
-    assert text.splitlines().count(
-        "Advisory: Battery thermal 0.1.0 · Pack & cell temperatures stayed within the recorded range."
-    ) == 1
-    assert text.splitlines().count(
-        "Advisory: Gait noise 0.2.0 · Footfall noise stayed within the recorded band."
-    ) == 1
+    assert (
+        markdown.splitlines().count(
+            "**Advisory:** Battery thermal 0.1.0 · Pack & cell temperatures stayed within the recorded range."
+        )
+        == 1
+    )
+    assert (
+        markdown.splitlines().count(
+            "**Advisory:** Gait noise 0.2.0 · Footfall noise stayed within the recorded band."
+        )
+        == 1
+    )
+    assert (
+        text.splitlines().count(
+            "Advisory: Battery thermal 0.1.0 · Pack & cell temperatures stayed within the recorded range."
+        )
+        == 1
+    )
+    assert (
+        text.splitlines().count(
+            "Advisory: Gait noise 0.2.0 · Footfall noise stayed within the recorded band."
+        )
+        == 1
+    )
 
 
 def test_grade_and_sibling_cards_stay_byte_identical():
@@ -387,6 +400,8 @@ def test_each_advisory_shows_its_own_provenance_line():
     [
         ("commit", "A" * 40, "commit"),
         ("repo", "not a repo", "repo"),
+        ("ref", "main", "ref"),
+        ("ref", "abcd", "ref"),
     ],
 )
 def test_malformed_provenance_is_refused(field, value, match):
@@ -467,15 +482,92 @@ def test_advisory_mark_never_uses_the_check_or_says_pass():
     assert "PASS" not in card
 
 
-def test_no_media_result_renders_its_summary_without_a_pass():
-    document = load_advisory("no-media")
-    summary = document["advisory"]["summary"]
-    assert summary.endswith("was not run for lack of media. This is not a healthy verdict.")
-    stored = with_advisory(bundle("g1"), {"no-media": document})
-    card = _card(render(stored, "html"), "no-media")
-    assert summary in card
+def test_no_media_refusal_renders_not_run_without_a_pass():
+    recorded = json.loads((FIXTURES / "no-media" / "not-run.json").read_text(encoding="utf-8"))
+    ident, record = next(iter(recorded.items()))
+    assert ident == "no-media"
+    assert record == {"outcome": "refused", "reason": "Health was not run: media missing."}
+    stored = with_maps(bundle("g1"), not_run=recorded)
+    line = "no-media: NOT RUN (refused): Health was not run: media missing."
+    card = _card(render(stored, "html"), ident)
+    assert line in card
     assert CHECK_PATH not in card
     assert "PASS" not in card
+    assert line in render(stored, "markdown")
+    assert line in render(stored, "table")
+
+
+@pytest.mark.parametrize("outcome", ["success", "passed", 1])
+def test_not_run_outcome_other_than_failure_or_refused_is_refused(outcome):
+    stored = with_maps(
+        bundle("g1"),
+        not_run={"camera-glare": {"outcome": outcome, "reason": "fine"}},
+    )
+    for fmt in ("html", "markdown", "table"):
+        with pytest.raises(ValueError, match="outcome"):
+            rendered = render(stored, fmt)
+            assert "NOT RUN" not in rendered
+
+
+def test_markdown_characters_in_advisory_text_are_escaped():
+    document = load_advisory("gait-noise")
+    document["advisory"]["summary"] = "*bold* _x_ `tick` | pipe [x](y)"
+    stored = with_advisory(bundle("g1"), {"gait-noise": document})
+    escaped = r"\*bold\* \_x\_ \`tick\` \| pipe \[x\](y)"
+    for fmt in ("markdown", "table"):
+        text = render(stored, fmt)
+        assert escaped in text
+        assert "*bold*" not in text
+
+
+def test_result_and_not_run_for_the_same_id_are_refused():
+    stored = with_maps(
+        bundle("g1"),
+        results={"battery-thermal": load_advisory("battery-thermal")},
+        not_run={"battery-thermal": {"outcome": "failure", "reason": "x"}},
+    )
+    for fmt in ("html", "markdown", "table"):
+        with pytest.raises(ValueError, match="cannot replace"):
+            rendered = render(stored, fmt)
+            assert "NOT RUN" not in rendered
+            assert "Battery thermal" not in rendered
+
+
+def test_malformed_descriptor_is_refused():
+    document = load_advisory("battery-thermal")
+    document["descriptor"] = "not-a-descriptor"
+    stored = with_advisory(bundle("g1"), {"battery-thermal": document})
+    for fmt in ("html", "markdown", "table"):
+        with pytest.raises(ValueError, match="descriptor"):
+            render(stored, fmt)
+
+
+def _result_validator():
+    from jsonschema import Draft202012Validator
+    from referencing import Registry, Resource
+
+    root = FIXTURES / "schema"
+    base = "https://github.com/Living-Proof-Labs/livingproof-evaluator/schema/"
+
+    def retrieve(uri):
+        relative = uri.removeprefix(base).split("#", 1)[0]
+        return Resource.from_contents(json.loads((root / relative).read_text(encoding="utf-8")))
+
+    schema = json.loads((root / "evaluator-result.schema.json").read_text(encoding="utf-8"))
+    return Draft202012Validator(
+        schema,
+        registry=Registry(retrieve=retrieve),
+        format_checker=Draft202012Validator.FORMAT_CHECKER,
+    )
+
+
+def test_advisory_result_fixtures_match_the_v1_10_0_schema():
+    validator = _result_validator()
+    for name in ("battery-thermal", "gait-noise"):
+        errors = sorted(
+            validator.iter_errors(load_advisory(name)), key=lambda item: list(item.path)
+        )
+        assert errors == [], name
 
 
 def test_not_run_keeps_grade_and_sibling_cards_byte_identical():

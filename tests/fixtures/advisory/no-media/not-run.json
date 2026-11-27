@@ -1,0 +1,6 @@
+{
+  "no-media": {
+    "outcome": "refused",
+    "reason": "Health was not run: media missing."
+  }
+}
