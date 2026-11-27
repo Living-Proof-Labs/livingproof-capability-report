@@ -1031,9 +1031,14 @@ def summary_front(report, stored_body, evidence_results=None, *, presentations=(
     )
 
 
+def _collapsed(value):
+    """One line of plain text. The field is already plain, so nothing is escaped."""
+    return " ".join(str(value).split())
+
+
 def _plain(value):
     """One line of Markdown-safe text: no line breaks, no table or emphasis markup."""
-    text = " ".join(str(value).split())
+    text = _collapsed(value)
     for char in ("\\", "|", "*", "_", "`", "[", "]", "<", ">"):
         text = text.replace(char, "\\" + char)
     return text
@@ -1335,4 +1340,4 @@ def advisory_text_lines(report, evidence_results=None):
     views = order_marks(advisory_views(report, evidence_results))
     if not views:
         return []
-    return _format_advisory_lines(views, plain=_plain, prefix="Advisory: ")
+    return _format_advisory_lines(views, plain=_collapsed, prefix="Advisory: ")

@@ -511,13 +511,17 @@ def test_not_run_outcome_other_than_failure_or_refused_is_refused(outcome):
 
 def test_markdown_characters_in_advisory_text_are_escaped():
     document = load_advisory("gait-noise")
-    document["advisory"]["summary"] = "*bold* _x_ `tick` | pipe [x](y)"
+    raw = "cam_front *bold* _x_ `tick` | pipe [x](y)"
+    document["advisory"]["summary"] = raw
     stored = with_advisory(bundle("g1"), {"gait-noise": document})
-    escaped = r"\*bold\* \_x\_ \`tick\` \| pipe \[x\](y)"
-    for fmt in ("markdown", "table"):
-        text = render(stored, fmt)
-        assert escaped in text
-        assert "*bold*" not in text
+    escaped = r"cam\_front \*bold\* \_x\_ \`tick\` \| pipe \[x\](y)"
+    markdown = render(stored, "markdown")
+    table = render(stored, "table")
+    assert escaped in markdown
+    assert "*bold*" not in markdown
+    assert raw in table
+    assert r"cam\_front" not in table
+    assert r"\*bold\*" not in table
 
 
 def test_result_and_not_run_for_the_same_id_are_refused():
