@@ -1,5 +1,6 @@
 """Thin Click group, reusable as a future parent's nested report command."""
 
+import re
 from pathlib import Path
 
 import click
@@ -296,6 +297,11 @@ def comment_command(reports, repo, pr, dry_run, comments):
         click.echo(text, nl=False)
 
 
+# A GitHub owner is letters, digits and hyphens, not leading; a repository name adds dots and
+# underscores. The site command uses it to tell this repository's CI run pages apart.
+_REPOSITORY_SHAPE = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})/[A-Za-z0-9._-]{1,100}")
+
+
 @report.command("site")
 @click.argument("reports_dir", type=click.Path(file_okay=False, path_type=Path))
 @click.option(
@@ -361,6 +367,10 @@ def site_command(
 
     if not repository:
         raise click.UsageError("--repository (or GITHUB_REPOSITORY) is required.")
+    if not _REPOSITORY_SHAPE.fullmatch(repository) or repository.split("/")[1] in {".", ".."}:
+        raise click.UsageError(
+            f"--repository (or GITHUB_REPOSITORY) must have the OWNER/NAME shape: {repository!r}."
+        )
     try:
         added = build(
             reports_dir,
