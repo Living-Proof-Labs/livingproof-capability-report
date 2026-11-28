@@ -447,8 +447,8 @@ report pages and checksums stay. `--git-dir` names a checkout used to show the r
 each tested commit. The command then checks every link, checksum and published word, and exits
 non-zero on any problem. It never fetches anything and never regrades a run.
 
-`--repository` (default `GITHUB_REPOSITORY`; the command refuses to run without it) names the
-caller. Only that repository's own CI run pages (`https://github.com/OWNER/NAME/actions/runs/N`,
+`--repository` (default `GITHUB_REPOSITORY`; the command refuses to run without it, or when it
+is not `OWNER/NAME`) names the caller. Only that repository's own CI run pages (`https://github.com/OWNER/NAME/actions/runs/N`,
 case exact, ending at the address or at the HTML entity that closes it) stay links. Any other
 Actions address is removed from the pages and the report JSON: other repositories, a case
 variant, a suffix such as `/job/2`, `?x=1` or `.zip`, and an `/actions/` hidden by percent or

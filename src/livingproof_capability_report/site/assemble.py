@@ -1780,7 +1780,7 @@ def build(
         raise SiteError(
             f"run.url must be a run of this repository ({repository}): "
             + ", ".join(problems)
-            + ". Drop that run with exclude-runs, or start the history again."
+            + ". Drop that run with --exclude-run, or start the history again."
         )
     if problems := public_page_problems(reports_dir, repository=repository):
         raise SiteError(
