@@ -978,7 +978,9 @@ def render_example_card(
     )
 
 
-def summary_front(report, stored_body, evidence_results=None, *, presentations=(), viewer_panels=None):
+def summary_front(
+    report, stored_body, evidence_results=None, *, presentations=(), viewer_panels=None
+):
     """Visible ring and marks. ``stored_body`` sits inside one mark's details."""
     runs = [summary for summary in report.get("summaries") or [] if isinstance(summary, dict)]
     docs = []

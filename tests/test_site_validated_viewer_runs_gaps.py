@@ -10,8 +10,8 @@ Found by reviewing #145 at 8ed5fac. Each group names what it holds fixed:
 - a listed run that `site` republishes anyway (evidence expiry, same-run replace) is kept
   as a plain page and the entry has no effect
 - the two helpers that are now public
-- three positions where the frame text is still accepted, as strict xfails (finding 1 of the
-  review): the frame must be a whole element, not bytes inside a tag, a value or a script
+- the frame must be a whole element in the exact place `compose_viewer_page` puts it, not
+  the same bytes inside a start tag, an attribute value or a script
 """
 
 from __future__ import annotations
@@ -301,7 +301,9 @@ def test_the_composed_page_holds_exactly_the_markup_the_check_accepts(tmp_path):
     frame = _frame((reports / RUN / "index.html").read_text(encoding="utf-8"))
     assert frame.startswith(FRAME_START) and frame.endswith(FRAME_END)
     assert re.fullmatch(
-        re.escape(FRAME_START) + r"trusted-viewer/viewer\.html#[^\"<>]+" + re.escape(FRAME_END),
+        re.escape(FRAME_START)
+        + r"trusted-viewer/viewer\.html#file=data%2Frecording\.json&amp;sha256=[a-f0-9]{64}&amp;run=[A-Za-z0-9._~%-]+&amp;configuration=[A-Za-z0-9._~%-]+&amp;trial=[1-9][0-9]*"
+        + re.escape(FRAME_END),
         frame,
     )
 
@@ -444,12 +446,7 @@ def test_write_published_checksums_covers_the_trusted_viewer_files(tmp_path):
     assert "SHA256SUMS" not in sums
 
 
-# --- finding 1: the frame is taken out as bytes, wherever they sit -------------------------
-#
-# The check removes the frame text and checks what is left, so the frame's bytes can sit in a
-# start tag, an attribute value or a known script and the page still passes, although the
-# page that is published is not the page that was checked. These are strict xfails: they
-# fail today, and start to fail loudly (XPASS) when the exception becomes position-aware.
+# --- finding 1: the frame has to be a whole element in the composed panel ------------------
 
 POSITIONS = {
     "inside a start tag": r"<a ",
@@ -458,7 +455,6 @@ POSITIONS = {
 }
 
 
-@pytest.mark.xfail(strict=True, reason="finding 1: the frame is removed as text, at any position")
 @pytest.mark.parametrize("where", sorted(POSITIONS))
 def test_the_frame_bytes_inside_a_tag_a_value_or_a_script_are_not_accepted(tmp_path, where):
     reports = _history(tmp_path)

@@ -62,3 +62,30 @@ def validate_viewer_page(page, report, *, trusted_viewers, asset_root, validate_
         before, _, after = page.partition(decorated)
         page = before + original + after
     _checked_shell(page, validate_shell)
+
+
+def shell_after_removing_viewer(page, report, frame):
+    """Return the page with the composed viewer panel replaced by the original panel.
+
+    The frame has to be a whole element in the exact place `compose_viewer_page` puts it
+    (inside the native advisory panel). The same bytes inside a start tag, an attribute
+    value or a script do not form that panel and are refused. This does not read
+    `trusted-viewer/`; the caller supplies the frame it already matched.
+    """
+    if not isinstance(page, str) or not isinstance(frame, str) or not frame:
+        raise ValueError("A page and the composed viewer frame are required")
+    found = None
+    for view in advisory_views(report):
+        original = _panel(view, show_time=False)
+        decorated = _panel(dict(view, trusted_viewer_html=frame), show_time=False)
+        count = page.count(decorated)
+        if count == 0:
+            continue
+        if count != 1 or found is not None:
+            raise ValueError("Expected one unchanged native evaluator panel")
+        found = (original, decorated)
+    if found is None:
+        raise ValueError("Published viewer differs from the native bound panel")
+    original, decorated = found
+    before, _, after = page.partition(decorated)
+    return before + original + after

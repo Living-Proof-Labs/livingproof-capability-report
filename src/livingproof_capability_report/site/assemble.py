@@ -10,16 +10,19 @@ from __future__ import annotations
 import hashlib
 import html
 import json
+import os
 import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import urllib.parse
 from collections.abc import Iterable
 from datetime import timedelta
 from pathlib import Path, PurePosixPath
 
 from ..trusted_viewer import FRAME_END, FRAME_START
+from ..viewer_page import shell_after_removing_viewer
 from .details import DetailsPathError, cited_details_uris, read_cited_details, safe_relative
 from .common import (
     ARTIFACT_WORD,
@@ -1284,7 +1287,9 @@ def write_published_checksums(folder: Path) -> None:
     """Write `folder/SHA256SUMS`: the SHA-256 of every other file under it, sorted by path.
 
     A run folder's checksum list as the site publishes it. Callers that add files to a
-    published run folder (a trusted viewer, for example) call this afterwards.
+    published run folder (a trusted viewer, for example) call this afterwards. A
+    symlinked `SHA256SUMS` is refused (the write never follows it). The file is written
+    to a temporary name in the same folder and renamed into place.
     """
     names = sorted(
         path.relative_to(folder).as_posix()
@@ -1293,8 +1298,21 @@ def write_published_checksums(folder: Path) -> None:
     )
     if any(name == ORIGINAL_HTML or name.endswith("/" + ORIGINAL_HTML) for name in names):
         raise SiteError(f"{folder}: {ORIGINAL_HTML} is not a published file")
+    target = folder / "SHA256SUMS"
+    if target.is_symlink():
+        raise SiteError(f"{folder}: SHA256SUMS is a symlink; refusing to write through it")
+    if target.exists() and not target.is_file():
+        raise SiteError(f"{folder}: SHA256SUMS is not a regular file")
     lines = [f"{_sha256(folder / name)}  {name}" for name in names]
-    (folder / "SHA256SUMS").write_text(("\n".join(lines) + "\n") if lines else "", encoding="utf-8")
+    payload = ("\n".join(lines) + "\n") if lines else ""
+    fd, tmp_name = tempfile.mkstemp(prefix=".SHA256SUMS.", suffix=".tmp", dir=folder)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(payload)
+        Path(tmp_name).replace(target)
+    except Exception:
+        Path(tmp_name).unlink(missing_ok=True)
+        raise
 
 
 def publish_report_files(
@@ -1611,19 +1629,18 @@ def remember_stored_wording(folder: Path, record: dict) -> bool:
     return True
 
 
-# A trusted viewer frame as the reporter composes it (trusted_viewer.FRAME_START and
-# FRAME_END), with its src under the run's trusted-viewer/ folder: a local HTML asset path,
-# then the URL-encoded recording fragment with each "&" escaped.
-_FRAME_QUERY = r"[A-Za-z0-9._~%+-]+=[A-Za-z0-9._~%+-]*"
-_VIEWER_FRAME = re.compile(
-    re.escape(FRAME_START)
-    + r"trusted-viewer/[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*\.html#"
-    + _FRAME_QUERY
-    + r"(?:&amp;"
-    + _FRAME_QUERY
-    + r")*"
-    + re.escape(FRAME_END)
+# A trusted viewer frame as `compose_viewer_page` writes it: FRAME_START, the exact
+# `src` (one filename, the recording fragment with those five keys in that order, each
+# "&" escaped), FRAME_END. Anything else is refused.
+_VIEWER_SRC = (
+    r"trusted-viewer/viewer\.html#"
+    r"file=data%2Frecording\.json"
+    r"&amp;sha256=[a-f0-9]{64}"
+    r"&amp;run=[A-Za-z0-9._~%-]+"
+    r"&amp;configuration=[A-Za-z0-9._~%-]+"
+    r"&amp;trial=[1-9][0-9]*"
 )
+_VIEWER_FRAME = re.compile(re.escape(FRAME_START) + _VIEWER_SRC + re.escape(FRAME_END))
 _RUN_PATH_PART = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 
 
@@ -1675,8 +1692,10 @@ def recheck_restored_run(folder: Path, *, validated_viewer: bool = False) -> Non
     rewriting them; reset-history rebuilds the site from run folders.
 
     For a run the caller validated (`--validated-viewer-run`), index.html must hold exactly
-    one trusted viewer frame; only that frame is left out of the check. The rest of the
-    page, report.html and the evidence get every check as usual.
+    one trusted viewer frame as `compose_viewer_page` writes it, as a whole element in the
+    native advisory panel. That panel is put back to the original and the remaining shell
+    is checked; `report.html` and the evidence get every check as usual. This does not
+    read, change, add or delete anything under `trusted-viewer/`.
     """
     evidence = folder / "evidence"
     # The site writes each evidence listing as evidence/<name>.html. A restored one is a
@@ -1693,7 +1712,12 @@ def recheck_restored_run(folder: Path, *, validated_viewer: bool = False) -> Non
                     f"restored {path}: --validated-viewer-run needs exactly one trusted viewer "
                     f"frame as the reporter composes it, found {len(frames)}"
                 )
-            text = text.replace(frames[0], "", 1)
+            try:
+                text = shell_after_removing_viewer(
+                    text, read_report(folder / "report.json"), frames[0]
+                )
+            except ValueError as error:
+                raise SiteError(f"restored {path}: {error}") from None
         if checked_report_html(text, f"restored {path}") != text:
             raise SiteError(
                 f"restored {path}: holds a <script> that is not a known reporter script"
