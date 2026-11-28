@@ -1,0 +1,28 @@
+Living Proof Labs capability report
+Stored decisions; no regrading.
+
+Result        | Catalog | Revision | Status
+--------------+---------+----------+-------
+stock-seed-01 | v2.3.0  | 0.1.0    | FAIL
+
+Separate contexts (no overall grade):
+  {\"environment\": {\"id\": \"hallway-open\", \"version\": \"0.1.0\"}, \"spec\": {\"capability\": \"walk-hallway\", \"commit\": \"57317e617014a6df97bb7fba9d92a890af8d42e5\", \"repository\": \"https://github.com/Living-Proof-Labs/robot-capability-specs\", \"revision\": \"0.1.0\", \"tag\": \"v2.3.0\"}, \"system\": {\"id\": \"unitree-g1/stock\", \"version\": \"1.1.1\"}}
+    Results: stock-seed-01
+
+Fixture evidence, not robot safety certification.
+Use --format json/html/csv for full export details.
+Run unitree-g1/stock: 0 successes, 0%; overall FAIL. 100% required.
+Run Integrity: PASS
+  Actual: 1 failure, 100%; primary failure: lateral limit exceeded in 1 (trial 1).
+Policy: "all-required-v1@1.0.0"
+Grade revision: 1
+{"assessor_types": ["deterministic"], "failures": [{"check": "hallway-lateral-limit", "limit": 0.49, "observed": 0.5965, "seed": 1, "t": 10.46, "unit": "m"}, {"check": "hallway-wall-contact", "limit": 0.0, "observed": 0.0504, "seed": 1, "t": 10.54, "unit": "m", "wall": "wall-left"}], "reason": "Failed: lateral 0.60 m > 0.49 m at 10.46 s (trial 1); wall contact depth 0.05 m at 10.54 s (trial 1)", "result_id": "stock-seed-01", "status": "FAIL"}
+## Pinned inputs
+
+capability-verifier: resolved (no published commit; tag peeled)
+livingproof-sim-mujoco: resolved (no published commit; tag peeled)
+robot-capability-specs: resolved (no published commit; tag peeled)
+livingproof-worlds: resolved (no published commit; tag peeled)
+livingproof-evaluator-scenario: resolved (no published commit; tag peeled)
+livingproof-evaluator-run: resolved (no published commit; tag peeled)
+livingproof-capability-report: resolved (no published commit; tag peeled)

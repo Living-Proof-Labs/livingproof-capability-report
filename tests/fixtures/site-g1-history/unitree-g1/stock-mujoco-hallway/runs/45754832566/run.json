@@ -1,0 +1,355 @@
+{
+  "fixture": false,
+  "robot": {
+    "repository": "Living-Proof-Labs/livingproof-unitree-g1",
+    "commit": "d554c8243a12849dc7fe8acc1921bb3d4e5239a7",
+    "configuration": "stock",
+    "url": "https://github.com/Living-Proof-Labs/livingproof-unitree-g1/tree/d554c8243a12849dc7fe8acc1921bb3d4e5239a7",
+    "software_version": "1.1.1"
+  },
+  "variant": "stock-mujoco-hallway",
+  "verification": "unitree-g1-stock-mujoco-hallway",
+  "procedure": "walk-hallway",
+  "outcome": [
+    {
+      "capability": "walk-hallway",
+      "system": "unitree-g1/stock",
+      "grade": "FAIL",
+      "passed": 0,
+      "trials": 1,
+      "required": 1
+    }
+  ],
+  "run": {
+    "id": "45754832566",
+    "url": "https://github.com/Living-Proof-Labs/verification-reports-action/actions/runs/45754832566",
+    "created": "2026-11-26T04:30:31Z"
+  },
+  "commit": {
+    "sha": "d554c8243a12849dc7fe8acc1921bb3d4e5239a7",
+    "url": "https://github.com/Living-Proof-Labs/verification-reports-action/commit/d554c8243a12849dc7fe8acc1921bb3d4e5239a7"
+  },
+  "releases": {
+    "specs": {
+      "repository": "Living-Proof-Labs/robot-capability-specs",
+      "tag": "v2.3.0",
+      "commit": "57317e617014a6df97bb7fba9d92a890af8d42e5",
+      "files": {
+        "specs/scenarios/walk-hallway/description.json": "788bcd6345dad4d262ea14fc346d8883933b790f4991302f01d6eee84f52ff21",
+        "specs/scenarios/walk-hallway/parameters.json": "9226aa6bc0e577863bdc210514e7e7c3a7edc32f49c4f7b46aa7249837f08b3d"
+      },
+      "url": "https://github.com/Living-Proof-Labs/robot-capability-specs/releases/tag/v2.3.0"
+    },
+    "runner": {
+      "repository": "Living-Proof-Labs/livingproof-sim-mujoco",
+      "tag": "v3.9.7",
+      "commit": "727d8706598e8ac706324ca87edd0973fdbb3485",
+      "url": "https://github.com/Living-Proof-Labs/livingproof-sim-mujoco/releases/tag/v3.9.7"
+    },
+    "verifier": {
+      "repository": "Living-Proof-Labs/capability-verifier",
+      "tag": "v2.12.5",
+      "url": "https://github.com/Living-Proof-Labs/capability-verifier/releases/tag/v2.12.5"
+    },
+    "reporter": {
+      "repository": "Living-Proof-Labs/livingproof-capability-report",
+      "tag": "v3.15.4",
+      "commit": "5918ce732732a287cd71e4e276ae737f5ca1d49b",
+      "url": "https://github.com/Living-Proof-Labs/livingproof-capability-report/releases/tag/v3.15.4"
+    }
+  },
+  "definition": "tests/smoke/g1/unitree-g1-stock-mujoco-hallway.toml",
+  "version": "3.5.0",
+  "declared_robot": {
+    "repository": "Living-Proof-Labs/livingproof-unitree-g1",
+    "ref": "v2.3.34",
+    "commit": "d554c8243a12849dc7fe8acc1921bb3d4e5239a7",
+    "configurations": [
+      "stock"
+    ],
+    "adapter": "lpl_g1.adapter:ROBOT"
+  },
+  "inputs": [
+    {
+      "name": "capability-verifier",
+      "repository": "Living-Proof-Labs/capability-verifier",
+      "tag": "v2.12.5",
+      "commit": "e6a1ba347c525b62abf0644b610562b7bfb390d9",
+      "digest": "sha256:df15ce3eaeac3e3f7947a37e6df6e8bb4d759ece88787136a786f0bfb195b907",
+      "workflow": "",
+      "status": "resolved",
+      "result": "resolved",
+      "attestation": "not-published",
+      "checks": {
+        "release": "passed",
+        "commit": "resolved",
+        "digest": "passed",
+        "attestation": "not-published"
+      }
+    },
+    {
+      "name": "livingproof-sim-mujoco",
+      "repository": "Living-Proof-Labs/livingproof-sim-mujoco",
+      "tag": "v3.9.7",
+      "commit": "727d8706598e8ac706324ca87edd0973fdbb3485",
+      "digest": "sha256:7bc8013c7d225dca38d335c8c9c0d95548e092377c1af53e902aa3f4f3f6c083",
+      "workflow": "",
+      "status": "resolved",
+      "result": "resolved",
+      "attestation": "not-published",
+      "checks": {
+        "release": "passed",
+        "commit": "resolved",
+        "digest": "resolved",
+        "attestation": "not-published"
+      }
+    },
+    {
+      "name": "robot-capability-specs",
+      "repository": "Living-Proof-Labs/robot-capability-specs",
+      "tag": "v2.3.0",
+      "commit": "57317e617014a6df97bb7fba9d92a890af8d42e5",
+      "digest": "sha256:af965dc3a6b3665e98a57b348812a2b9cc45f83351434fdedcbba4fc01027e7c",
+      "workflow": "",
+      "status": "resolved",
+      "result": "resolved",
+      "attestation": "not-published",
+      "checks": {
+        "release": "passed",
+        "commit": "resolved",
+        "digest": "resolved",
+        "attestation": "not-published"
+      }
+    },
+    {
+      "name": "livingproof-worlds",
+      "repository": "Living-Proof-Labs/livingproof-worlds",
+      "tag": "v1.1.0",
+      "commit": "9b3e7119aa93a3370383227fb30bd39a9dd72b4b",
+      "digest": "sha256:d60bb8aa6a72c8403fb6674cc9d803962c1484bc3e163527988e8c57ccec775c",
+      "workflow": "",
+      "status": "resolved",
+      "result": "resolved",
+      "attestation": "not-published",
+      "checks": {
+        "release": "passed",
+        "commit": "resolved",
+        "digest": "resolved",
+        "attestation": "not-published"
+      }
+    },
+    {
+      "name": "livingproof-evaluator-scenario",
+      "repository": "Living-Proof-Labs/livingproof-evaluator-scenario",
+      "tag": "v1.5.3",
+      "commit": "ca9d337a771269d07feec94c99f199bef7fca808",
+      "digest": "sha256:26939e0a0644cb997b9562f7c41cc20e0155b1a683325b025f123f94d51ad8fc",
+      "workflow": "",
+      "status": "resolved",
+      "result": "resolved",
+      "attestation": "not-published",
+      "checks": {
+        "release": "passed",
+        "commit": "resolved",
+        "digest": "resolved",
+        "attestation": "not-published"
+      }
+    },
+    {
+      "name": "livingproof-evaluator-run",
+      "repository": "Living-Proof-Labs/livingproof-evaluator-run",
+      "tag": "v1.8.6",
+      "commit": "105aab515a8b045186a06f73c689568a2e02480d",
+      "digest": "sha256:443be75e256ec6c09f3a6efe17940f60fc3df0cdca46e7fc0c65b83e5fe1d5ff",
+      "workflow": "",
+      "status": "resolved",
+      "result": "resolved",
+      "attestation": "not-published",
+      "checks": {
+        "release": "passed",
+        "commit": "resolved",
+        "digest": "resolved",
+        "attestation": "not-published"
+      }
+    },
+    {
+      "name": "livingproof-capability-report",
+      "repository": "Living-Proof-Labs/livingproof-capability-report",
+      "tag": "v3.15.4",
+      "commit": "5918ce732732a287cd71e4e276ae737f5ca1d49b",
+      "digest": "sha256:b91557cbb024614e441462ced9941e3da1f40cabe96fbfd9a3f5f82d1908db07",
+      "workflow": "",
+      "status": "resolved",
+      "result": "resolved",
+      "attestation": "not-published",
+      "checks": {
+        "release": "passed",
+        "commit": "resolved",
+        "digest": "passed",
+        "attestation": "not-published"
+      }
+    }
+  ],
+  "health": {
+    "advisory": true,
+    "path": "health.json",
+    "sha256": "0d48032bd49edb595432c59e99219052d4f31dc21ba1e883375d936bdb3e2ca4",
+    "source": {
+      "name": "livingproof-evaluator-health",
+      "repository": "Living-Proof-Labs/livingproof-evaluator-health",
+      "tag": "v1.1.2",
+      "commit": "7441d6d7c7dc529d12cf0be0a4dc6225faa85cad",
+      "digest": "sha256:cdb3f6fad993042be368e5ffeeb8fb7ea234b38f34860dd352f1897e888d721c",
+      "workflow": "",
+      "status": "resolved",
+      "result": "resolved",
+      "attestation": "not-published",
+      "checks": {
+        "release": "passed",
+        "commit": "resolved",
+        "digest": "resolved",
+        "attestation": "not-published"
+      }
+    },
+    "trial": {
+      "configuration": "stock",
+      "index": 1,
+      "observation_sha256": "16223272b2ddd3e13b4053e2b756a61b251c1c2ff2d858a6936efbefa4120a46",
+      "run_id": "walk-hallway-unitree-g1-stock-20261126T042453Z"
+    },
+    "report_trial": "stock-seed-01"
+  },
+  "poster": {
+    "type": "ci",
+    "name": "CI"
+  },
+  "grading_inputs": [
+    {
+      "role": "thresholds",
+      "path": "thresholds.json",
+      "sha256": "b3df271329b1520e5f004a7629d547875b9ee8366279e71e6dbee8c1070250cf"
+    }
+  ],
+  "evidence": [
+    {
+      "label": "evidence ending",
+      "kind": "note",
+      "preserved": true,
+      "files": [
+        {
+          "path": "evidence/evidence-ending.json",
+          "sha256": "4130fd890b37d0bab0a4db10e27e57fa170e0183a927343b651b186301411894",
+          "bytes": 215
+        }
+      ]
+    },
+    {
+      "label": "manifest",
+      "kind": "note",
+      "preserved": true,
+      "files": [
+        {
+          "path": "evidence/manifest.json",
+          "sha256": "22d7e3327fca148daada9e0e76e5f5e2bb637661bf37dd6085015d471582c06e",
+          "bytes": 18518
+        }
+      ]
+    },
+    {
+      "label": "trial 01.binding",
+      "kind": "note",
+      "preserved": true,
+      "files": [
+        {
+          "path": "evidence/mcap/mcap/trial-01.binding.json",
+          "sha256": "58ccfc48ba07b28434ea2e0b450089c0ce676e241d32df064059b7a49e3ebfd6",
+          "bytes": 1466
+        }
+      ]
+    },
+    {
+      "label": "trial 01",
+      "kind": "mcap",
+      "preserved": true,
+      "files": [
+        {
+          "path": "evidence/mcap/mcap/trial-01.mcap",
+          "sha256": "7c32e85d5020a0c16ab70c6e8a551bc35ac7c8e1c9b9b3b3caf8442b38a3eca6",
+          "bytes": 199245
+        }
+      ]
+    },
+    {
+      "label": "trial 01.robot",
+      "kind": "mcap",
+      "preserved": true,
+      "files": [
+        {
+          "path": "evidence/mcap/mcap/trial-01.robot.mcap",
+          "sha256": "45abf69c4d5a61580c1f052ec1e1122c008fffd18254cfbb2b484306875c7b52",
+          "bytes": 314
+        }
+      ]
+    },
+    {
+      "label": "media",
+      "kind": "note",
+      "preserved": true,
+      "files": [
+        {
+          "path": "evidence/mcap/media.json",
+          "sha256": "beb0f07372285f183b080cdc2778f4f9c15de6f206136511220256520bb8031c",
+          "bytes": 1024
+        }
+      ]
+    },
+    {
+      "label": "run manifest",
+      "kind": "note",
+      "preserved": true,
+      "files": [
+        {
+          "path": "evidence/run-manifest.json",
+          "sha256": "185c177b02f566ecd16bb31aa341cf49b04938ca4153ccb656692f3d92758d56",
+          "bytes": 1251
+        }
+      ]
+    },
+    {
+      "label": "trial 01",
+      "kind": "note",
+      "preserved": true,
+      "files": [
+        {
+          "path": "evidence/trials/trial-01.json",
+          "sha256": "16223272b2ddd3e13b4053e2b756a61b251c1c2ff2d858a6936efbefa4120a46",
+          "bytes": 25775
+        }
+      ]
+    },
+    {
+      "label": "verifier image",
+      "kind": "note",
+      "preserved": true,
+      "files": [
+        {
+          "path": "evidence/verifier-image.json",
+          "sha256": "942631f21ecf5f6fc867a59db35c379d6d01b3d17efd81425682b05608bb0844",
+          "bytes": 709
+        }
+      ]
+    },
+    {
+      "label": "trial 01 fail",
+      "kind": "video",
+      "preserved": true,
+      "files": [
+        {
+          "path": "evidence/video/trial-01-fail.mp4",
+          "sha256": "fbe2f320810b5b0bc116a99b5e3edbf63f6d6a83a5d359c2eee0a6d98cb2c037",
+          "bytes": 609988
+        }
+      ]
+    }
+  ]
+}

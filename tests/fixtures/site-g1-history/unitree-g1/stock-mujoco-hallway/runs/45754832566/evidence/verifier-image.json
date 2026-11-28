@@ -1,0 +1,13 @@
+{
+  "format": "livingproof-verifier-image/0.1",
+  "image": "ghcr.io/living-proof-labs/capability-verifier-hallway",
+  "locked_digest": "sha256:df15ce3eaeac3e3f7947a37e6df6e8bb4d759ece88787136a786f0bfb195b907",
+  "digest": "sha256:df15ce3eaeac3e3f7947a37e6df6e8bb4d759ece88787136a786f0bfb195b907",
+  "matches": true,
+  "source": "container engine: image of this job's container",
+  "container": "b5c0c3e16783c720fe907b1f102ef77c78c5bbd0ae410f659e8dad0e0da11f78",
+  "image_id": "sha256:92c8070284aa938c8283507f22754df328ab9e80425f398011db30de706744bd",
+  "repo_digests": [
+    "ghcr.io/living-proof-labs/capability-verifier-hallway@sha256:df15ce3eaeac3e3f7947a37e6df6e8bb4d759ece88787136a786f0bfb195b907"
+  ]
+}

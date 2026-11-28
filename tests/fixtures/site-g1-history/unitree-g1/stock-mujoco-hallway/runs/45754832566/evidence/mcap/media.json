@@ -1,0 +1,32 @@
+{
+  "format": "livingproof-hallway-media/2.2.0",
+  "configuration": "stock",
+  "run_id": "walk-hallway-unitree-g1-stock-20261126T042453Z",
+  "trials": [
+    {
+      "index": 1,
+      "observation_sha256": "16223272b2ddd3e13b4053e2b756a61b251c1c2ff2d858a6936efbefa4120a46",
+      "mcap": {
+        "path": "mcap/trial-01.mcap",
+        "bytes": 199245,
+        "sha256": "7c32e85d5020a0c16ab70c6e8a551bc35ac7c8e1c9b9b3b3caf8442b38a3eca6"
+      },
+      "robot_mcap": {
+        "path": "mcap/trial-01.robot.mcap",
+        "bytes": 314,
+        "sha256": "45abf69c4d5a61580c1f052ec1e1122c008fffd18254cfbb2b484306875c7b52"
+      },
+      "binding": {
+        "path": "mcap/trial-01.binding.json",
+        "bytes": 1466,
+        "sha256": "58ccfc48ba07b28434ea2e0b450089c0ce676e241d32df064059b7a49e3ebfd6"
+      },
+      "status": "FAIL",
+      "video": {
+        "path": "video/trial-01-fail.mp4",
+        "bytes": 609988,
+        "sha256": "fbe2f320810b5b0bc116a99b5e3edbf63f6d6a83a5d359c2eee0a6d98cb2c037"
+      }
+    }
+  ]
+}
