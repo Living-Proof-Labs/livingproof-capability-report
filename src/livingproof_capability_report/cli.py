@@ -146,6 +146,16 @@ def validate_command(manifest):
         "Required when a link is expired. There is no default."
     ),
 )
+@click.option(
+    "--trusted-viewers",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Caller-only JSON list of trusted viewer pins; never evaluator output. HTML only.",
+)
+@click.option(
+    "--asset-root",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    help="Local report assets, including pinned viewer and adjacent data. Required for viewers.",
+)
 @errors
 def render_command(
     report_file,
@@ -158,6 +168,8 @@ def render_command(
     history_href,
     history_label,
     evidence_retention,
+    trusted_viewers,
+    asset_root,
 ):
     """Render stored decisions; never grade or overwrite existing files.
 
@@ -201,6 +213,23 @@ def render_command(
     history = None
     if history_href or history_label:
         history = {"href": history_href, "label": history_label}
+    from .trusted_viewer import TrustedViewer
+
+    viewers = None
+    if trusted_viewers is not None:
+        pins = decode(trusted_viewers.read_text(encoding="utf-8"))
+        if not isinstance(pins, list):
+            raise ValueError("Trusted viewer pins must be a caller-owned list")
+        viewers = [TrustedViewer(**pin) for pin in pins]
+    if viewers and output is not None:
+        if asset_root is None or output.parent.resolve() != asset_root.resolve():
+            raise ValueError("Viewer HTML output must be in the verified asset root")
+        # Do not allow a symlink path to redirect the page away from verified assets.
+        for path in (output, *output.parents, asset_root, *asset_root.parents):
+            if path.is_symlink():
+                raise ValueError("Viewer HTML output and asset paths cannot contain symlinks")
+        if output.exists():
+            raise ValueError("Viewer HTML output must be a new file, not a staged input")
     content = render(
         stored,
         selected_format,
@@ -209,6 +238,8 @@ def render_command(
         evaluator_results=evaluator_results,
         history=history,
         retention=evidence_retention,
+        trusted_viewers=viewers,
+        asset_root=asset_root,
     )
     if output is not None and output.is_dir():
         if selected_format != "markdown":

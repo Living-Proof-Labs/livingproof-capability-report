@@ -803,6 +803,8 @@ def _panel(view, *, show_time=True):
         bits.append(f"<p class='more'>{esc(view['details'])}</p>")
     if view.get("details_href"):
         bits.append(f"<p class='more'><a href='{esc(view['details_href'])}'>Recorded data</a></p>")
+    if view.get("trusted_viewer_html"):
+        bits.append(view["trusted_viewer_html"])
     if view["missing_descriptor"]:
         bits.append(f"<p class='descriptor-note'>{esc(NO_DESCRIPTOR)}</p>")
     return f"<div class='eval-panel'>{''.join(bits)}</div>"
@@ -976,7 +978,7 @@ def render_example_card(
     )
 
 
-def summary_front(report, stored_body, evidence_results=None, *, presentations=()):
+def summary_front(report, stored_body, evidence_results=None, *, presentations=(), viewer_panels=None):
     """Visible ring and marks. ``stored_body`` sits inside one mark's details."""
     runs = [summary for summary in report.get("summaries") or [] if isinstance(summary, dict)]
     docs = []
@@ -993,6 +995,8 @@ def summary_front(report, stored_body, evidence_results=None, *, presentations=(
         if view["identity"] in identities:
             raise ValueError("Optional presentation cannot replace an existing evaluator")
         identities.add(view["identity"])
+        if viewer_panels and view["identity"] in viewer_panels:
+            view["trusted_viewer_html"] = viewer_panels[view["identity"]]
         views.append(view)
     failed = any(_run_failed(summary) for summary in runs)
     if not views:
