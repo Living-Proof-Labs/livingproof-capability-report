@@ -457,6 +457,23 @@ caller's runs. A missing, malformed or foreign `run.url` stops the build with
 `run.url must be a run of this repository`, naming each `run.json`. Drop that run with
 `--exclude-run`, or start the history again.
 
+`--validated-viewer-run ROBOT/VARIANT/runs/RUN_ID` (repeatable) names a restored run whose
+trusted viewer the caller has already validated (manifest, release asset, recording and trial
+binding, the exact native panel), as verification-reports-action does before it calls `site`.
+A restored run's `index.html` normally may not hold an `<iframe>`; for a listed run it must
+hold exactly one viewer frame as the reporter composes it, with its `src` under the run's
+`trusted-viewer/` folder, and only that frame is left out of the check. The rest of that page,
+its `report.html` and its evidence get every check as usual. Each entry is one exact path, with
+no globs. A listed run that is not in the history, has no `trusted-viewer/` folder, or is also
+passed to `--exclude-run` stops the command before anything is written.
+
+Two helpers are public for callers that add to a published run folder:
+`livingproof_capability_report.site.checked_report_html(text, where)` returns the page
+unchanged when it passes the published HTML policy (it raises `SiteError` otherwise, and
+cuts out unknown scripts with a warning), and
+`livingproof_capability_report.site.write_published_checksums(folder)` rewrites the folder's
+`SHA256SUMS` over every other file in it.
+
 ## Walk-hallway results
 
 capability-verifier grades walk-hallway trials one per result and stores each decision

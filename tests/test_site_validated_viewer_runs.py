@@ -123,12 +123,16 @@ def test_a_listed_restored_viewer_run_is_kept_byte_for_byte(tmp_path):
 
 
 def test_the_cli_passes_each_listed_run(tmp_path):
-    reports = _history(tmp_path)
     runs = _incoming(tmp_path, "46122371784", "2026-11-28T08:48:59Z")
-    args = ["site", str(reports), "--runs", str(runs), "--repository", REPOSITORY]
-    refused = CliRunner().invoke(cli, args)
+
+    def invoke(name, *extra):
+        reports = _history(tmp_path / name)
+        args = ["site", str(reports), "--runs", str(runs), "--repository", REPOSITORY, *extra]
+        return CliRunner().invoke(cli, args)
+
+    refused = invoke("unlisted")
     assert refused.exit_code != 0 and "<iframe> is not allowed" in refused.output
-    result = CliRunner().invoke(cli, [*args, "--validated-viewer-run", RUN])
+    result = invoke("listed", "--validated-viewer-run", RUN)
     assert result.exit_code == 0, result.output
     assert "Added unitree-g1/stock-mujoco-hallway/runs/46122371784" in result.output
 
@@ -233,7 +237,7 @@ def _tamper(reports: Path, fault: str) -> None:
         ("frame-outside-trusted-viewer", "one trusted viewer frame"),
         ("frame-with-extra-attribute", "one trusted viewer frame"),
         ("script-in-frame-src", "one trusted viewer frame"),
-        ("unknown-script", "not a known reporter script"),
+        ("unknown-script", "is not one of the reporter's scripts"),
         ("frame-in-report-html", "<iframe> is not allowed"),
         ("unpublished-evidence", "evidence of this type is not published"),
     ],

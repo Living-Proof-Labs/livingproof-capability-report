@@ -338,6 +338,14 @@ _REPOSITORY_SHAPE = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})/[A-Za-z0-9._-
     help="Restored run folder name to drop before rendering. Repeat for more.",
 )
 @click.option(
+    "--validated-viewer-run",
+    "validated_viewer_runs",
+    multiple=True,
+    metavar="ROBOT/VARIANT/runs/RUN_ID",
+    help="Restored run whose trusted viewer the caller has already validated. Its index.html "
+    "may hold that one viewer frame; every other check still runs. Exact path, repeatable.",
+)
+@click.option(
     "--repository",
     envvar="GITHUB_REPOSITORY",
     help="Caller repository (OWNER/NAME) whose CI run pages a published page may link. "
@@ -351,6 +359,7 @@ def site_command(
     allow_replace_run_id,
     git_dir,
     exclude_runs,
+    validated_viewer_runs,
     repository,
 ):
     """Add the run folders in --runs to REPORTS_DIR and render the reports section.
@@ -381,6 +390,7 @@ def site_command(
             git_dir=git_dir,
             exclude_runs=exclude_runs,
             repository=repository,
+            validated_viewer_runs=validated_viewer_runs,
         )
         issues = check_reports_tree(reports_dir, repository=repository)
         if issues:
