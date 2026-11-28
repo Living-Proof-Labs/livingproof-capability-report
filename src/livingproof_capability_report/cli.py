@@ -146,6 +146,16 @@ def validate_command(manifest):
         "Required when a link is expired. There is no default."
     ),
 )
+@click.option(
+    "--trusted-viewers",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Caller-only JSON list of trusted viewer pins; never evaluator output. HTML only.",
+)
+@click.option(
+    "--asset-root",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    help="Local report assets, including pinned viewer and adjacent data. Required for viewers.",
+)
 @errors
 def render_command(
     report_file,
@@ -158,6 +168,8 @@ def render_command(
     history_href,
     history_label,
     evidence_retention,
+    trusted_viewers,
+    asset_root,
 ):
     """Render stored decisions; never grade or overwrite existing files.
 
@@ -201,6 +213,14 @@ def render_command(
     history = None
     if history_href or history_label:
         history = {"href": history_href, "label": history_label}
+    from .trusted_viewer import TrustedViewer
+
+    viewers = None
+    if trusted_viewers is not None:
+        pins = decode(trusted_viewers.read_text(encoding="utf-8"))
+        if not isinstance(pins, list):
+            raise ValueError("Trusted viewer pins must be a caller-owned list")
+        viewers = [TrustedViewer(**pin) for pin in pins]
     content = render(
         stored,
         selected_format,
@@ -209,6 +229,8 @@ def render_command(
         evaluator_results=evaluator_results,
         history=history,
         retention=evidence_retention,
+        trusted_viewers=viewers,
+        asset_root=asset_root,
     )
     if output is not None and output.is_dir():
         if selected_format != "markdown":

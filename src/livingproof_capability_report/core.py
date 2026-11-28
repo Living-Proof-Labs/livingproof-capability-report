@@ -194,6 +194,8 @@ def render(
     observations=None,
     evaluator_results=None,
     evaluator_presentations=None,
+    trusted_viewers=None,
+    asset_root=None,
     history=None,
     retention=None,
 ):
@@ -208,6 +210,8 @@ def render(
     from .presentation import validate_presentations
 
     presentations = validate_presentations(evaluator_presentations, report)
+    if trusted_viewers and format != "html":
+        raise ValueError("Trusted viewers are supported only for HTML")
     if presentations and not report.get("summaries"):
         raise ValueError("Optional evaluator presentations require a run summary")
     if presentations and format != "html":
@@ -380,7 +384,11 @@ def render(
     if runs:
         from .evaluators import summary_front
 
-        front = summary_front(report, sections_body, evaluator_results, presentations=presentations)
+        from .trusted_viewer import viewer_panels
+
+        panels = viewer_panels(trusted_viewers, report, asset_root)
+        front = summary_front(report, sections_body, evaluator_results,
+                              presentations=presentations, viewer_panels=panels)
         return html_theme.page(
             title="Living Proof Labs capability report",
             lede=(

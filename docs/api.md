@@ -79,3 +79,45 @@ no placeholder. Contributions do not mutate the report, its source bundle or the
 stored Scenario and Run Integrity results. They are HTML-only; supplying a
 nonempty list for another format raises `ValueError`. Preserve the original
 portable report and evidence when generating a site page with contributions.
+
+## Caller-pinned replay assets
+
+`render(report, "html", trusted_viewers=[TrustedViewer(...)], asset_root=path)`
+can place a trusted static viewer inside an existing advisory evaluator panel.
+This optional caller input is separate from evaluator results. The caller chooses,
+verifies and stages immutable released executable bytes; never construct these pins
+from evaluator-provided URLs or code. Reporter does not download assets.
+
+Each `TrustedViewer` declares `evaluator_id`, `evaluator_version`,
+`evaluator_publisher`, `viewer_href`, `viewer_sha256` and `recording_format`.
+The first three must match exactly one advisory result. `viewer_href` is a local
+HTML path. The caller stages the report's original JSON details file in the asset
+root and an identical copy at `data/recording.json` beside that viewer.
+Reporter checks bounded local files, refuses symlinks, verifies both hashes and
+requires exactly one recording trial matching the selected report observation,
+run, configuration and positive integer trial index (booleans are not indices).
+The recording envelope has `format` and `trials`; its sole trial has the same
+`format` and a `trial` identity with `run_id`, `configuration`, `index` and
+`observation_sha256`. This is an explicit viewer input compatibility requirement,
+not a change to the evaluator result schema.
+
+The iframe receives only the adjacent JSON path, published digest and selected
+identity in its fragment. The trusted viewer must independently verify those bytes
+before displaying data. It runs scripts on the reports origin: the sandbox is not
+an isolation boundary against a malicious caller-selected executable. Only pin
+reviewed code approved for that origin. Missing JavaScript retains the existing
+Recorded data link. No declaration leaves HTML unchanged; an absent evaluator
+adds no panel. A matching evaluator with invalid assets or ambiguous identity
+fails before output. No portable report, evidence, grade or evaluator result changes.
+
+The existing CLI accepts a caller-owned JSON list of these field objects:
+
+```sh
+livingproof-capability-report render report.json --format html \
+  --trusted-viewers trusted-viewers.json --asset-root ./report-assets \
+  --output ./report-assets/index.html
+```
+
+Use a new output path. Run the normal upstream report generation before this
+step; a stale source-bundle digest remains an error, not a repair instruction.
+This interface does not change site history, navigation, restoration or deployment.

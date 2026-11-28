@@ -2,6 +2,7 @@
 
 from .assessed import report_from_bundle
 from .presentation import EvaluatorPresentation
+from .trusted_viewer import TrustedViewer
 from .core import aggregate, load_bundle, render, validate_bundle
 
 __all__ = [
@@ -11,4 +12,5 @@ __all__ = [
     "report_from_bundle",
     "validate_bundle",
     "EvaluatorPresentation",
+    "TrustedViewer",
 ]
