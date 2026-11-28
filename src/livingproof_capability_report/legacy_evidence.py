@@ -158,3 +158,20 @@ def mujoco_note(report, summary):
         ):
             return _NOTE
     return None
+
+
+def scenario_title(capability: str, variant: str) -> str | None:
+    """The reports site's frozen title for a published scenario, or None for any other.
+
+    These titles are on published report histories (moved from verification-reports-action
+    with the reports site, va#75); a new scenario is titled from its capability id.
+    """
+    if variant.endswith("-corner-left") or capability == "walk-corner-left":
+        return "Walk around the corner (left)"
+    if variant.endswith("-corner-right") or capability == "walk-corner-right":
+        return "Walk around the corner (right)"
+    if capability == "walk-corner" or variant.endswith("-corner"):
+        return "Walk around the corner"
+    if capability == "walk-hallway" or variant.endswith("-hallway"):
+        return "Walk the hallway"
+    return None
