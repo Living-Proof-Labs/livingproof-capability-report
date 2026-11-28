@@ -512,7 +512,7 @@ def test_the_run_url_message_names_the_caller_each_run_json_and_the_way_out(tmp_
     assert message.startswith(f"run.url must be a run of this repository ({OWNER}): ")
     assert message.count("run.json run.url is not this repository's run") == 2
     assert "runs/100/run.json" in message and "runs/200/run.json" in message
-    assert message.endswith(". Drop that run with exclude-runs, or start the history again.")
+    assert message.endswith(". Drop that run with --exclude-run, or start the history again.")
     assert "Actions links or artifact wording" not in message
 
 

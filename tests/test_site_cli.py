@@ -7,6 +7,7 @@ import json
 from importlib import resources
 from pathlib import Path
 
+import pytest
 import site_fixture
 from click.testing import CliRunner
 
@@ -152,3 +153,49 @@ def test_the_site_command_names_the_run_json_whose_run_url_is_wrong(tmp_path: Pa
     assert result.exit_code == 1
     assert "run.json run.url is not this repository's run" in result.output
     assert "Actions links or artifact wording" not in result.output
+
+
+@pytest.mark.parametrize(
+    "repository",
+    [
+        "Living-Proof-Labs",
+        "Living-Proof-Labs/",
+        "/verification-reports-action",
+        "Living-Proof-Labs/verification-reports-action/extra",
+        "Living-Proof-Labs/verification reports",
+        "Living-Proof-Labs/verification-reports-action\n",
+        "Living_Proof_Labs/verification-reports-action",
+        "-Living-Proof-Labs/verification-reports-action",
+        "Living-Proof-Labs/..",
+        "Living-Proof-Labs/.",
+        "Living-Proof-Labs/repo+x",
+        "Living-Proof-Labs/(repo)",
+        "https://github.com/Living-Proof-Labs/verification-reports-action",
+        "Living-Proof-Labs/verification-reports-action/actions",
+    ],
+)
+def test_the_site_command_refuses_a_repository_that_is_not_owner_slash_name(
+    tmp_path: Path, repository: str
+):
+    # Vera's I2 on 143: an owner-only value would accept https://github.com/OWNER/actions/runs/N.
+    site_fixture.write(tmp_path / "in", run_id="100", created="2026-11-20T06:00:00Z")
+    reports = tmp_path / "reports"
+    flag = _site(str(reports), "--runs", str(tmp_path / "in"), "--repository", repository)
+    assert flag.exit_code == 2, flag.output
+    assert "OWNER/NAME" in flag.output
+    env = _site(str(reports), "--runs", str(tmp_path / "in"), env={"GITHUB_REPOSITORY": repository})
+    assert env.exit_code == 2, env.output
+    assert not reports.exists()
+
+
+@pytest.mark.parametrize(
+    "repository",
+    ["Living-Proof-Labs/verification-reports-action", "a/b", "o1/repo.name_x-y", "O/.github"],
+)
+def test_the_site_command_accepts_an_owner_slash_name_repository(tmp_path: Path, repository: str):
+    site_fixture.write(tmp_path / "in", run_id="100", created="2026-11-20T06:00:00Z")
+    result = _site(
+        str(tmp_path / "reports"), "--runs", str(tmp_path / "in"), "--repository", repository
+    )
+    # The shape is accepted; the fixture's run.url names CALLER, so only CALLER builds.
+    assert "OWNER/NAME shape" not in result.output
