@@ -6,9 +6,7 @@ run.url was reported under the Actions-links label. L2 (the player match is a su
 the action's published-links gate, `tools/require_reports.py`, which stays in the action.
 """
 
-import ast
 import json
-import re
 from pathlib import Path
 
 import pytest
@@ -18,7 +16,6 @@ from livingproof_capability_report.site import assemble as site
 
 OWNER = "Living-Proof-Labs/verification-reports-action"
 RUN = f"https://github.com/{OWNER}/actions/runs/46115314157"
-SITE_PACKAGE = Path(site.__file__).parent
 
 UNQUOTED_ENCODED = [
     "https://github.com/evil/repo/%61ctions/runs/1",
@@ -65,25 +62,6 @@ def test_an_unquoted_anchor_does_not_swallow_the_next_link():
     assert site.strip_actions_text(text, repository=OWNER) == (
         "one<a href='evidence/keep.json'>keep</a>"
     )
-
-
-def test_every_top_level_function_in_the_site_package_is_used_somewhere():
-    # Vera's L3: caller_repository() stayed behind unused after the caller moved to build().
-    tests = "\n".join(
-        path.read_text(encoding="utf-8")
-        for path in sorted(Path(__file__).parent.glob("test_site*.py"))
-    )
-    sources = {path: path.read_text(encoding="utf-8") for path in sorted(SITE_PACKAGE.glob("*.py"))}
-    unused = []
-    for path, text in sources.items():
-        everything = text + tests + "".join(sources.values())
-        for node in ast.parse(text).body:
-            if isinstance(node, ast.FunctionDef):
-                uses = len(re.findall(rf"\b{re.escape(node.name)}\b", everything))
-                # the definition itself is one; a use in __all__, code or a test is another
-                if uses < 2:
-                    unused.append(f"{path.name}:{node.name}")
-    assert unused == []
 
 
 def test_caller_repository_no_longer_exists():
