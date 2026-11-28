@@ -10,15 +10,19 @@ from __future__ import annotations
 import hashlib
 import html
 import json
+import os
 import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import urllib.parse
 from collections.abc import Iterable
 from datetime import timedelta
 from pathlib import Path, PurePosixPath
 
+from ..trusted_viewer import FRAME_END, FRAME_START
+from ..viewer_page import shell_after_removing_viewer
 from .details import DetailsPathError, cited_details_uris, read_cited_details, safe_relative
 from .common import (
     ARTIFACT_WORD,
@@ -1280,6 +1284,13 @@ def reporter_html(folder: Path) -> str:
 
 
 def write_published_checksums(folder: Path) -> None:
+    """Write `folder/SHA256SUMS`: the SHA-256 of every other file under it, sorted by path.
+
+    A run folder's checksum list as the site publishes it. Callers that add files to a
+    published run folder (a trusted viewer, for example) call this afterwards. A
+    symlinked `SHA256SUMS` is refused (the write never follows it). The file is written
+    to a temporary name in the same folder and renamed into place.
+    """
     names = sorted(
         path.relative_to(folder).as_posix()
         for path in folder.rglob("*")
@@ -1287,8 +1298,21 @@ def write_published_checksums(folder: Path) -> None:
     )
     if any(name == ORIGINAL_HTML or name.endswith("/" + ORIGINAL_HTML) for name in names):
         raise SiteError(f"{folder}: {ORIGINAL_HTML} is not a published file")
+    target = folder / "SHA256SUMS"
+    if target.is_symlink():
+        raise SiteError(f"{folder}: SHA256SUMS is a symlink; refusing to write through it")
+    if target.exists() and not target.is_file():
+        raise SiteError(f"{folder}: SHA256SUMS is not a regular file")
     lines = [f"{_sha256(folder / name)}  {name}" for name in names]
-    (folder / "SHA256SUMS").write_text(("\n".join(lines) + "\n") if lines else "", encoding="utf-8")
+    payload = ("\n".join(lines) + "\n") if lines else ""
+    fd, tmp_name = tempfile.mkstemp(prefix=".SHA256SUMS.", suffix=".tmp", dir=folder)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(payload)
+        Path(tmp_name).replace(target)
+    except Exception:
+        Path(tmp_name).unlink(missing_ok=True)
+        raise
 
 
 def publish_report_files(
@@ -1605,12 +1629,73 @@ def remember_stored_wording(folder: Path, record: dict) -> bool:
     return True
 
 
-def recheck_restored_run(folder: Path) -> None:
+# A trusted viewer frame as `compose_viewer_page` writes it: FRAME_START, the exact
+# `src` (one filename, the recording fragment with those five keys in that order, each
+# "&" escaped), FRAME_END. Anything else is refused.
+_VIEWER_SRC = (
+    r"trusted-viewer/viewer\.html#"
+    r"file=data%2Frecording\.json"
+    r"&amp;sha256=[a-f0-9]{64}"
+    r"&amp;run=[A-Za-z0-9._~%-]+"
+    r"&amp;configuration=[A-Za-z0-9._~%-]+"
+    r"&amp;trial=[1-9][0-9]*"
+)
+_VIEWER_FRAME = re.compile(re.escape(FRAME_START) + _VIEWER_SRC + re.escape(FRAME_END))
+_RUN_PATH_PART = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+
+
+def validated_viewer_run_folders(
+    reports_dir: Path,
+    entries: Iterable[str],
+    *,
+    history_keys: set[tuple[str, str, str]],
+    excluded: frozenset[str] = frozenset(),
+) -> set[Path]:
+    """Resolve `--validated-viewer-run` entries to restored run folders, or refuse them all.
+
+    Each entry is one exact `ROBOT/VARIANT/runs/RUN_ID` path in the restored history (no
+    globs, no `.` or `..`, no trailing slash) whose run folder holds a `trusted-viewer/`
+    folder. Called before anything is written.
+    """
+    folders: set[Path] = set()
+    for entry in entries:
+        parts = entry.split("/") if isinstance(entry, str) else []
+        if (
+            len(parts) != 4
+            or parts[2] != "runs"
+            or not all(_RUN_PATH_PART.fullmatch(part) for part in parts)
+        ):
+            raise SiteError(
+                f"--validated-viewer-run {entry!r} must be one exact ROBOT/VARIANT/runs/RUN_ID "
+                "path in the reports tree, with no globs."
+            )
+        robot, variant, _, run_id = parts
+        if run_id in excluded:
+            raise SiteError(
+                f"--validated-viewer-run {entry!r} is also excluded with --exclude-run."
+            )
+        folder = reports_dir / robot / variant / "runs" / run_id
+        if (robot, variant, run_id) not in history_keys or folder.is_symlink():
+            raise SiteError(f"--validated-viewer-run {entry!r} is not a run in the history.")
+        viewer = folder / "trusted-viewer"
+        if viewer.is_symlink() or not viewer.is_dir():
+            raise SiteError(f"--validated-viewer-run {entry!r} has no trusted-viewer/ folder.")
+        folders.add(folder)
+    return folders
+
+
+def recheck_restored_run(folder: Path, *, validated_viewer: bool = False) -> None:
     """Check a run restored from the last deployment that this build does not republish.
 
     Its pages and evidence were published by an earlier build, so a gap fixed since then
     would otherwise be carried into every later deployment. The build fails rather than
     rewriting them; reset-history rebuilds the site from run folders.
+
+    For a run the caller validated (`--validated-viewer-run`), index.html must hold exactly
+    one trusted viewer frame as `compose_viewer_page` writes it, as a whole element in the
+    native advisory panel. That panel is put back to the original and the remaining shell
+    is checked; `report.html` and the evidence get every check as usual. This does not
+    read, change, add or delete anything under `trusted-viewer/`.
     """
     evidence = folder / "evidence"
     # The site writes each evidence listing as evidence/<name>.html. A restored one is a
@@ -1620,6 +1705,19 @@ def recheck_restored_run(folder: Path) -> None:
         if not path.is_file():
             continue
         text = _read_utf8_text(path)
+        if validated_viewer and path == folder / "index.html":
+            frames = _VIEWER_FRAME.findall(text)
+            if len(frames) != 1:
+                raise SiteError(
+                    f"restored {path}: --validated-viewer-run needs exactly one trusted viewer "
+                    f"frame as the reporter composes it, found {len(frames)}"
+                )
+            try:
+                text = shell_after_removing_viewer(
+                    text, read_report(folder / "report.json"), frames[0]
+                )
+            except ValueError as error:
+                raise SiteError(f"restored {path}: {error}") from None
         if checked_report_html(text, f"restored {path}") != text:
             raise SiteError(
                 f"restored {path}: holds a <script> that is not a known reporter script"
@@ -1643,8 +1741,10 @@ def render(
     days: int = DEFAULT_RETENTION_DAYS,
     publish_folders: set[Path] | None = None,
     repository: str | None = None,
+    validated_viewer_runs: set[Path] | None = None,
 ) -> dict[tuple[str, str], list[dict]]:
     validate_retention_days(days)
+    viewer_runs = set(validated_viewer_runs or set())
     _, pruned_folders = prune_expired_evidence(reports_dir, now, days)
     history = runs(reports_dir)
     _require_single_robot({robot for robot, _ in history})
@@ -1686,7 +1786,7 @@ def render(
                     repository=repository,
                 )
             else:
-                recheck_restored_run(run_folder)
+                recheck_restored_run(run_folder, validated_viewer=run_folder in viewer_runs)
         (base / "index.html").write_text(
             _history_page_html(robot, variant, records, loaded_reports), encoding="utf-8"
         )
@@ -1705,6 +1805,7 @@ def build(
     git_dir: Path | None = None,
     exclude_runs: Iterable[str] = (),
     repository: str | None = None,
+    validated_viewer_runs: Iterable[str] = (),
 ) -> list[Path]:
     if not repository:
         raise SiteError(
@@ -1720,6 +1821,9 @@ def build(
         for (robot, variant), recs in existing.items()
         for rec in recs
     }
+    viewer_runs = validated_viewer_run_folders(
+        reports_dir, validated_viewer_runs, history_keys=restored_keys, excluded=excluded_set
+    )
     seen_in_batch: set[tuple[str, str, str]] = set()
     sources = discover_run_folders(runs_dir)
 
@@ -1775,6 +1879,7 @@ def build(
         days=days,
         publish_folders=set(added_folders),
         repository=repository,
+        validated_viewer_runs=viewer_runs,
     )
     if problems := run_url_problems(reports_dir, repository):
         raise SiteError(

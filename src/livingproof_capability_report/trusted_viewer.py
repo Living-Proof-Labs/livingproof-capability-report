@@ -9,6 +9,17 @@ import re
 from urllib.parse import urlencode
 
 
+# The one viewer frame a native panel holds: FRAME_START, the escaped src, FRAME_END. The
+# site command's --validated-viewer-run matches exactly this markup and nothing looser.
+FRAME_START = (
+    '<iframe title="Recorded replay" sandbox="allow-scripts allow-same-origin" loading="lazy" src="'
+)
+FRAME_END = (
+    '" style="display:block;width:100%;height:660px;border:1px solid #bcc;max-width:100%">'
+    "</iframe><noscript>Replay needs JavaScript; Recorded data remains available.</noscript>"
+)
+
+
 @dataclass(frozen=True)
 class TrustedViewer:
     evaluator_id: str
@@ -143,10 +154,5 @@ def viewer_panels(items, report, asset_root):
             )
         )
         src = escape(item.viewer_href + "#" + fragment, quote=True)
-        panels[item.evaluator_id] = (
-            f'<iframe title="Recorded replay" sandbox="allow-scripts allow-same-origin" '
-            f'loading="lazy" src="{src}" '
-            'style="display:block;width:100%;height:660px;border:1px solid #bcc;max-width:100%">'
-            "</iframe><noscript>Replay needs JavaScript; Recorded data remains available.</noscript>"
-        )
+        panels[item.evaluator_id] = FRAME_START + src + FRAME_END
     return panels

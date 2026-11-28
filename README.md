@@ -457,6 +457,32 @@ caller's runs. A missing, malformed or foreign `run.url` stops the build with
 `run.url must be a run of this repository`, naming each `run.json`. Drop that run with
 `--exclude-run`, or start the history again.
 
+`--validated-viewer-run ROBOT/VARIANT/runs/RUN_ID` (repeatable) names a restored run whose
+trusted viewer the caller has already validated (manifest, release asset, recording and trial
+binding, the exact native panel), as verification-reports-action does before it calls `site`.
+A restored run's `index.html` normally may not hold an `<iframe>`; for a listed run it must
+hold exactly one viewer frame as `compose_viewer_page` writes it: a whole element in the
+native advisory panel, with `src` `trusted-viewer/viewer.html#` plus the recording fragment
+(`file`, `sha256`, `run`, `configuration`, `trial`, in that order, no extra keys). The
+command puts that panel back to the original and checks the remaining shell; the rest of
+the page, `report.html` and the evidence get every check as usual. It does not read, change,
+add or delete anything under `trusted-viewer/` — that stays with the caller's
+`validate_restored`. Each entry is one exact path, with no globs. A listed run that is not
+in the history, has no `trusted-viewer/` folder, or is also passed to `--exclude-run` stops
+the command before anything is written. When evidence expiry rewrites a decorated run as a
+plain page, the caller composes the viewer again and checks the result with
+`validate_viewer_page`.
+
+Two helpers are public for callers that add to a published run folder:
+`livingproof_capability_report.site.checked_report_html(text, where)` returns the page
+unchanged when it passes the published HTML policy (it raises `SiteError` otherwise). A
+`<script>` that carries the reporter's marker attribute but not the reporter's bytes is
+cut out with a warning, so a caller must compare the result with its input; any other
+script raises `SiteError`.
+`livingproof_capability_report.site.write_published_checksums(folder)` rewrites the folder's
+`SHA256SUMS` over every other file in it. A symlinked `SHA256SUMS` is refused, and the
+file is written to a temporary name in the same folder and renamed into place.
+
 ## Walk-hallway results
 
 capability-verifier grades walk-hallway trials one per result and stores each decision

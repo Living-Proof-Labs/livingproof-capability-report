@@ -387,8 +387,13 @@ def render(
         from .trusted_viewer import viewer_panels
 
         panels = viewer_panels(trusted_viewers, report, asset_root)
-        front = summary_front(report, sections_body, evaluator_results,
-                              presentations=presentations, viewer_panels=panels)
+        front = summary_front(
+            report,
+            sections_body,
+            evaluator_results,
+            presentations=presentations,
+            viewer_panels=panels,
+        )
         return html_theme.page(
             title="Living Proof Labs capability report",
             lede=(
