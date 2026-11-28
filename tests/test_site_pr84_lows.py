@@ -80,7 +80,7 @@ def test_a_foreign_run_url_is_reported_under_its_own_label(tmp_path: Path):
     message = str(error.value)
     assert "run.url" in message and "runs/100/run.json" in message
     assert OWNER in message
-    assert "exclude-runs" in message
+    assert "--exclude-run," in message
     assert "Actions links or artifact wording" not in message
 
 
