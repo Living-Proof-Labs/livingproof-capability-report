@@ -43,12 +43,12 @@ def test_an_unquoted_href_with_an_encoded_actions_is_unwrapped(href: str):
 @pytest.mark.parametrize("href", UNQUOTED_ENCODED)
 def test_the_reporter_page_scrub_unwraps_an_unquoted_encoded_actions_href(href: str):
     record = {"run": {"url": RUN}, "evidence": []}
-    raw = f"<p><a class=x href={href} title=t>run &amp; log</a></p>"
+    raw = f"<p><a class=x href={href} title=t>run log</a></p>"
     cleaned = site.scrub_reporter_html(
         raw, record, trial=False, expired=False, days=7, repository=OWNER
     )
     assert "<a " not in cleaned
-    assert "run &amp; log" in cleaned
+    assert cleaned == "<p>run log</p>"
 
 
 def test_an_unquoted_href_to_this_repository_run_page_is_kept_and_other_unquoted_links_too():

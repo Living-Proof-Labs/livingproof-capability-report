@@ -13,8 +13,12 @@ from pathlib import Path
 from .assemble import MARKER, _parse_sha256sums, public_page_problems
 
 
-def check_reports_tree(reports_dir: Path) -> list[str]:
-    """Return a list of link, checksum, or content issues inside `reports_dir`."""
+def check_reports_tree(reports_dir: Path, repository: str | None = None) -> list[str]:
+    """Return a list of link, checksum, or content issues inside `reports_dir`.
+
+    `repository` is the caller (owner/name): only its own CI run pages may be linked, and
+    every run.json must carry a run.url that is one of its runs.
+    """
     issues: list[str] = []
     if not (reports_dir / "index.html").is_file():
         issues.append("index.html missing")
@@ -70,5 +74,5 @@ def check_reports_tree(reports_dir: Path) -> list[str]:
             if actual != digest:
                 issues.append(f"{run_folder.relative_to(reports_dir)}/{rel_name}: sha256 mismatch")
 
-    issues.extend(public_page_problems(reports_dir))
+    issues.extend(public_page_problems(reports_dir, repository=repository))
     return issues

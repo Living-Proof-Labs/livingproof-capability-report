@@ -331,8 +331,21 @@ def comment_command(reports, repo, pr, dry_run, comments):
     multiple=True,
     help="Restored run folder name to drop before rendering. Repeat for more.",
 )
+@click.option(
+    "--repository",
+    envvar="GITHUB_REPOSITORY",
+    help="Caller repository (OWNER/NAME) whose CI run pages a published page may link. "
+    "Every run.json must carry a run.url that is one of its runs. Defaults to GITHUB_REPOSITORY.",
+)
 def site_command(
-    reports_dir, runs_dir, evidence_retention_days, now, allow_replace_run_id, git_dir, exclude_runs
+    reports_dir,
+    runs_dir,
+    evidence_retention_days,
+    now,
+    allow_replace_run_id,
+    git_dir,
+    exclude_runs,
+    repository,
 ):
     """Add the run folders in --runs to REPORTS_DIR and render the reports section.
 
@@ -346,6 +359,8 @@ def site_command(
     """
     from .site import MARKER, SiteError, build, check_reports_tree
 
+    if not repository:
+        raise click.UsageError("--repository (or GITHUB_REPOSITORY) is required.")
     try:
         added = build(
             reports_dir,
@@ -355,8 +370,9 @@ def site_command(
             allow_replace_run_id=allow_replace_run_id or None,
             git_dir=git_dir,
             exclude_runs=exclude_runs,
+            repository=repository,
         )
-        issues = check_reports_tree(reports_dir)
+        issues = check_reports_tree(reports_dir, repository=repository)
         if issues:
             raise SiteError("Generated reports/ check failed: " + "; ".join(issues))
         marker = decode((reports_dir / MARKER).read_text(encoding="utf-8"))

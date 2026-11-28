@@ -66,7 +66,9 @@ def test_the_site_command_fails_when_the_built_tree_has_a_broken_link(tmp_path: 
     from livingproof_capability_report import site
 
     site_fixture.write(tmp_path / "in", run_id="100", created="2026-11-20T06:00:00Z")
-    monkeypatch.setattr(site, "check_reports_tree", lambda reports: ["index.html: broken link x/"])
+    monkeypatch.setattr(
+        site, "check_reports_tree", lambda reports, repository=None: ["index.html: broken link x/"]
+    )
     result = _site(
         str(tmp_path / "reports"), "--runs", str(tmp_path / "in"), "--repository", CALLER
     )
@@ -98,7 +100,13 @@ def test_the_site_command_drops_an_excluded_restored_run(tmp_path: Path):
 def test_the_site_command_refuses_an_unsafe_exclude_entry(tmp_path: Path):
     site_fixture.write(tmp_path / "in", run_id="100", created="2026-11-20T06:00:00Z")
     result = _site(
-        str(tmp_path / "reports"), "--runs", str(tmp_path / "in"), "--exclude-run", "../1"
+        str(tmp_path / "reports"),
+        "--runs",
+        str(tmp_path / "in"),
+        "--exclude-run",
+        "../1",
+        "--repository",
+        CALLER,
     )
     assert result.exit_code == 1
     assert not (tmp_path / "reports").exists()
@@ -122,7 +130,7 @@ def test_the_site_command_defaults_the_caller_to_github_repository(tmp_path: Pat
     site_fixture.write(tmp_path / "in", run_id="100", created="2026-11-20T06:00:00Z")
     runs = ("--runs", str(tmp_path / "in"))
     missing = _site(str(tmp_path / "none"), *runs, env={"GITHUB_REPOSITORY": ""})
-    assert missing.exit_code == 1
+    assert missing.exit_code == 2
     assert "--repository" in missing.output and "GITHUB_REPOSITORY" in missing.output
     assert not (tmp_path / "none").exists()
     foreign = _site(str(tmp_path / "bad"), *runs, env={"GITHUB_REPOSITORY": "other-org/other-repo"})
@@ -143,4 +151,4 @@ def test_the_site_command_names_the_run_json_whose_run_url_is_wrong(tmp_path: Pa
     )
     assert result.exit_code == 1
     assert "run.json run.url is not this repository's run" in result.output
-    assert "Actions links or artifact wording" not in result.output.split("run.url")[0][-80:]
+    assert "Actions links or artifact wording" not in result.output
