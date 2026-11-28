@@ -11,3 +11,10 @@ the `site` package and must match it byte for byte (va#75).
 
 `../site-golden/SHA256SUMS` is the action's `tests/fixtures/site-golden/SHA256SUMS`, copied
 unchanged; `site_fixture.build_golden_site` is the action's `tools/site_golden.py` build.
+
+`../site-real-g1/46122371783/` is the `g1-verification-report` artifact of Verify run 46122371783
+of verification-reports-action (reporter 3.17.0, real G1 hallway, with a trial video and MCAP).
+`../site-golden/real-g1-46122371783.SHA256SUMS` is the 25-file site the action's own
+`src/site_action.py` wrote from it at PR 84 head a27a1a0 with
+`GITHUB_REPOSITORY=Living-Proof-Labs/verification-reports-action`; main `2f1ae18` writes the
+same bytes (checked by Vera for this run and for 46115314157 and 46118968220).

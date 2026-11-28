@@ -2444,3 +2444,22 @@ def test_the_site_refuses_an_unsafe_cited_details_file(tmp_path, uri, mutate, me
     }
     with pytest.raises(site_tool.SiteError, match=message):
         site_tool._publish_cited_details(source, tmp_path / "out", report)
+
+
+def test_a_real_g1_run_page_matches_the_bytes_the_action_rendered(tmp_path: Path):
+    # Verify run 46122371783, built by the action's src/site_action.py (PR 84 head a27a1a0,
+    # and main 2f1ae18 agrees): every published file, byte for byte.
+    reports = tmp_path / "reports"
+    runs = ROOT / "tests/fixtures/site-real-g1/46122371783"
+    site_tool.build(reports, runs, repository=G1_REPOSITORY)
+    expected = (ROOT / "tests/fixtures/site-golden/real-g1-46122371783.SHA256SUMS").read_text(
+        encoding="utf-8"
+    )
+    assert site_fixture.digests(reports) == expected
+    run = next(reports.glob("*/*/runs/46122371783"))
+    page = (run / "index.html").read_text(encoding="utf-8")
+    run_url = f"https://github.com/{G1_REPOSITORY}/actions/runs/46122371783"
+    assert f"<a href='{run_url}'>CI run</a>" in page
+    assert "<video controls" in page and "evidence/video/trial-01-fail.mp4" in page
+    assert f"&quot;run&quot;: &quot;{run_url}&quot;" in page
+    assert site_fixture.check_reports_tree(reports, repository=G1_REPOSITORY) == []
