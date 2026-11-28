@@ -1,0 +1,10 @@
+{
+  "format": "livingproof-evidence-ending/0.1",
+  "configuration": "stock",
+  "ended": "exited",
+  "exit_code": 0,
+  "signal": null,
+  "step_outcome": "success",
+  "manifest_present": true,
+  "planned_trials": 1
+}

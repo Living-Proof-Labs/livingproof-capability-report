@@ -1,0 +1,175 @@
+{
+  "fixture": false,
+  "robot": {
+    "repository": "Living-Proof-Labs/livingproof-unitree-g1",
+    "commit": "d554c8243a12849dc7fe8acc1921bb3d4e5239a7",
+    "configuration": "stock",
+    "url": "https://github.com/Living-Proof-Labs/livingproof-unitree-g1/tree/d554c8243a12849dc7fe8acc1921bb3d4e5239a7"
+  },
+  "variant": "unitree-g1-stock-mujoco-hallway",
+  "verification": "unitree-g1-stock-mujoco-hallway",
+  "procedure": "walk-hallway",
+  "outcome": [
+    {
+      "capability": "walk-hallway",
+      "system": "unitree-g1/stock",
+      "grade": "FAIL",
+      "passed": 0,
+      "trials": 1,
+      "required": 1
+    }
+  ],
+  "run": {
+    "id": "46122371783",
+    "url": "https://github.com/Living-Proof-Labs/verification-reports-action/actions/runs/46122371783",
+    "created": "2026-11-28T07:48:59Z"
+  },
+  "commit": {
+    "sha": "d554c8243a12849dc7fe8acc1921bb3d4e5239a7",
+    "url": "https://github.com/Living-Proof-Labs/livingproof-unitree-g1/commit/d554c8243a12849dc7fe8acc1921bb3d4e5239a7"
+  },
+  "releases": {
+    "specs": {
+      "repository": "Living-Proof-Labs/robot-capability-specs",
+      "tag": "v2.3.0",
+      "commit": "57317e617014a6df97bb7fba9d92a890af8d42e5",
+      "files": {
+        "specs/scenarios/walk-hallway/description.json": "788bcd6345dad4d262ea14fc346d8883933b790f4991302f01d6eee84f52ff21",
+        "specs/scenarios/walk-hallway/parameters.json": "9226aa6bc0e577863bdc210514e7e7c3a7edc32f49c4f7b46aa7249837f08b3d"
+      },
+      "url": "https://github.com/Living-Proof-Labs/robot-capability-specs/releases/tag/v2.3.0"
+    },
+    "runner": {
+      "repository": "Living-Proof-Labs/livingproof-sim-mujoco",
+      "tag": "v3.9.7",
+      "commit": "727d8706598e8ac706324ca87edd0973fdbb3485",
+      "url": "https://github.com/Living-Proof-Labs/livingproof-sim-mujoco/releases/tag/v3.9.7"
+    },
+    "verifier": {
+      "repository": "Living-Proof-Labs/capability-verifier",
+      "tag": "v2.14.0",
+      "url": "https://github.com/Living-Proof-Labs/capability-verifier/releases/tag/v2.14.0"
+    },
+    "reporter": {
+      "repository": "Living-Proof-Labs/livingproof-capability-report",
+      "tag": "v3.17.0",
+      "commit": "5d6aed964c0eea1094caeec24e797808b2d0c3fb",
+      "url": "https://github.com/Living-Proof-Labs/livingproof-capability-report/releases/tag/v3.17.0"
+    }
+  },
+  "definition": "tests/smoke/g1/unitree-g1-stock-mujoco-hallway.toml",
+  "version": "3.10.4",
+  "declared_robot": {
+    "repository": "Living-Proof-Labs/livingproof-unitree-g1",
+    "ref": "v2.3.34",
+    "commit": "d554c8243a12849dc7fe8acc1921bb3d4e5239a7",
+    "configurations": [
+      "stock"
+    ],
+    "adapter": "lpl_g1.adapter:ROBOT"
+  },
+  "inputs": [
+    {
+      "name": "capability-verifier",
+      "repository": "Living-Proof-Labs/capability-verifier",
+      "tag": "v2.14.0",
+      "commit": "bd6be5217b52b1348b4dc23613ee06d44bed9519",
+      "digest": "sha256:3f97c6910e27a98ba97dc114e8d537b2c1acdcd728696186428fa3e48ae3019c",
+      "workflow": "",
+      "status": "resolved",
+      "result": "resolved",
+      "attestation": "not-published",
+      "checks": {
+        "release": "passed",
+        "commit": "resolved",
+        "digest": "passed",
+        "attestation": "not-published"
+      }
+    },
+    {
+      "name": "livingproof-sim-mujoco",
+      "repository": "Living-Proof-Labs/livingproof-sim-mujoco",
+      "tag": "v3.9.7",
+      "commit": "727d8706598e8ac706324ca87edd0973fdbb3485",
+      "digest": "sha256:7bc8013c7d225dca38d335c8c9c0d95548e092377c1af53e902aa3f4f3f6c083",
+      "workflow": "",
+      "status": "resolved",
+      "result": "resolved",
+      "attestation": "not-published",
+      "checks": {
+        "release": "passed",
+        "commit": "resolved",
+        "digest": "resolved",
+        "attestation": "not-published"
+      }
+    },
+    {
+      "name": "robot-capability-specs",
+      "repository": "Living-Proof-Labs/robot-capability-specs",
+      "tag": "v2.3.0",
+      "commit": "57317e617014a6df97bb7fba9d92a890af8d42e5",
+      "digest": "sha256:af965dc3a6b3665e98a57b348812a2b9cc45f83351434fdedcbba4fc01027e7c",
+      "workflow": "",
+      "status": "resolved",
+      "result": "resolved",
+      "attestation": "not-published",
+      "checks": {
+        "release": "passed",
+        "commit": "resolved",
+        "digest": "resolved",
+        "attestation": "not-published"
+      }
+    },
+    {
+      "name": "livingproof-worlds",
+      "repository": "Living-Proof-Labs/livingproof-worlds",
+      "tag": "v1.1.0",
+      "commit": "9b3e7119aa93a3370383227fb30bd39a9dd72b4b",
+      "digest": "sha256:d60bb8aa6a72c8403fb6674cc9d803962c1484bc3e163527988e8c57ccec775c",
+      "workflow": "",
+      "status": "resolved",
+      "result": "resolved",
+      "attestation": "not-published",
+      "checks": {
+        "release": "passed",
+        "commit": "resolved",
+        "digest": "resolved",
+        "attestation": "not-published"
+      }
+    },
+    {
+      "name": "livingproof-evaluator-scenario",
+      "repository": "Living-Proof-Labs/livingproof-evaluator-scenario",
+      "tag": "v1.5.3",
+      "commit": "ca9d337a771269d07feec94c99f199bef7fca808",
+      "digest": "sha256:26939e0a0644cb997b9562f7c41cc20e0155b1a683325b025f123f94d51ad8fc",
+      "workflow": "",
+      "status": "resolved",
+      "result": "resolved",
+      "attestation": "not-published",
+      "checks": {
+        "release": "passed",
+        "commit": "resolved",
+        "digest": "resolved",
+        "attestation": "not-published"
+      }
+    },
+    {
+      "name": "livingproof-capability-report",
+      "repository": "Living-Proof-Labs/livingproof-capability-report",
+      "tag": "v3.17.0",
+      "commit": "5d6aed964c0eea1094caeec24e797808b2d0c3fb",
+      "digest": "sha256:b07f7a5237a697a284f63d94a8d3b031b4756d0880d8e250b93e0ca1b23d8eba",
+      "workflow": "",
+      "status": "resolved",
+      "result": "resolved",
+      "attestation": "not-published",
+      "checks": {
+        "release": "passed",
+        "commit": "resolved",
+        "digest": "passed",
+        "attestation": "not-published"
+      }
+    }
+  ]
+}

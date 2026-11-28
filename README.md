@@ -424,6 +424,39 @@ versions produce identical provenance JSON. The installed-package smoke tests
 check its retention and CLI agreement for wheels, source distributions, Debian
 packages and container images.
 
+## Publish a reports section
+
+`livingproof-capability-report site REPORTS_DIR --runs DIR --repository OWNER/NAME` builds a static,
+single-robot reports section, the one the
+[Verification Reports action](https://github.com/Living-Proof-Labs/verification-reports-action)
+publishes on GitHub Pages. Each folder in `DIR` is one run: `report.html`, `report.json`,
+`report.md`, `report.txt`, `SHA256SUMS` and `run.json`. The command checks every checksum,
+copies the run under `ROBOT/SCENARIO/runs/RUN_ID/`, and writes:
+
+- `index.html`, the latest grade of each scenario, failures first;
+- `ROBOT/SCENARIO/index.html`, the scenario's run history, and `latest/`, a redirect to the
+  newest run;
+- each run's published page, with the site navigation and spec provenance added and the
+  links it cannot keep (other Actions pages, evidence it did not publish) turned to text;
+- `styles.css`, `open.js` and `site.json` (robot, scenario and run counts).
+
+`REPORTS_DIR` may already hold earlier runs, for example restored from the last Pages
+deploy. They are rechecked and kept byte for byte; `--exclude-run RUN_ID` (repeatable) drops
+one. Copied MCAP, video and media expire after `--evidence-retention-days` (default 7); the
+report pages and checksums stay. `--git-dir` names a checkout used to show the release tag of
+each tested commit. The command then checks every link, checksum and published word, and exits
+non-zero on any problem. It never fetches anything and never regrades a run.
+
+`--repository` (default `GITHUB_REPOSITORY`; the command refuses to run without it) names the
+caller. Only that repository's own CI run pages (`https://github.com/OWNER/NAME/actions/runs/N`,
+case exact, ending at the address or at the HTML entity that closes it) stay links. Any other
+Actions address is removed from the pages and the report JSON: other repositories, a case
+variant, a suffix such as `/job/2`, `?x=1` or `.zip`, and an `/actions/` hidden by percent or
+entity encoding, quoted or not. Every `run.json` must carry a `run.url` that is one of the
+caller's runs. A missing, malformed or foreign `run.url` stops the build with
+`run.url must be a run of this repository`, naming each `run.json`. Drop that run with
+`--exclude-run`, or start the history again.
+
 ## Walk-hallway results
 
 capability-verifier grades walk-hallway trials one per result and stores each decision

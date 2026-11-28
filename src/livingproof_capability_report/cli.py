@@ -294,3 +294,90 @@ def comment_command(reports, repo, pr, dry_run, comments):
     click.echo(f"{'would ' if dry_run else ''}{method} {path} ({len(text)} chars)")
     if dry_run:
         click.echo(text, nl=False)
+
+
+@report.command("site")
+@click.argument("reports_dir", type=click.Path(file_okay=False, path_type=Path))
+@click.option(
+    "--runs",
+    "runs_dir",
+    required=True,
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    help="Directory of incoming run folders (report.html, report.json, report.md, "
+    "report.txt, SHA256SUMS and run.json each).",
+)
+@click.option(
+    "--evidence-retention-days",
+    type=int,
+    default=7,
+    show_default=True,
+    help="Days to keep copied MCAP, video and media files before pruning them.",
+)
+@click.option("--now", default=None, help="UTC ISO-8601 reference time for evidence pruning.")
+@click.option(
+    "--allow-replace-run-id",
+    default=None,
+    help="Current run id that may replace its own folder on a same-run retry.",
+)
+@click.option(
+    "--git-dir",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    default=None,
+    help="Checkout used to find the release tag that points at each tested commit.",
+)
+@click.option(
+    "--exclude-run",
+    "exclude_runs",
+    multiple=True,
+    help="Restored run folder name to drop before rendering. Repeat for more.",
+)
+@click.option(
+    "--repository",
+    envvar="GITHUB_REPOSITORY",
+    help="Caller repository (OWNER/NAME) whose CI run pages a published page may link. "
+    "Every run.json must carry a run.url that is one of its runs. Defaults to GITHUB_REPOSITORY.",
+)
+def site_command(
+    reports_dir,
+    runs_dir,
+    evidence_retention_days,
+    now,
+    allow_replace_run_id,
+    git_dir,
+    exclude_runs,
+    repository,
+):
+    """Add the run folders in --runs to REPORTS_DIR and render the reports section.
+
+    REPORTS_DIR may already hold earlier runs (for example restored from the last Pages
+    deploy); they are rechecked and kept. The command writes the reports index, one history
+    page per scenario, a latest/ redirect and each run's published page, then checks every
+    link and checksum. It never fetches anything and never regrades a run.
+
+    \b
+    livingproof-capability-report site reports --runs incoming
+    """
+    from .site import MARKER, SiteError, build, check_reports_tree
+
+    if not repository:
+        raise click.UsageError("--repository (or GITHUB_REPOSITORY) is required.")
+    try:
+        added = build(
+            reports_dir,
+            runs_dir,
+            now=now or None,
+            days=evidence_retention_days,
+            allow_replace_run_id=allow_replace_run_id or None,
+            git_dir=git_dir,
+            exclude_runs=exclude_runs,
+            repository=repository,
+        )
+        issues = check_reports_tree(reports_dir, repository=repository)
+        if issues:
+            raise SiteError("Generated reports/ check failed: " + "; ".join(issues))
+        marker = decode((reports_dir / MARKER).read_text(encoding="utf-8"))
+    except SiteError as exc:
+        raise click.ClickException(str(exc)) from exc
+    for folder in added:
+        click.echo(f"Added {folder.relative_to(reports_dir).as_posix()}")
+    click.echo(f"Built {reports_dir} ({marker['scenarios']} scenarios, {marker['runs']} runs).")
