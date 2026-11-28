@@ -627,6 +627,10 @@ def test_tampered_checksums_and_invalid_reports_fail_closed(tmp_path: Path):
 # ---------------------------------------------------------------- client timezone script
 
 
+@pytest.mark.skipif(
+    shutil.which("node") is None,
+    reason="needs Node.js; the Docker development image has none, Verify's reporter tests run it",
+)
 def test_open_js_formats_viewer_timezone_without_relative_age(tmp_path: Path):
     runs_in = tmp_path / "in"
     _make_run_folder(runs_in, "hallway", created="2026-11-18T05:20:00Z")
