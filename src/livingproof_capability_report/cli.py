@@ -221,6 +221,15 @@ def render_command(
         if not isinstance(pins, list):
             raise ValueError("Trusted viewer pins must be a caller-owned list")
         viewers = [TrustedViewer(**pin) for pin in pins]
+    if viewers and output is not None:
+        if asset_root is None or output.parent.resolve() != asset_root.resolve():
+            raise ValueError("Viewer HTML output must be in the verified asset root")
+        # Do not allow a symlink path to redirect the page away from verified assets.
+        for path in (output, *output.parents, asset_root, *asset_root.parents):
+            if path.is_symlink():
+                raise ValueError("Viewer HTML output and asset paths cannot contain symlinks")
+        if output.exists():
+            raise ValueError("Viewer HTML output must be a new file, not a staged input")
     content = render(
         stored,
         selected_format,

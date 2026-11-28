@@ -2,7 +2,7 @@
 
 The supported import surface includes the operations exported through
 `livingproof_capability_report.__all__`: `load_bundle`, `validate_bundle`,
-`aggregate`, `report_from_bundle` and `render`, plus the `EvaluatorPresentation` type. Their installed signatures and
+`aggregate`, `report_from_bundle` and `render`, plus the `EvaluatorPresentation` and `TrustedViewer` types. Their installed signatures and
 docstrings are generated below. Internal helpers and the internal Click
 implementation are not additional supported library interfaces. Install the
 reporter package using the [release instructions](../README.md#install-a-release).
@@ -118,6 +118,8 @@ livingproof-capability-report render report.json --format html \
   --output ./report-assets/index.html
 ```
 
-Use a new output path. Run the normal upstream report generation before this
+Use a new output file directly inside the verified asset root. Other directories,
+existing staged inputs and symlink output paths are refused before writing.
+Run the normal upstream report generation before this
 step; a stale source-bundle digest remains an error, not a repair instruction.
 This interface does not change site history, navigation, restoration or deployment.

@@ -179,3 +179,46 @@ def test_missing_or_symlink_asset_refused(case):
     path.symlink_to(root / "other.html")
     with pytest.raises(ValueError):
         viewer_panels([pin], stored, root)
+
+
+@pytest.mark.parametrize(
+    "kind", ["different-directory", "existing-input", "symlink-file", "symlink-directory"]
+)
+def test_cli_output_must_stay_with_verified_assets(case, tmp_path, kind):
+    root, stored, pin = case
+    source = root / "report.json"
+    source.write_text(json.dumps(stored))
+    pins = root / "pins.json"
+    pins.write_text(json.dumps([asdict(pin)]))
+    other = root / "other"
+    other.mkdir()
+    output = other / "page.html"
+    if kind == "existing-input":
+        output = source
+    elif kind == "symlink-file":
+        output = root / "page.html"
+        output.symlink_to(other / "page.html")
+    elif kind == "symlink-directory":
+        alias = root / "alias"
+        alias.symlink_to(root, target_is_directory=True)
+        output = alias / "page.html"
+    before = source.read_bytes()
+    result = CliRunner().invoke(
+        cli,
+        [
+            "render",
+            str(source),
+            "--format",
+            "html",
+            "--trusted-viewers",
+            str(pins),
+            "--asset-root",
+            str(root),
+            "-o",
+            str(output),
+        ],
+    )
+    assert result.exit_code != 0
+    assert source.read_bytes() == before
+    assert not (other / "page.html").exists()
+    assert not (root / "page.html").is_file()

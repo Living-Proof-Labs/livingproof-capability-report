@@ -210,6 +210,7 @@ print(json.dumps([{'name': n, 'signature': str(inspect.signature(getattr(api, n)
         "report_from_bundle",
         "validate_bundle",
         "EvaluatorPresentation",
+        "TrustedViewer",
     }
     text = (ROOT / "artifacts/docs/source/api.md").read_text()
     for function in actual:
